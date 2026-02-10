@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block header_strip %}
+<div class="w-full bg-background-dark border-b border-primary/20 relative overflow-hidden">
+    <div class="absolute inset-0 bg-primary/5"></div>
+    <div class="max-w-7xl mx-auto px-6 py-4 relative z-10 flex items-center gap-4">
+        <span class="material-symbols-outlined text-primary text-4xl sickle-left">content_cut</span>
+        <h1 class="text-white text-3xl font-aggressive uppercase tracking-widest text-shadow-red">
+            {% trans %}Challenges{% endtrans %}
+        </h1>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+    <div class="w-full mt-10 relative z-10">
+        <div class="container mx-auto px-6 max-w-7xl">
+            {% include "components/errors.html" %}
+
+            <div 
+                x-data="ChallengeBoard" 
+                @load-challenges.window="loadChallenges()" 
+                @load-challenge.window="loadChallenge($event.detail)"
+                class="min-h-screen"
+            >
+                <div
+                    x-ref="challengeWindow" id="challenge-window" class="modal fade" tabindex="-1" role="dialog" x-data=""
+                    x-html="$store.challenge.data.view"
+                ></div>
+
+                <div x-show="!loaded">
+                    <div class="min-vh-50 d-flex align-items-center justify-center py-20">
+                        <div class="text-center w-full text-primary glow-red">
+                            <i class="fas fa-biohazard fa-spin fa-3x fa-fw"></i>
+                            <p class="mt-4 font-mono text-primary uppercase tracking-widest">Loading Protocol...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-show="loaded" class="space-y-16 pb-20">
+                    <template x-for="(category, idx) in getCategories()" :key="idx">
+                        <div class="pt-5">
+                            <div class="mb-8 flex items-center gap-4 border-b border-primary/30 pb-2">
+                                <span class="material-symbols-outlined text-primary text-2xl animate-pulse">emergency</span>
+                                <h3 x-text="category" class="text-4xl font-aggressive text-white uppercase tracking-wider text-shadow-red"></h3>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+                                <template x-for="(c, idx) in getChallenges(category)" :key="c.id">
+                                    <button
+                                        class="group relative flex flex-col items-center justify-center w-full min-h-[180px] bg-card-dark border-2 rounded-sm transition-all duration-300 overflow-hidden"
+                                        :class="c.solved_by_me ? 'border-primary/50 bg-primary/10 parchment-texture' : 'border-stone-800 hover:border-primary hover:shadow-[0_0_15px_rgba(236,19,19,0.3)]'"
+                                        :value="c.id" @click="loadChallenge(c.id)"
+                                    >
+                                        <!-- Card Background Effects -->
+                                        <div class="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                        
+                                        <!-- Corner Accents -->
+                                        <div class="absolute top-0 left-0 w-2 h-2 border-l-2 border-t-2 border-primary/50 transition-all duration-300 group-hover:w-full group-hover:h-full group-hover:border-primary/20"></div>
+                                        <div class="absolute bottom-0 right-0 w-2 h-2 border-r-2 border-b-2 border-primary/50 transition-all duration-300 group-hover:w-full group-hover:h-full group-hover:border-primary/20"></div>
+
+                                        <div class="relative z-10 text-center p-4 w-full h-full flex flex-col justify-between">
+                                            <!-- Challenge Name -->
+                                            <p x-text="c.name" class="text-xl font-bold font-display uppercase tracking-wider mb-2 transition-colors duration-300"
+                                               :class="c.solved_by_me ? 'text-primary-dark' : 'text-white group-hover:text-primary'"></p>
+                                            
+                                            <!-- Challenge Value -->
+                                            <div class="mt-auto">
+                                                <span x-text="c.value" class="font-mono text-lg font-bold"
+                                                      :class="c.solved_by_me ? 'text-primary-dark' : 'text-stone-500 group-hover:text-primary/80'"></span>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Solved Stamp/Indicator -->
+                                        <template x-if="c.solved_by_me">
+                                            <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                <div class="border-4 border-primary/30 text-primary/30 font-aggressive text-4xl uppercase tracking-widest rotate-[-20deg] px-4 py-2 select-none backdrop-blur-sm">
+                                                    DECEASED
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <!-- Lock/Unsolved Icon -->
+                                        <template x-if="!c.solved_by_me">
+                                            <div class="absolute top-2 right-2 text-stone-800 group-hover:text-primary/50 transition-colors">
+                                                <span class="material-symbols-outlined text-sm">lock</span>
+                                            </div>
+                                        </template>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ Assets.js("assets/js/challenges.js") }}
+{% endblock %}

@@ -1,0 +1,82 @@
+<header class="bg-black border-b border-white/10 w-full z-50">
+    <div class="max-w-[1400px] mx-auto w-full px-6 h-[80px] flex items-center justify-between">
+        <div class="flex items-center gap-12">
+            <!-- Logo -->
+            <a href="{{ url_for('views.static_html', route='/') }}" class="flex items-center gap-3 group">
+                <span class="material-symbols-outlined text-primary text-3xl">architecture</span>
+                <span class="font-display text-xl font-bold tracking-wide uppercase">
+                    {% if Configs.ctf_logo %}
+                        <img src="{{ url_for('views.files', path=Configs.ctf_logo) }}" alt="{{ Configs.ctf_name }}" class="h-8">
+                    {% else %}
+                        {{ Configs.ctf_name }}
+                    {% endif %}
+                </span>
+            </a>
+            
+            <!-- Nav Links -->
+            <nav class="hidden lg:flex items-center gap-8">
+                <!-- Challenges -->
+                <a href="{{ url_for('challenges.listing') }}" class="text-sm font-bold text-gray-400 hover:text-white uppercase tracking-widest transition-colors">
+                    {% trans %}Challenges{% endtrans %}
+                </a>
+                
+                <!-- Scoreboard -->
+                {% if Configs.account_visibility != 'admins' and Configs.score_visibility != 'admins' %}
+                <a href="{{ url_for('scoreboard.listing') }}" class="text-sm font-bold text-gray-400 hover:text-white uppercase tracking-widest transition-colors">
+                    {% trans %}Scoreboard{% endtrans %}
+                </a>
+                {% endif %}
+
+                <!-- The Rules -->
+                <a href="/rules" class="text-sm font-bold text-gray-400 hover:text-white uppercase tracking-widest transition-colors">
+                    The Rules
+                </a>
+
+                <!-- Users -->
+                {% if Configs.account_visibility != 'admins' %}
+                <a href="{{ url_for('users.listing') }}" class="text-sm font-bold text-gray-400 hover:text-white uppercase tracking-widest transition-colors">
+                    {% trans %}Users{% endtrans %}
+                </a>
+                
+                <!-- Teams -->
+                {% if Configs.user_mode == 'teams' %}
+                <a href="{{ url_for('teams.listing') }}" class="text-sm font-bold text-gray-400 hover:text-white uppercase tracking-widest transition-colors">
+                    {% trans %}Teams{% endtrans %}
+                </a>
+                {% endif %}
+                {% endif %}
+                
+                <!-- Plugin Pages -->
+                 {% for page in Plugins.user_menu_pages %}
+                    <a href="{{ page.route }}" class="text-sm font-bold text-gray-400 hover:text-white uppercase tracking-widest transition-colors">
+                        {{ page.title }}
+                    </a>
+                {% endfor %}
+            </nav>
+        </div>
+
+        <!-- Right Buttons -->
+        <div class="flex items-center gap-4">
+            {% if authed() %}
+                <a href="{{ url_for('users.private') }}" class="bg-primary hover:bg-primary-hover text-white text-xs font-bold uppercase py-2.5 px-6 rounded tracking-widest transition-colors shadow-lg shadow-purple-900/20">
+                    Profile
+                </a>
+                {% if is_admin() %}
+                    <a href="{{ url_for('admin.view') }}" class="bg-transparent border border-white/20 hover:border-white/40 text-white text-xs font-bold uppercase py-2.5 px-6 rounded tracking-widest transition-colors">
+                        Admin
+                    </a>
+                {% endif %}
+                <a href="{{ url_for('auth.logout') }}" class="bg-transparent border border-white/20 hover:border-white/40 text-white text-xs font-bold uppercase py-2.5 px-6 rounded tracking-widest transition-colors">
+                    Logout
+                </a>
+            {% else %}
+                <a href="{{ url_for('auth.register') }}" class="bg-primary hover:bg-primary-hover text-white text-xs font-bold uppercase py-2.5 px-6 rounded tracking-widest transition-colors shadow-lg shadow-purple-900/20">
+                    Register
+                </a>
+                <a href="{{ url_for('auth.login') }}" class="bg-transparent border border-white/20 hover:border-white/40 text-white text-xs font-bold uppercase py-2.5 px-6 rounded tracking-widest transition-colors">
+                    Login
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</header>

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-6 py-12">
+    
+    <div class="text-center mb-12">
+      <h1 class="text-5xl font-aggressive text-white uppercase tracking-widest mb-2">
+        {% trans %}Notifications{% endtrans %}
+      </h1>
+      <div class="h-1 w-24 bg-primary mx-auto"></div>
+    </div>
+
+    <div class="space-y-6">
+		{% if not notifications %}
+        <div class="text-center py-12 bg-card-dark border border-stone-800">
+		    <h2 class="text-2xl font-aggressive text-stone-500 uppercase tracking-widest">
+			    {% trans %}There are no notifications yet{% endtrans %}
+		    </h2>
+        </div>
+		{% endif %}
+        
+		{% for notification in notifications %}
+		<div class="bg-card-dark border-l-4 border-primary p-6 shadow-lg relative overflow-hidden group hover:bg-black/40 transition-colors">
+            <!-- Decoration -->
+            <div class="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl -mr-12 -mt-12 pointer-events-none group-hover:bg-primary/10 transition-colors"></div>
+            
+			<div class="relative z-10">
+				<h3 class="text-2xl font-aggressive text-white uppercase tracking-widest mb-3 flex justify-between items-start">
+                    {{ notification.title }}
+                    <small class="text-xs text-primary font-mono ml-4 mt-1 opacity-70 whitespace-nowrap"><span data-time="{{ notification.date | isoformat }}"></span></small>
+                </h3>
+				<div class="text-stone-300 font-serif leading-relaxed pl-4 border-l border-stone-700">
+					<p>{{ notification.html }}</p>
+				</div>
+			</div>
+		</div>
+		{% endfor %}
+	</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  {{ Assets.js("assets/js/notifications.js") }}
+{% endblock %}
+

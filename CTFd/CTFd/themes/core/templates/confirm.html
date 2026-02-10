@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-[calc(100vh-80px)] flex items-center justify-center p-6 bg-cover bg-center" style="background-image: url('https://raw.githubusercontent.com/LiyanderDev/TomCTF/main/assets/img/wolf-bg.jpg');">
+    <div class="w-full max-w-lg bg-card-dark/95 backdrop-blur-sm border border-primary/30 p-8 md:p-12 relative overflow-hidden shadow-[0_0_50px_rgba(236,19,19,0.3)]">
+        
+        <div class="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+        <div class="absolute bottom-0 left-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none"></div>
+
+        <div class="text-center mb-10">
+            <h1 class="text-5xl font-aggressive text-primary uppercase tracking-widest mb-2">{% trans %}Confirm{% endtrans %}</h1>
+        </div>
+
+        {% include "components/errors.html" %}
+
+        <div class="text-stone-300 space-y-4 text-center mb-8">
+        {% if request.args.get('flow') == "init" %}
+            <p>{% trans %}To send a confirmation email to your email address, please click the button below.{% endtrans %}</p>
+            <p class="font-bold text-primary">{% trans %}Please click the link in that email to confirm your account.{% endtrans %}</p>
+            <p class="text-sm text-stone-500">{% trans %}If the email doesn’t arrive, check your spam folder or contact an administrator to manually verify your account.{% endtrans %}</p>
+        {% else%}
+            <p>{% trans %}We've sent a confirmation email to your email address.{% endtrans %}</p>
+            <p class="font-bold text-primary">{% trans %}Please click the link in that email to confirm your account.{% endtrans %}</p>
+            <p class="text-sm text-stone-500">{% trans %}If the email doesn’t arrive, check your spam folder or contact an administrator to manually verify your account.{% endtrans %}</p>
+        {% endif %}
+        </div>
+
+        <div class="border-t border-stone-700 mb-8"></div>
+
+        {% with form = Forms.auth.ConfirmForm() %}
+          <form method="POST" action="{{ url_for('auth.confirm') }}" class="space-y-4">
+            {{ form.submit(class="w-full bg-primary hover:bg-red-700 text-white font-bold uppercase tracking-widest py-3 transition-all duration-300 cursor-pointer border-none") }}
+            
+             <a href="{{ url_for('views.settings') }}" class="block w-full text-center bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold uppercase tracking-widest py-3 border border-stone-600 transition-all">
+                {% trans %}Change Email Address{% endtrans %}
+            </a>
+            
+            {{ form.nonce() }}
+          </form>
+        {% endwith %}
+    </div>
+</div>
+{% endblock %}

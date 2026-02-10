@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block header_strip %}
+<div class="w-full bg-black">
+    <div class="max-w-[1400px] mx-auto px-6 py-4">
+        <h1 class="text-white text-lg font-medium">{{ user.name }}</h1>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+    {% if solves %}
+        <div class="w-full text-left mt-10">
+            <h3 class="text-2xl font-bold mb-6 text-white">Solves</h3>
+            <div class="overflow-x-auto rounded-lg border border-border-dark">
+                <table class="w-full text-left text-gray-400">
+                    <thead class="bg-surface-dark uppercase text-xs font-bold text-gray-200">
+                        <tr>
+                            <th class="px-6 py-3">Challenge</th>
+                            <th class="px-6 py-3">Category</th>
+                            <th class="px-6 py-3">Value</th>
+                            <th class="px-6 py-3">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border-dark">
+                        {% for solve in solves %}
+                        <tr class="hover:bg-white/5 transition-colors">
+                            <td class="px-6 py-4">
+                                <a href="{{ url_for('challenges.listing') }}#{{ solve.challenge.name }}-{{ solve.challenge.id }}" class="text-primary hover:text-purple-400 underline decoration-primary/30 underline-offset-4">
+                                    {{ solve.challenge.name }}
+                                </a>
+                            </td>
+                            <td class="px-6 py-4">{{ solve.challenge.category }}</td>
+                            <td class="px-6 py-4">{{ solve.challenge.value }}</td>
+                            <td class="px-6 py-4 solve-time">
+                                <span data-time="{{ solve.date | isoformat }}"></span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <div class="text-center mt-10">
+            <p class="text-gray-500 text-lg font-medium">No solves yet</p>
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  {{ Assets.js("assets/js/users/private.js") }}
+{% endblock %}
+

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-[calc(100vh-80px)] flex items-center justify-center p-6 bg-cover bg-center" style="background-image: url('https://raw.githubusercontent.com/LiyanderDev/TomCTF/main/assets/img/wolf-bg.jpg');">
+    <div class="w-full max-w-lg bg-card-dark/95 backdrop-blur-sm border border-primary/30 p-8 md:p-12 relative overflow-hidden shadow-[0_0_50px_rgba(236,19,19,0.3)]">
+        
+       <div class="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+       <div class="absolute bottom-0 left-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none"></div>
+
+        <div class="text-center mb-10">
+            <h1 class="text-5xl font-aggressive text-primary uppercase tracking-widest mb-2">{% trans %}Register{% endtrans %}</h1>
+            <p class="text-stone-400 font-display text-sm tracking-widest uppercase">Join the hunt</p>
+        </div>
+
+        {% include "components/errors.html" %}
+
+        {% if integrations.mlc() %}
+          <a class="block w-full text-center py-3 bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold uppercase tracking-widest border border-stone-600 transition-all mb-8" href="{{ url_for('auth.oauth_login') }}">
+            Login with Major League Cyber
+          </a>
+        {% endif %}
+
+        {% with form = Forms.auth.RegistrationForm() %}
+
+          {% from "macros/forms.html" import render_extra_fields %}
+
+          <form method="post" accept-charset="utf-8" role="form" class="space-y-6">
+
+            <div class="group">
+              <label class="block text-primary text-xs font-bold uppercase tracking-widest mb-2">
+                {{ form.name.label }}
+                <span class="text-red-500">*</span>
+              </label>
+              {{ form.name(class="w-full bg-black/50 border border-stone-700 text-white p-4 focus:border-primary outline-none transition-colors font-mono", placeholder="Username", autocomplete="username") }}
+              <small class="block mt-1 text-[10px] text-stone-500 uppercase tracking-wider">
+                {% trans %}Your username on the site{% endtrans %}
+              </small>
+            </div>
+
+            <div class="group">
+              <label class="block text-primary text-xs font-bold uppercase tracking-widest mb-2">
+                {{ form.email.label }}
+                <span class="text-red-500">*</span>
+              </label>
+              {{ form.email(class="w-full bg-black/50 border border-stone-700 text-white p-4 focus:border-primary outline-none transition-colors font-mono", placeholder="Email address", autocomplete="email") }}
+              <small class="block mt-1 text-[10px] text-stone-500 uppercase tracking-wider">
+                {% trans %}Never shown to the public{% endtrans %}
+              </small>
+            </div>
+
+            <div class="group">
+              <label class="block text-primary text-xs font-bold uppercase tracking-widest mb-2">
+                {{ form.password.label }}
+                <span class="text-red-500">*</span>
+              </label>
+              {{ form.password(class="w-full bg-black/50 border border-stone-700 text-white p-4 focus:border-primary outline-none transition-colors font-mono", placeholder="Password", autocomplete="new-password") }}
+               <small class="block mt-1 text-[10px] text-stone-500 uppercase tracking-wider">
+                {% trans %}Password used to log into your account{% endtrans %}
+              </small>
+            </div>
+
+            {{ form.nonce() }}
+
+            {{ render_extra_fields(form.extra) }}
+
+            <div class="pt-4">
+                {{ form.submit(class="w-full bg-primary hover:bg-red-700 text-white font-bold uppercase tracking-widest py-4 transition-all duration-300 hover:shadow-[0_0_20px_rgba(236,19,19,0.5)] cursor-pointer border-none") }}
+            </div>
+
+            {% if Configs.tos_or_privacy %}
+              <div class="text-center pt-4">
+                <small class="text-stone-500 text-[10px] uppercase tracking-wider">
+                  {% trans trimmed privacy_link=Configs.privacy_link, tos_link=Configs.tos_link %}
+                  By registering, you agree to the
+                  <a href="{{ privacy_link }}" target="_blank" class="text-primary hover:underline">privacy policy</a>
+                  and <a href="{{ tos_link }}" target="_blank" class="text-primary hover:underline">terms of service</a>
+                  {% endtrans %}
+                </small>
+              </div>
+            {% endif %}
+          </form>
+        {% endwith %}
+    </div>
+</div>
+{% endblock %}

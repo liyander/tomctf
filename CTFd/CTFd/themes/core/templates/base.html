@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <title>{{ title or Configs.ctf_name }}</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="shortcut icon" href="{{ Configs.ctf_small_icon }}" type="image/x-icon">
+  
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries,typography"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Metal+Mania&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@0..1,0..1&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+  <script id="tailwind-config">
+      tailwind.config = {
+          darkMode: "class",
+          theme: {
+              extend: {
+                  colors: {
+                      "primary": "#ec1313",
+                      "primary-hover": "#c50f0f",
+                      "background-dark": "#0a0a0a",
+                      "card-dark": "#121212",
+                      "surface-dark": "#1a1a1a",
+                      "border-dark": "#2a0a0a",
+                  },
+                  fontFamily: {
+                      "aggressive": ["Metal Mania", "cursive"],
+                      "creep": ["Creepster", "cursive"],
+                      "display": ["Space Grotesk", "sans-serif"],
+                      "mono": ["monospace"]
+                  },
+                  backgroundImage: {
+                     'wolf-pattern': "url('https://raw.githubusercontent.com/LiyanderDev/TomCTF/main/assets/img/wolf-bg.jpg')",
+                  }
+              },
+          },
+      }
+  </script>
+  <style>
+      :root {
+          --bs-primary: #ec1313;
+          --bs-primary-rgb: 236, 19, 19;
+          --bs-body-bg: #0a0a0a;
+          --bs-body-color: #d6d3d1; /* stone-300 */
+      }
+      body {
+          font-family: 'Space Grotesk', sans-serif;
+          background-color: #0a0a0a !important;
+          color: #d6d3d1 !important;
+      }
+      h1, h2, h3, h4, h5, h6 {
+          font-family: 'Metal Mania', cursive;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: white;
+      }
+      .bg-dark {
+          background-color: #121212 !important;
+      }
+      .btn-primary {
+          background-color: #ec1313 !important;
+          border-color: #ec1313 !important;
+          color: white !important;
+          font-family: 'Metal Mania', cursive !important;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          border-radius: 0 !important;
+      }
+      .btn-primary:hover {
+          background-color: #c50f0f !important;
+          border-color: #c50f0f !important;
+          box-shadow: 0 0 15px rgba(236, 19, 19, 0.5);
+      }
+      .btn-outline-primary {
+          color: #ec1313 !important;
+          border-color: #ec1313 !important;
+          border-radius: 0 !important;
+          font-family: 'Metal Mania', cursive !important;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+      }
+      .btn-outline-primary:hover {
+          background-color: #ec1313 !important;
+          color: white !important;
+      }
+      a {
+          color: #ec1313;
+          text-decoration: none;
+          transition: color 0.3s;
+      }
+      a:hover {
+          color: #c50f0f;
+          text-shadow: 0 0 5px rgba(236, 19, 19, 0.5);
+      }
+      .jumbotron {
+        background-color: transparent !important;
+      }
+      
+      /* Bootstrap Overrides for Forms/Modals */
+      .form-control {
+          background-color: rgba(0,0,0,0.5) !important;
+          border: 1px solid #44403c !important;
+          color: white !important;
+          border-radius: 0 !important;
+      }
+      .form-control:focus {
+          border-color: #ec1313 !important;
+          box-shadow: 0 0 0 0.25rem rgba(236, 19, 19, 0.25) !important;
+      }
+      .modal-content {
+          background-color: #121212 !important;
+          border: 1px solid #ec1313 !important;
+          border-radius: 0 !important;
+          color: #d6d3d1 !important;
+      }
+      .modal-header {
+          border-bottom: 1px solid rgba(236, 19, 19, 0.2) !important;
+      }
+      .modal-footer {
+          border-top: 1px solid rgba(236, 19, 19, 0.2) !important;
+      }
+      .btn-close {
+          filter: invert(1) grayscale(100%) brightness(200%);
+      }
+      
+      /* Tabs */
+      .nav-tabs {
+          border-bottom: 1px solid rgba(236, 19, 19, 0.2) !important;
+      }
+      .nav-tabs .nav-link {
+          color: #a8a29e !important;
+          border: none !important;
+          border-bottom: 2px solid transparent !important;
+          font-family: 'Space Grotesk', sans-serif;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+      }
+      .nav-tabs .nav-link:hover {
+          color: #ec1313 !important;
+          border-color: transparent !important;
+      }
+      .nav-tabs .nav-link.active {
+          background-color: transparent !important;
+          color: #ec1313 !important;
+          border-bottom: 2px solid #ec1313 !important;
+      }
+
+  </style>
+
+  {{ meta | safe }}
+
+  {% block stylesheets %}
+    {{ Assets.css("assets/scss/main.scss") }}
+  {% endblock %}
+
+  {{ Plugins.styles }}
+
+  {{ Assets.js("assets/js/color_mode_switcher.js", type=None) }}
+
+  <script type="text/javascript">
+      window.init = {
+          'urlRoot': "{{ request.script_root }}",
+          'csrfNonce': "{{ Session.nonce }}",
+          'userMode': "{{ Configs.user_mode }}",
+          'userId': {{ Session.id }},
+          'userName': {{ User.name | tojson }},
+          'userEmail': {{ User.email | tojson }},
+          'userVerified': {{ User.verified | tojson }},
+          'teamId': {{ Team.id | tojson }},
+          'teamName': {{ Team.name | tojson }},
+          'start': {{ Configs.start | tojson }},
+          'end': {{ Configs.end | tojson }},
+          'themeSettings': {{ Configs.theme_settings | tojson }},
+          'eventSounds': [
+            "/themes/core/static/sounds/notification.webm",
+            "/themes/core/static/sounds/notification.mp3",
+          ],
+      }
+  </script>
+  {{ Configs.theme_header }}
+</head>
+<body class="bg-background-dark text-stone-300 min-h-screen flex flex-col font-display selection:bg-primary/30 selection:text-white overflow-x-hidden">
+
+{% include "components/navbar.html" %}
+
+{% block header_strip %}{% endblock %}
+
+<main class="flex-grow w-full flex flex-col pt-20 relative" role="main">
+  <!-- Global background texture if desired, slightly visible -->
+  <div class="fixed inset-0 pointer-events-none opacity-[0.03] z-[-1]" style="background-image: url('https://www.transparenttextures.com/patterns/dark-matter.png');"></div>
+  
+  {% block content %}
+  {% endblock %}
+</main>
+
+{% include "components/snackbar.html" %}
+
+<footer class="w-full py-12 mt-auto border-t border-primary/10 bg-black/50 backdrop-blur-sm">
+    <div class="max-w-7xl mx-auto px-6 text-center">
+        <h3 class="text-2xl font-aggressive text-primary/50 mb-2">Reap the Flag</h3>
+        <p class="text-stone-600 text-xs font-mono uppercase tracking-widest">Powered by CTFd</p>
+    </div>
+</footer>
+
+{% include "components/notifications.html" %}
+
+{% block scripts %}
+  {{ Assets.js("assets/js/page.js") }}
+{% endblock %}
+
+{{ Plugins.scripts }}
+
+{{ Configs.theme_footer }}
+</body>
+</html>

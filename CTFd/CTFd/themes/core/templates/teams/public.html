@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block header_strip %}
+<div class="w-full bg-background-dark border-b border-primary/10">
+    <div class="max-w-7xl mx-auto px-6 py-8 flex flex-col items-center justify-center text-center">
+        <h1 class="text-primary text-5xl font-aggressive uppercase tracking-widest mb-4" id="team-id" data-ctfd-team-id="{{ team.id }}">{{ team.name }}</h1>
+        
+        <div class="flex flex-wrap justify-center gap-3">
+            {% if team.oauth_id %}
+                <a href="https://majorleaguecyber.org/t/{{ team.name }}" class="px-3 py-1 bg-primary/20 border border-primary text-primary text-xs font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-colors">
+                    {% trans %}Official{% endtrans %}
+                </a>
+            {% endif %}
+
+            {% if team.affiliation %}
+                <span class="px-3 py-1 bg-card-dark border border-stone-700 text-stone-400 text-xs font-bold uppercase tracking-widest">
+                    {{ team.affiliation }}
+                </span>
+            {% endif %}
+
+            {% if team.country %}
+                <span class="px-3 py-1 bg-card-dark border border-stone-700 text-stone-400 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                    <i class="flag-{{ team.country.lower() }}"></i>
+                    {{ lookup_country_code(team.country) }}
+                </span>
+            {% endif %}
+            
+            {% if team.bracket_id %}
+                 <span class="px-3 py-1 bg-card-dark border border-stone-700 text-stone-400 text-xs font-bold uppercase tracking-widest">
+                    {{ team.bracket.name }}
+                </span>
+            {% endif %}
+        </div>
+
+        {% if team.fields %}
+            <div class="mt-6 flex flex-wrap justify-center gap-6">
+                {% for field in team.fields %}
+                    <div class="text-stone-500 font-mono text-sm">
+                        <span class="text-primary uppercase font-bold">{{ field.name }}:</span> {{ field.value }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if team.website and (team.website.startswith('http://') or team.website.startswith('https://')) %}
+            <div class="mt-6">
+                <a href="{{ team.website }}" target="_blank" rel="noopener" class="text-stone-500 hover:text-primary transition-colors">
+                    <i class="fas fa-external-link-alt fa-2x"></i>
+                </a>
+            </div>
+        {% endif %}
+
+        {% if scores_visible() %}
+            <div class="mt-8 flex gap-12 border-t border-primary/10 pt-8">
+                {% if place %}
+                    <div class="text-center">
+                        <div class="text-4xl font-aggressive text-white">{{ place }}</div>
+                        <div class="text-xs uppercase tracking-[0.2em] text-primary font-bold">Place</div>
+                    </div>
+                {% endif %}
+                {% if score %}
+                    <div class="text-center">
+                        <div class="text-4xl font-aggressive text-white">{{ score }}</div>
+                        <div class="text-xs uppercase tracking-[0.2em] text-primary font-bold">Points</div>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-12">
+    {% include "components/errors.html" %}
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <!-- Members Column -->
+        <div>
+            <h3 class="text-3xl font-aggressive mb-8 text-white uppercase tracking-widest">{% trans %}Members{% endtrans %}</h3>
+            <div class="overflow-x-auto rounded-none border border-primary/30 bg-card-dark/50 backdrop-blur-sm">
+                <table class="w-full text-left text-stone-400">
+                    <thead class="bg-primary/10 uppercase text-xs font-bold text-primary tracking-widest border-b border-primary/20">
+                        <tr>
+                            <th class="px-6 py-4 font-display">{% trans %}User Name{% endtrans %}</th>
+                            <th class="px-6 py-4 font-display text-right">{% trans %}Score{% endtrans %}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-primary/10">
+                        {% for member in team.members %}
+                            <tr class="hover:bg-primary/5 transition-colors group">
+                                <td class="px-6 py-4">
+                                    <a href="{{ url_for('users.public', user_id=member.id) }}" class="text-white hover:text-primary transition-colors font-bold font-display uppercase tracking-wider">
+                                        {{ member.name }}
+                                    </a>
+                                </td>
+                                <td class="px-6 py-4 text-right font-mono text-primary font-bold">{{ member.score }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Awards Column -->
+        {% if awards %}
+        <div>
+             <h3 class="text-3xl font-aggressive mb-8 text-white uppercase tracking-widest">{% trans %}Awards{% endtrans %}</h3>
+             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                 {% for award in awards %}
+                    <div class="bg-card-dark border border-primary/20 p-6 flex flex-col items-center text-center hover:border-primary/50 transition-colors">
+                        <i class="award-icon award-{{ award.icon }} fa-2x text-primary mb-3"></i>
+                        <strong class="text-white font-display text-lg uppercase">{{ award.name }}</strong>
+                        <p class="text-stone-500 text-sm mt-2">{{ award.description or "" }}</p>
+                        <p class="text-primary font-mono font-bold mt-auto pt-4">{{ award.value }}</p>
+                    </div>
+                 {% endfor %}
+             </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Solves Graph -->
+    <div class="mt-20">
+         <h3 class="text-3xl font-aggressive mb-8 text-white uppercase tracking-widest">{% trans %}Solves{% endtrans %}</h3>
+         <div id="score-graph" class="w-full h-[400px] border border-primary/30 bg-card-dark rounded-sm p-4 relative" x-data="TeamGraph" x-ref="scoregraph">
+            <div class="absolute inset-0 flex items-center justify-center">
+                 <i class="fas fa-biohazard fa-spin fa-3x fa-fw text-primary glow-red"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Solves Table -->
+    {% if solves %}
+        <div class="mt-20">
+             <div class="overflow-x-auto rounded-none border border-primary/30 bg-card-dark/50 backdrop-blur-sm">
+                <table class="w-full text-left text-stone-400">
+                    <thead class="bg-primary/10 uppercase text-xs font-bold text-primary tracking-widest border-b border-primary/20">
+                        <tr>
+                            <th class="px-6 py-4 font-display">{% trans %}Challenge{% endtrans %}</th>
+                            <th class="px-6 py-4 font-display">{% trans %}Category{% endtrans %}</th>
+                            <th class="px-6 py-4 font-display">{% trans %}Value{% endtrans %}</th>
+                            <th class="px-6 py-4 font-display">{% trans %}Time{% endtrans %}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-primary/10">
+                        {% for solve in solves %}
+                        <tr class="hover:bg-primary/5 transition-colors group">
+                            <td class="px-6 py-4">
+                                <a href="{{ url_for('challenges.listing') }}#{{ solve.challenge.name }}-{{ solve.challenge.id }}" class="text-white hover:text-primary transition-colors font-bold font-display uppercase tracking-wider">
+                                    {{ solve.challenge.name }}
+                                </a>
+                            </td>
+                            <td class="px-6 py-4 font-mono text-sm">{{ solve.challenge.category }}</td>
+                            <td class="px-6 py-4 font-mono text-sm text-primary">{{ solve.challenge.value }}</td>
+                            <td class="px-6 py-4 solve-time font-mono text-xs">
+                                <span data-time="{{ solve.date | isoformat }}"></span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <div class="text-center py-20 mt-10">
+            <p class="text-stone-500 text-xl font-display uppercase tracking-widest">No solves yet</p>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+  {{ Assets.js("assets/js/teams/public.js") }}
+{% endblock %}

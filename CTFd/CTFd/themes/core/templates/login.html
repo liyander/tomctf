@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-[calc(100vh-80px)] flex items-center justify-center p-6 bg-cover bg-center" style="background-image: url('https://raw.githubusercontent.com/LiyanderDev/TomCTF/main/assets/img/wolf-bg.jpg');">
+    <div class="w-full max-w-lg bg-card-dark/95 backdrop-blur-sm border border-primary/30 p-8 md:p-12 relative overflow-hidden shadow-[0_0_50px_rgba(236,19,19,0.3)]">
+        
+        <!-- Decoration -->
+        <div class="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+        <div class="absolute bottom-0 left-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none"></div>
+
+        <div class="text-center mb-10">
+            <h1 class="text-5xl font-aggressive text-primary uppercase tracking-widest mb-2">{% trans %}Login{% endtrans %}</h1>
+            <p class="text-stone-400 font-display text-sm tracking-widest uppercase">Enter the slaughterhouse</p>
+        </div>
+
+        {% include "components/errors.html" %}
+
+        {% if integrations.mlc() %}
+          <a class="block w-full text-center py-3 bg-stone-800 hover:bg-stone-700 text-stone-300 font-bold uppercase tracking-widest border border-stone-600 transition-all mb-8" href="{{ url_for('auth.oauth_login') }}">
+            Login with Major League Cyber
+          </a>
+        {% endif %}
+
+        {% with form = Forms.auth.LoginForm() %}
+          <form method="post" accept-charset="utf-8" class="space-y-6">
+            <div class="group">
+                <label class="block text-primary text-xs font-bold uppercase tracking-widest mb-2">
+                    {{ form.name.label }}
+                    <span class="text-red-500">*</span>
+                </label>
+                {{ form.name(class="w-full bg-black/50 border border-stone-700 text-white p-4 focus:border-primary outline-none transition-colors font-mono", placeholder="Username or Email", autocomplete="username email") }}
+            </div>
+
+            <div class="group">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="block text-primary text-xs font-bold uppercase tracking-widest">
+                        {{ form.password.label }}
+                        <span class="text-red-500">*</span>
+                    </label>
+                </div>
+                {{ form.password(class="w-full bg-black/50 border border-stone-700 text-white p-4 focus:border-primary outline-none transition-colors font-mono", placeholder="Password", autocomplete="current-password") }}
+            </div>
+
+            <div class="flex flex-col gap-4 mt-8">
+                {{ form.submit(class="w-full bg-primary hover:bg-red-700 text-white font-bold uppercase tracking-widest py-4 transition-all duration-300 hover:shadow-[0_0_20px_rgba(236,19,19,0.5)] cursor-pointer border-none") }}
+                
+                 <a class="text-xs text-center text-stone-500 hover:text-primary uppercase tracking-widest transition-colors" href="{{ url_for('auth.reset_password') }}">
+                    {% trans %}Forgot your password?{% endtrans %}
+                </a>
+            </div>
+
+            {{ form.nonce() }}
+          </form>
+        {% endwith %}
+    </div>
+</div>
+{% endblock %}
