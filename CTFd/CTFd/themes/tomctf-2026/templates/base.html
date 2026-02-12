@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html data-bs-theme="dark">
 <head>
   <title>{{ title or Configs.ctf_name }}</title>
   <meta charset="utf-8">
@@ -16,8 +16,6 @@
   {% endblock %}
 
   {{ Plugins.styles }}
-
-  {{ Assets.js("assets/js/color_mode_switcher.js", type=None) }}
 
   <script type="text/javascript">
       window.init = {

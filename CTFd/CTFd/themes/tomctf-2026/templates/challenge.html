@@ -51,6 +51,17 @@
           <div role="tabpanel" class="tab-pane fade show active" id="challenge">
             <h2 class="challenge-name text-center pt-3" x-text="getCleanChallengeName('{{ challenge.name }}')">
             </h2>
+
+            <!-- Author Breadcrumb -->
+            <nav aria-label="breadcrumb" class="d-flex justify-content-center mb-1">
+              <ol class="breadcrumb mb-0" style="font-family: 'Space Grotesk', var(--bs-font-sans-serif); font-size: 0.85rem; background: transparent;">
+                <li class="breadcrumb-item text-muted">{{ challenge.category }}</li>
+                <li class="breadcrumb-item active" aria-current="page" style="color: var(--bs-secondary-color);">
+                  <i class="fas fa-pen-nib me-1" style="font-size: 0.75rem;"></i>Designed by {{ challenge.author or 'TomCTF' }}
+                </li>
+              </ol>
+            </nav>
+
             <h3 class="challenge-value text-center">
               {{ challenge.value }}
             </h3>

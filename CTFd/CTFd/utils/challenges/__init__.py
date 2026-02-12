@@ -14,7 +14,7 @@ from CTFd.utils.helpers.models import build_model_filters
 from CTFd.utils.modes import generate_account_url, get_model
 
 Challenge = namedtuple(
-    "Challenge", ["id", "type", "name", "value", "category", "tags", "requirements"]
+    "Challenge", ["id", "type", "name", "value", "category", "tags", "requirements", "difficulty", "author"]
 )
 
 Rating = namedtuple("Rating", ["up", "down", "count"])
@@ -74,6 +74,8 @@ def get_all_challenges(admin=False, field=None, q=None, **query_args):
             category=c.category,
             requirements=c.requirements,
             tags=tag_schema.dump(c.tags).data,
+            difficulty=getattr(c, "difficulty", None),
+            author=getattr(c, "author", None),
         )
         results.append(ct)
     return results

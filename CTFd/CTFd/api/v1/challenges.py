@@ -233,6 +233,8 @@ class ChallengeList(Resource):
                     "type": challenge_type.name,
                     "name": challenge.name,
                     "value": challenge.value,
+                    "difficulty": getattr(challenge, "difficulty", None),
+                    "author": getattr(challenge, "author", None),
                     "solves": solve_counts.get(challenge.id, solve_count_dfl),
                     "first_bloods": get_first_bloods(challenge.id, solve_counts.get(challenge.id))
                     if solve_counts.get(challenge.id)
@@ -815,7 +817,17 @@ class ChallengeAttempt(Resource):
 
             if status == "correct" or status is True:
                 # The challenge plugin says the input is right
+                first_blood = False
                 if ctftime() or current_user.is_admin():
+                    # First blood is the first solve for this challenge across the event.
+                    # This is computed before inserting the solve so the submitter can be notified
+                    # even if SSE notifications are disabled/broken.
+                    try:
+                        solves_before = Solves.query.filter_by(challenge_id=challenge.id).count()
+                        first_blood = solves_before == 0
+                    except Exception:
+                        first_blood = False
+
                     try:
                         chal_class.solve(
                             user=user,
@@ -842,6 +854,7 @@ class ChallengeAttempt(Resource):
                             "data": {
                                 "status": "already_solved",
                                 "message": f"{message} but you already solved this",
+                                "first_blood": False,
                             },
                         }
 
@@ -858,7 +871,7 @@ class ChallengeAttempt(Resource):
                 )
                 return {
                     "success": True,
-                    "data": {"status": "correct", "message": message},
+                    "data": {"status": "correct", "message": message, "first_blood": first_blood},
                 }
             elif status == "partial":
                 # The challenge plugin says that the input is a partial solve

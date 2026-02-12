@@ -85,8 +85,7 @@ Alpine.data("Challenge", () => ({
 
   getCleanChallengeName(challengeName) {
     if (!challengeName) return '';
-    // 移除前缀标签 [EASY], [MEDIUM], [HARD]
-    return challengeName.replace(/^\[(EASY|MEDIUM|HARD)\]\s*/i, '').trim();
+    return challengeName.replace(/^\[(EASY|MEDIUM|HARD|INSANE|EXPERT)\]\s*/i, '').trim();
   },
 
   getStyles() {
@@ -217,6 +216,15 @@ Alpine.data("Challenge", () => ({
   async renderSubmissionResponse() {
     if (this.response.data.status === "correct") {
       this.submission = "";
+
+      // Play first blood sound directly from submission response
+      // This is more reliable than waiting for SSE notification
+      if (this.response.data.first_blood) {
+        console.log("[FirstBlood] You got first blood! Playing sound.");
+        if (typeof window.testFirstBloodSound === "function") {
+          window.testFirstBloodSound();
+        }
+      }
     }
 
     // Increment attempts counter

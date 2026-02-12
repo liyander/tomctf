@@ -107,34 +107,38 @@
              if (name.startsWith('[EASY]')) return 'easy';
              if (name.startsWith('[MEDIUM]')) return 'medium';
              if (name.startsWith('[HARD]')) return 'hard';
-             return 'medium'; // 默认中等难度
+             if (name.startsWith('[INSANE]') || name.startsWith('[EXPERT]')) return 'insane';
+             return 'medium';
+           },
+           
+           getDifficulty(challenge) {
+             // Prefer the difficulty field from the API (set in admin panel)
+             if (challenge.difficulty) return challenge.difficulty;
+             // Fallback: parse from name prefix
+             return this.getDifficultyFromName(challenge.name);
            },
            
            getCleanChallengeName(challengeName) {
              if (!challengeName) return '';
-             // 移除前缀标签 [EASY], [MEDIUM], [HARD]
-             return challengeName.replace(/^\[(EASY|MEDIUM|HARD)\]\s*/i, '').trim();
+             return challengeName.replace(/^\[(EASY|MEDIUM|HARD|INSANE|EXPERT)\]\s*/i, '').trim();
            },
            
-           getDifficultyWeight(challengeName) {
-             if (!challengeName) return 2; // 默认中等难度权重
-             const name = challengeName.toUpperCase();
-             if (name.startsWith('[EASY]')) return 1;    // EASY = 1 (最高优先级)
-             if (name.startsWith('[MEDIUM]')) return 2;  // MEDIUM = 2
-             if (name.startsWith('[HARD]')) return 3;     // HARD = 3 (最低优先级)
-             return 2; // 默认中等难度权重
+           getDifficultyWeight(challenge) {
+             const diff = typeof challenge === 'string' 
+               ? challenge 
+               : this.getDifficulty(challenge);
+             const weights = { 'easy': 1, 'medium': 2, 'hard': 3, 'insane': 4 };
+             return weights[diff] || 2;
            },
            
            getSortedChallenges(category) {
              const challenges = this.getChallenges(category);
              return challenges.sort((a, b) => {
-               // 首先按难度排序 (EASY -> MEDIUM -> HARD)
-               const difficultyA = this.getDifficultyWeight(a.name);
-               const difficultyB = this.getDifficultyWeight(b.name);
+               const difficultyA = this.getDifficultyWeight(a);
+               const difficultyB = this.getDifficultyWeight(b);
                if (difficultyA !== difficultyB) {
                  return difficultyA - difficultyB;
                }
-               // 如果难度相同，按分数排序 (低分到高分)
                return a.value - b.value;
              });
            }
@@ -236,7 +240,7 @@
                         class="challenge-card h-100 position-relative"
                         :class="[
                           c.solved_by_me ? 'challenge-solved' : '',
-                          'difficulty-' + getDifficultyFromName(c.name),
+                          'difficulty-' + getDifficulty(c),
                           'category-' + category.toLowerCase().replace(/[^a-z0-9]/g, '-'),
                           ...c.tags.map((tag) => `tag-${tag.value.replace(/ /g, '-')}`),
                         ]"
@@ -268,22 +272,28 @@
                           <div class="d-flex justify-content-between align-items-center mb-2">
                             <!-- Difficulty Indicator -->
                             <div class="difficulty-indicator">
-                              <template x-if="getDifficultyFromName(c.name) === 'easy'">
+                              <template x-if="getDifficulty(c) === 'easy'">
                                 <span class="badge bg-success-subtle text-success px-2 py-1 rounded-pill small">
                                   <i class="fas fa-seedling me-1"></i>
                                   {% trans %}Easy{% endtrans %}
                                 </span>
                               </template>
-                              <template x-if="getDifficultyFromName(c.name) === 'medium'">
+                              <template x-if="getDifficulty(c) === 'medium'">
                                 <span class="badge bg-warning-subtle text-warning px-2 py-1 rounded-pill small">
                                   <i class="fas fa-fire me-1"></i>
                                   {% trans %}Medium{% endtrans %}
                                 </span>
                               </template>
-                              <template x-if="getDifficultyFromName(c.name) === 'hard'">
+                              <template x-if="getDifficulty(c) === 'hard'">
                                 <span class="badge bg-danger-subtle text-danger px-2 py-1 rounded-pill small">
                                   <i class="fas fa-skull me-1"></i>
                                   {% trans %}Hard{% endtrans %}
+                                </span>
+                              </template>
+                              <template x-if="getDifficulty(c) === 'insane'">
+                                <span class="badge bg-dark text-light px-2 py-1 rounded-pill small" style="border: 1px solid #dc3545;">
+                                  <i class="fas fa-skull-crossbones me-1"></i>
+                                  {% trans %}Insane{% endtrans %}
                                 </span>
                               </template>
                             </div>
@@ -843,12 +853,26 @@
         // 初始化CTFd通知系统
         initCTFdNotificationSystem() {
           try {
-            // 监听CTFd通知计数器的变化
-            if (typeof CTFd !== 'undefined' && CTFd.events && CTFd.events.controller) {
-              CTFd.events.controller.on('counter', (data) => {
-                this.unreadCount = data.count;
-                Alpine.store("unread_count", this.unreadCount);
-              });
+            // Listen for counter changes using the supported hook.
+            // CTFd calls `CTFd._functions.events.eventCount(count)` whenever the unread count changes.
+            if (
+              typeof CTFd !== 'undefined' &&
+              CTFd._functions &&
+              CTFd._functions.events &&
+              typeof CTFd._functions.events.eventCount === 'function' &&
+              !CTFd._functions.events.__activityFeedCountWrapped
+            ) {
+              const original = CTFd._functions.events.eventCount;
+              CTFd._functions.events.eventCount = (count) => {
+                try {
+                  this.unreadCount = count;
+                  Alpine.store("unread_count", this.unreadCount);
+                } catch (e) {
+                  // ignore
+                }
+                return original(count);
+              };
+              CTFd._functions.events.__activityFeedCountWrapped = true;
             }
             
             // 初始化未读计数

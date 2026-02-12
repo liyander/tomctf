@@ -26,6 +26,36 @@
 	</div>
 	{% endblock %}
 
+	{% block difficulty %}
+	<div class="form-group">
+		<label>
+			Difficulty:<br>
+			<small class="form-text text-muted">
+				The difficulty level of your challenge
+			</small>
+		</label>
+		<select class="form-control custom-select" name="difficulty">
+			<option value="">-- Select Difficulty --</option>
+			<option value="easy">Easy</option>
+			<option value="medium">Medium</option>
+			<option value="hard">Hard</option>
+			<option value="insane">Insane / Expert</option>
+		</select>
+	</div>
+	{% endblock %}
+
+	{% block author %}
+	<div class="form-group">
+		<label>
+			Author:<br>
+			<small class="form-text text-muted">
+				The author/creator of this challenge
+			</small>
+		</label>
+		<input type="text" class="form-control" name="author" placeholder="Enter challenge author">
+	</div>
+	{% endblock %}
+
 
 	{% block message %}
 	<div class="form-group">

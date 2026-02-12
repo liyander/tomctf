@@ -265,38 +265,39 @@ class BaseChallenge(object):
         try:
             db.session.add(solve)
             db.session.commit()
+        except IntegrityError as e:
+            db.session.rollback()
+            raise ChallengeSolveException(
+                f"Duplicate solve for user {user.id} on challenge {challenge.id}"
+            ) from e
 
-            # First Blood Notification
+        # First Blood Notification (wrapped in its own try/except so it never
+        # breaks the solve response even if SSE or DB has an issue)
+        try:
             solve_count = Solves.query.filter_by(challenge_id=challenge.id).count()
             if solve_count == 1:
                 solver_name = team.name if team else user.name
-                # Sanitize input to prevent HTML injection in notification if names are not clean, 
-                # but CTFd usually handles escaping in templates.
-                # However, for toast/js, we should be careful. 
-                # CTFd NotificationSchema/Marshmallow might handle it.
-                
                 content = f"First Blood on {challenge.name} by {solver_name}!"
-                
+
                 notif = Notifications(title="First Blood", content=content)
                 db.session.add(notif)
                 db.session.commit()
 
                 schema = NotificationSchema()
                 response = schema.dump(notif)
-                
+
                 # Use toast instead of alert to avoid modal/popup
                 response.data["type"] = "toast"
-                
-                # Disable default sound so only our custom music plays
+
+                # Disable default sound so only our custom first-blood music plays
                 response.data["sound"] = False
 
-                current_app.events_manager.publish(data=response.data, type="notification")
-
-        except IntegrityError as e:
-            db.session.rollback()
-            raise ChallengeSolveException(
-                f"Duplicate solve for user {user.id} on challenge {challenge.id}"
-            ) from e
+                current_app.events_manager.publish(
+                    data=response.data, type="notification"
+                )
+        except Exception:
+            import traceback
+            traceback.print_exc()
 
         # If the challenge is dynamic we should calculate a new value
         if challenge.function in DECAY_FUNCTIONS:
