@@ -224,6 +224,9 @@ Alpine.data("Challenge", () => ({
         if (typeof window.testFirstBloodSound === "function") {
           window.testFirstBloodSound();
         }
+        if (typeof window.triggerFlagCaptured === "function") {
+          window.triggerFlagCaptured();
+        }
       }
     }
 

@@ -4,9 +4,11 @@
   <title>{{ title or Configs.ctf_name }}</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="shortcut icon" href="{{ Configs.ctf_small_icon }}" type="image/x-icon">
+  <link rel="shortcut icon" href="/themes/tomctf-2026/static/img/tom-ctf.png" type="image/png">
+  <link rel="icon" href="/themes/tomctf-2026/static/img/tom-ctf.png" type="image/png">
 
   <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Metal+Mania&family=Nosifer&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.cdnfonts.com/css/stranger-things" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 
   {{ meta | safe }}
@@ -77,6 +79,230 @@
 {% endblock %}
 
 {{ Plugins.scripts }}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+/* ============================================================
+   FLAG CAPTURED — First Blood Full-Screen Effect
+   Call window.triggerFlagCaptured() to fire.
+   Total duration: ~5 seconds (3.2s visible + 1.8s fade)
+   ============================================================ */
+(function(){
+"use strict";
+var FADE_OUT_DELAY=3200,FADE_OUT_DURATION=1.8,isRunning=false;
+
+function hash(x,y){var h=x*374761393+y*668265263;h=(h^(h>>13))*1274126177;return((h^(h>>16))&0x7fffffff)/0x7fffffff;}
+function smoothNoise(x,y){var ix=Math.floor(x),iy=Math.floor(y),fx=x-ix,fy=y-iy,sx=fx*fx*(3-2*fx),sy=fy*fy*(3-2*fy);var a=hash(ix,iy),b=hash(ix+1,iy),c=hash(ix,iy+1),d=hash(ix+1,iy+1);return a+(b-a)*sx+(c-a)*sy+(a-b-c+d)*sx*sy;}
+function fbm(x,y,oct){var v=0,a=0.5,f=1;for(var i=0;i<oct;i++){v+=a*smoothNoise(x*f,y*f);a*=0.5;f*=2.1;}return v;}
+
+function ensureFont(){
+  if(!document.querySelector('link[href*="stranger-things"]')){
+    var lk=document.createElement("link");lk.rel="stylesheet";
+    lk.href="https://fonts.cdnfonts.com/css/stranger-things";
+    document.head.appendChild(lk);
+  }
+}
+
+function buildOverlay(){
+  ensureFont();
+  var root=document.createElement("div");root.id="fc-root";
+  root.innerHTML=
+    '<style>'+
+    '#fc-root{position:fixed;inset:0;z-index:99990;pointer-events:none}'+
+    '#fc-vig{position:fixed;inset:0;z-index:99991;pointer-events:none;background:radial-gradient(ellipse at center,transparent 20%,rgba(0,0,0,0.92) 100%);opacity:0}'+
+    '#fc-flash{position:fixed;inset:0;z-index:99998;pointer-events:none;background:radial-gradient(ellipse at center,rgba(229,9,20,0.3) 0%,transparent 70%);opacity:0}'+
+    '#fc-glitch{position:fixed;inset:0;z-index:99995;pointer-events:none;opacity:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(229,9,20,0.03) 2px,rgba(229,9,20,0.03) 4px);mix-blend-mode:screen}'+
+    '#fc-smoke{position:fixed;inset:0;z-index:99992;pointer-events:none}'+
+    '#fc-embers{position:fixed;inset:0;z-index:99993;pointer-events:none;overflow:hidden}'+
+    '#fc-sw{position:fixed;z-index:99994;pointer-events:none;border:2px solid rgba(229,9,20,0.6);border-radius:50%;box-shadow:0 0 30px rgba(255,0,0,0.3),inset 0 0 30px rgba(255,0,0,0.1);opacity:0;transform:scale(0)}'+
+    '#fc-tw{position:fixed;inset:0;z-index:99997;pointer-events:none;display:flex;align-items:center;justify-content:center}'+
+    '.stranger-title{font-family:"Stranger Things",serif;font-size:clamp(48px,10vw,120px);letter-spacing:6px;color:#e50914;text-shadow:0 0 10px #e50914,0 0 20px #e50914,0 0 40px #ff0000,0 0 80px #ff0000;opacity:0}'+
+    '@keyframes fc-pop{0%{opacity:0;transform:scale(0) rotate(-10deg)}50%{opacity:1;transform:scale(1.2) rotate(3deg)}70%{transform:scale(.95) rotate(-2deg)}100%{opacity:1;transform:scale(1) rotate(0deg)}}'+
+    '.fc-pop{animation:fc-pop .7s cubic-bezier(.68,-.55,.265,1.55) forwards}'+
+    '@keyframes fc-shake{0%,100%{transform:translate(0,0)}10%{transform:translate(-6px,5px)}20%{transform:translate(5px,-6px)}30%{transform:translate(-5px,4px)}40%{transform:translate(6px,-4px)}50%{transform:translate(-4px,6px)}60%{transform:translate(5px,-5px)}70%{transform:translate(-6px,4px)}80%{transform:translate(4px,-6px)}90%{transform:translate(-5px,5px)}}'+
+    '.fc-shake{animation:fc-shake 0.3s ease-in-out}'+
+    '</style>'+
+    '<div id="fc-vig"></div>'+
+    '<canvas id="fc-smoke"></canvas>'+
+    '<div id="fc-flash"></div>'+
+    '<div id="fc-glitch"></div>'+
+    '<div id="fc-embers"></div>'+
+    '<div id="fc-sw"></div>'+
+    '<div id="fc-tw"><div style="text-align:center"><div class="fc-pop"><span class="stranger-title" id="fc-title">FLAG CAPTURED!</span></div></div></div>';
+  document.body.appendChild(root);
+  return root;
+}
+
+function initSmoke(canvas,gOp){
+  var W=window.innerWidth,H=window.innerHeight,ctx=canvas.getContext("2d");
+  canvas.width=W;canvas.height=H;
+  var tendrils=[];
+  for(var i=0;i<80;i++){
+    var edge=Math.floor(Math.random()*4),sx,sy,tx,ty;
+    switch(edge){
+      case 0:sx=Math.random()*W;sy=-20;tx=W/2+(Math.random()-.5)*W*.6;ty=H*.35;break;
+      case 1:sx=W+20;sy=Math.random()*H;tx=W*.65;ty=H/2+(Math.random()-.5)*H*.6;break;
+      case 2:sx=Math.random()*W;sy=H+20;tx=W/2+(Math.random()-.5)*W*.6;ty=H*.65;break;
+      default:sx=-20;sy=Math.random()*H;tx=W*.35;ty=H/2+(Math.random()-.5)*H*.6;break;
+    }
+    tendrils.push({sx:sx,sy:sy,tx:tx,ty:ty,speed:.15+Math.random()*.25,width:20+Math.random()*60,
+      opacity:.08+Math.random()*.15,noiseOffset:Math.random()*100,progress:0,segments:12+Math.floor(Math.random()*8)});
+  }
+  var start=null;
+  function draw(ts){
+    if(!isRunning)return;
+    if(!start)start=ts;
+    var elapsed=(ts-start)/1000;
+    ctx.clearRect(0,0,W,H);ctx.globalAlpha=gOp.val;
+    for(var ti=0;ti<tendrils.length;ti++){
+      var t=tendrils[ti];t.progress=Math.min(1,elapsed*t.speed);
+      var segs=Math.floor(t.segments*t.progress);if(segs<2)continue;
+      ctx.save();ctx.globalCompositeOperation="lighter";
+      for(var s=1;s<=segs;s++){
+        var frac=s/t.segments,pf=(s-1)/t.segments;
+        var nx=fbm(t.noiseOffset+frac*3,elapsed*.4,3)*t.width*1.5;
+        var ny=fbm(t.noiseOffset+50+frac*3,elapsed*.4+10,3)*t.width;
+        var pnx=fbm(t.noiseOffset+pf*3,elapsed*.4,3)*t.width*1.5;
+        var pny=fbm(t.noiseOffset+50+pf*3,elapsed*.4+10,3)*t.width;
+        var x1=t.sx+(t.tx-t.sx)*pf+pnx,y1=t.sy+(t.ty-t.sy)*pf+pny;
+        var x2=t.sx+(t.tx-t.sx)*frac+nx,y2=t.sy+(t.ty-t.sy)*frac+ny;
+        var taper=Math.sin(frac*Math.PI)*(1-frac*.3),w=t.width*taper;
+        var grad=ctx.createRadialGradient(x2,y2,0,x2,y2,w);
+        grad.addColorStop(0,"rgba(100,0,0,"+(t.opacity*taper*1.2)+")");
+        grad.addColorStop(.4,"rgba(40,0,0,"+(t.opacity*taper*.6)+")");
+        grad.addColorStop(1,"rgba(0,0,0,0)");
+        ctx.beginPath();ctx.arc(x2,y2,w,0,Math.PI*2);ctx.fillStyle=grad;ctx.fill();
+        ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
+        ctx.strokeStyle="rgba(180,10,10,"+(t.opacity*taper*.5)+")";
+        ctx.lineWidth=Math.max(.5,w*.05);ctx.shadowColor="#ff0000";ctx.shadowBlur=8*taper;ctx.stroke();
+      }
+      ctx.restore();
+    }
+    ctx.save();ctx.globalCompositeOperation="source-over";
+    var ef=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*.15,W/2,H/2,Math.max(W,H)*.7);
+    ef.addColorStop(0,"rgba(0,0,0,0)");ef.addColorStop(.6,"rgba(0,0,0,0)");
+    ef.addColorStop(1,"rgba(10,0,0,"+(0.4*gOp.val)+")");
+    ctx.fillStyle=ef;ctx.fillRect(0,0,W,H);ctx.restore();
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+}
+
+function spawnEmbers(){
+  var W=window.innerWidth,H=window.innerHeight,c=document.getElementById("fc-embers");if(!c)return;
+  for(var i=0;i<50;i++){
+    var em=document.createElement("div"),sz=1.5+Math.random()*4,hot=Math.random()>.6;
+    em.style.cssText="position:absolute;width:"+sz+"px;height:"+sz+"px;border-radius:50%;"+
+      "background:"+(hot?"radial-gradient(circle,rgba(255,200,50,1)0%,rgba(255,80,0,.8)50%,rgba(200,20,0,0)100%)":"radial-gradient(circle,rgba(255,100,30,.9)0%,rgba(180,20,0,.5)60%,rgba(100,0,0,0)100%)")+";"+
+      "box-shadow:0 0 "+(sz*2)+"px rgba(255,"+(hot?150:60)+",0,.6);left:"+(10+Math.random()*(W-20))+"px;bottom:-10px;opacity:0;";
+    c.appendChild(em);
+    gsap.to(em,{y:-(H*.4+Math.random()*H*.5),x:(Math.random()-.5)*150,opacity:.5+Math.random()*.5,
+      duration:2.5+Math.random()*3,delay:Math.random()*3,ease:"power1.out",
+      onComplete:function(){var el=this.targets()[0];gsap.to(el,{opacity:0,duration:.4,onComplete:function(){el.remove()}})}});
+    gsap.to(em,{scale:.5+Math.random()*.5,duration:.2+Math.random()*.3,repeat:-1,yoyo:true,delay:Math.random()*3,ease:"sine.inOut"});
+  }
+}
+
+function triggerGlitch(){
+  var ov=document.getElementById("fc-glitch");if(!ov)return;
+  gsap.to(ov,{opacity:1,duration:.05,yoyo:true,repeat:3});
+  var H=window.innerHeight;
+  for(var i=0;i<6;i++){
+    var bar=document.createElement("div");
+    bar.style.cssText="position:fixed;left:0;right:0;z-index:99996;pointer-events:none;"+
+      "top:"+Math.random()*H+"px;height:"+(1+Math.random()*4)+"px;"+
+      "background:rgba(229,9,20,"+(.3+Math.random()*.5)+");box-shadow:0 0 10px rgba(255,0,0,.4);opacity:0;"+
+      "transform:translateX("+(Math.random()-.5)*20+"px);";
+    document.body.appendChild(bar);
+    gsap.to(bar,{opacity:1,duration:.04,delay:Math.random()*.15,yoyo:true,repeat:1+Math.floor(Math.random()*3),
+      onComplete:function(){this.targets()[0].remove()}});
+  }
+}
+
+function startGlitchLoop(){if(!isRunning)return;triggerGlitch();setTimeout(function(){if(isRunning)startGlitchLoop()},600+Math.random()*1200);}
+
+function triggerShockwave(){
+  var sw=document.getElementById("fc-sw");if(!sw)return;
+  var W=window.innerWidth,H=window.innerHeight,size=Math.max(W,H)*1.5;
+  sw.style.width=size+"px";sw.style.height=size+"px";
+  sw.style.left=(W/2-size/2)+"px";sw.style.top=(H/2-size/2)+"px";
+  gsap.fromTo(sw,{scale:0,opacity:.7},{scale:1,opacity:0,duration:1.2,ease:"power2.out"});
+}
+
+function showTitle(){
+  var title=document.getElementById("fc-title");if(!title)return;
+  function anim(){
+    gsap.fromTo(title,{opacity:0},{opacity:1,duration:.08,repeat:6,yoyo:true,delay:.05,
+      onComplete:function(){
+        gsap.to(title,{opacity:1,duration:.2});
+        gsap.to(title,{textShadow:"0 0 15px #e50914,0 0 30px #e50914,0 0 60px #ff0000,0 0 120px #ff0000,0 0 200px #ff0000",
+          duration:1.2,repeat:3,yoyo:true,ease:"sine.inOut"});
+      }
+    });
+  }
+  if(document.fonts&&document.fonts.load){document.fonts.load('1em "Stranger Things"').then(anim).catch(anim);}
+  else{anim();}
+}
+
+function playHum(){
+  try{
+    var ctx=new(window.AudioContext||window.webkitAudioContext)();
+    var osc=ctx.createOscillator();osc.type="sawtooth";osc.frequency.value=45;
+    var gain=ctx.createGain();
+    gain.gain.setValueAtTime(0,ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(.04,ctx.currentTime+.5);
+    gain.gain.linearRampToValueAtTime(.06,ctx.currentTime+2);
+    gain.gain.linearRampToValueAtTime(0,ctx.currentTime+5);
+    var flt=ctx.createBiquadFilter();flt.type="lowpass";flt.frequency.value=120;
+    osc.connect(flt);flt.connect(gain);gain.connect(ctx.destination);
+    osc.start();osc.stop(ctx.currentTime+5.5);
+    setTimeout(function(){
+      var buf=ctx.createBuffer(1,ctx.sampleRate*.15,ctx.sampleRate),d=buf.getChannelData(0);
+      for(var i=0;i<d.length;i++){var t=i/d.length;d[i]=(Math.random()*2-1)*Math.pow(1-t,5)*.2;}
+      var src=ctx.createBufferSource();src.buffer=buf;
+      var lp=ctx.createBiquadFilter();lp.type="lowpass";lp.frequency.value=300;
+      src.connect(lp);lp.connect(ctx.destination);src.start();
+    },700);
+  }catch(e){}
+}
+
+function flash(){gsap.fromTo("#fc-flash",{opacity:0},{opacity:1,duration:.05,yoyo:true,repeat:1,ease:"power4.out"});}
+function shake(){document.body.classList.add("fc-shake");setTimeout(function(){document.body.classList.remove("fc-shake")},300);}
+
+function fadeOutAll(root,sOp){
+  var tl=gsap.timeline({onComplete:function(){isRunning=false;if(root&&root.parentNode)root.parentNode.removeChild(root);}});
+  tl.to("#fc-title",{opacity:0,duration:.06,repeat:8,yoyo:true,ease:"none"},0);
+  tl.to("#fc-title",{opacity:0,duration:FADE_OUT_DURATION*.5,ease:"power2.in"},.5);
+  tl.to(sOp,{val:0,duration:FADE_OUT_DURATION,ease:"power2.in"},.2);
+  tl.to("#fc-embers",{opacity:0,duration:FADE_OUT_DURATION*.8,ease:"power2.in"},.3);
+  tl.to("#fc-glitch",{opacity:0,duration:.5},0);
+  tl.to("#fc-vig",{opacity:0,duration:FADE_OUT_DURATION,ease:"power2.in"},.5);
+  tl.to("#fc-flash",{opacity:0,duration:.3},0);
+}
+
+window.triggerFlagCaptured=function(){
+  if(isRunning)return;
+  if(typeof gsap==="undefined"){console.warn("[FlagCaptured] GSAP not loaded");return;}
+  isRunning=true;
+  var root=buildOverlay(),sOp={val:0},canvas=document.getElementById("fc-smoke");
+  gsap.to(sOp,{val:1,duration:1.5,ease:"power2.in"});
+  initSmoke(canvas,sOp);
+  gsap.to("#fc-vig",{opacity:1,duration:1.2,ease:"power2.in"});
+  playHum();
+  setTimeout(triggerGlitch,500);
+  setTimeout(function(){shake();flash();triggerShockwave();triggerGlitch();},700);
+  setTimeout(showTitle,850);
+  setTimeout(spawnEmbers,1000);
+  setTimeout(startGlitchLoop,800);
+  setTimeout(function(){shake();flash();},1100);
+  setTimeout(function(){fadeOutAll(root,sOp);},FADE_OUT_DELAY);
+};
+
+console.log("[FlagCaptured] Effect loaded. Call window.triggerFlagCaptured() to test.");
+ensureFont();
+if(document.fonts&&document.fonts.load){document.fonts.load('1em "Stranger Things"');}
+})();
+</script>
 
 {{ Configs.theme_footer }}
 </body>

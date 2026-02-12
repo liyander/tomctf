@@ -1,27 +1,23 @@
 {
-  "node_modules/@fontsource/lato/files/lato-latin-ext-700-normal.woff2": {
-    "file": "assets/lato-latin-ext-700-normal.4ef7cd3d.woff2",
-    "src": "node_modules/@fontsource/lato/files/lato-latin-ext-700-normal.woff2"
-  },
-  "node_modules/@fontsource/lato/files/lato-latin-400-normal.woff2": {
-    "file": "assets/lato-latin-400-normal.918b7dc3.woff2",
-    "src": "node_modules/@fontsource/lato/files/lato-latin-400-normal.woff2"
-  },
   "node_modules/@fontsource/lato/files/lato-latin-ext-400-normal.woff2": {
     "file": "assets/lato-latin-ext-400-normal.1c2fc265.woff2",
     "src": "node_modules/@fontsource/lato/files/lato-latin-ext-400-normal.woff2"
-  },
-  "node_modules/@fontsource/raleway/files/raleway-cyrillic-ext-400-normal.woff2": {
-    "file": "assets/raleway-cyrillic-ext-400-normal.068d812c.woff2",
-    "src": "node_modules/@fontsource/raleway/files/raleway-cyrillic-ext-400-normal.woff2"
   },
   "node_modules/@fontsource/lato/files/lato-latin-700-normal.woff2": {
     "file": "assets/lato-latin-700-normal.c447dd76.woff2",
     "src": "node_modules/@fontsource/lato/files/lato-latin-700-normal.woff2"
   },
-  "node_modules/@fontsource/raleway/files/raleway-vietnamese-400-normal.woff2": {
-    "file": "assets/raleway-vietnamese-400-normal.a2f00e25.woff2",
-    "src": "node_modules/@fontsource/raleway/files/raleway-vietnamese-400-normal.woff2"
+  "node_modules/@fontsource/lato/files/lato-latin-400-normal.woff2": {
+    "file": "assets/lato-latin-400-normal.918b7dc3.woff2",
+    "src": "node_modules/@fontsource/lato/files/lato-latin-400-normal.woff2"
+  },
+  "node_modules/@fontsource/raleway/files/raleway-cyrillic-ext-400-normal.woff2": {
+    "file": "assets/raleway-cyrillic-ext-400-normal.068d812c.woff2",
+    "src": "node_modules/@fontsource/raleway/files/raleway-cyrillic-ext-400-normal.woff2"
+  },
+  "node_modules/@fontsource/lato/files/lato-latin-ext-700-normal.woff2": {
+    "file": "assets/lato-latin-ext-700-normal.4ef7cd3d.woff2",
+    "src": "node_modules/@fontsource/lato/files/lato-latin-ext-700-normal.woff2"
   },
   "node_modules/@fontsource/raleway/files/raleway-cyrillic-400-normal.woff2": {
     "file": "assets/raleway-cyrillic-400-normal.a9f2a909.woff2",
@@ -34,6 +30,10 @@
   "node_modules/@fontsource/raleway/files/raleway-latin-400-normal.woff2": {
     "file": "assets/raleway-latin-400-normal.1d94fd1a.woff2",
     "src": "node_modules/@fontsource/raleway/files/raleway-latin-400-normal.woff2"
+  },
+  "node_modules/@fontsource/raleway/files/raleway-vietnamese-400-normal.woff2": {
+    "file": "assets/raleway-vietnamese-400-normal.a2f00e25.woff2",
+    "src": "node_modules/@fontsource/raleway/files/raleway-vietnamese-400-normal.woff2"
   },
   "node_modules/@fontsource/lato/files/lato-all-700-normal.woff": {
     "file": "assets/lato-all-700-normal.4bfd21d1.woff",
@@ -78,7 +78,7 @@
     ]
   },
   "assets/js/challenges.js": {
-    "file": "assets/challenges.d4fee85e.js",
+    "file": "assets/challenges.9977b923.js",
     "src": "assets/js/challenges.js",
     "isEntry": true,
     "imports": [
@@ -200,7 +200,7 @@
     ]
   },
   "assets/scss/main.scss": {
-    "file": "assets/main.178cec0a.css",
+    "file": "assets/main.94fdbea8.css",
     "src": "assets/scss/main.scss",
     "isEntry": true
   }
