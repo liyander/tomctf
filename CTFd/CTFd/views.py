@@ -373,6 +373,11 @@ def static_html(route):
         return render_template("page.html", content=page.html, title=page.title)
 
 
+@views.route("/credits")
+def credits_page():
+    return render_template("credits.html")
+
+
 @views.route("/tos")
 def tos():
     tos_url = get_config("tos_url")
