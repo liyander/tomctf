@@ -1,11 +1,11 @@
 <div :class="getStyles()" role="document" x-data="Challenge" x-init='id = {{ challenge.id }}; max_attempts = {{ max_attempts }}; attempts = {{ attempts }}; ratingValue = {{ (rating.get('value') if rating else None) | tojson }}; ratingReview = {{ (rating.get('review', '') if rating else None) | tojson }};'>
-  <div class="modal-content">
+  <div class="modal-content" style="font-family: 'Space Grotesk', var(--bs-font-sans-serif); border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; overflow: hidden;">
     <div class="modal-body py-4 px-4 px-sm-5">
 
       <div>
         <button type="button" class="btn-close float-end" data-bs-dismiss="modal" aria-label="Close"></button>
 
-        <ul class="nav nav-tabs">
+        <ul class="nav nav-tabs" style="border-bottom-color: rgba(255,255,255,0.1);">
           <li class="nav-item">
             <button class="nav-link active" data-bs-target="#challenge" @click="showChallenge()">
               {% trans %}Challenge{% endtrans %}
@@ -49,58 +49,72 @@
       <div>
         <div class="tab-content">
           <div role="tabpanel" class="tab-pane fade show active" id="challenge">
-            <h2 class="challenge-name text-center pt-3" x-text="getCleanChallengeName('{{ challenge.name }}')">
-            </h2>
 
-            <!-- Author Breadcrumb -->
-            <nav aria-label="breadcrumb" class="d-flex justify-content-center mb-1">
-              <ol class="breadcrumb mb-0" style="font-family: 'Space Grotesk', var(--bs-font-sans-serif); font-size: 0.85rem; background: transparent;">
-                <li class="breadcrumb-item text-muted">{{ challenge.category }}</li>
-                <li class="breadcrumb-item active" aria-current="page" style="color: var(--bs-secondary-color);">
-                  <i class="fas fa-pen-nib me-1" style="font-size: 0.75rem;"></i>Designed by {{ challenge.author or 'TomCTF' }}
-                </li>
-              </ol>
-            </nav>
+            <!-- Challenge Header Section -->
+            <div class="text-center pt-4 pb-2">
+              <h2 class="challenge-name fw-bold mb-2" style="font-family: 'Space Grotesk', var(--bs-font-sans-serif); letter-spacing: -0.02em;" x-text="getCleanChallengeName('{{ challenge.name }}')">
+              </h2>
 
-            <h3 class="challenge-value text-center">
-              {{ challenge.value }}
-            </h3>
+              <!-- Breadcrumb: Category / Designed by -->
+              <nav aria-label="breadcrumb" class="d-inline-flex">
+                <ol class="breadcrumb mb-2 px-3 py-1 rounded-pill" style="font-family: 'Space Grotesk', var(--bs-font-sans-serif); font-size: 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);">
+                  <li class="breadcrumb-item" style="color: var(--bs-info);">
+                    <i class="fas fa-folder-open me-1" style="font-size: 0.7rem;"></i>{{ challenge.category }}
+                  </li>
+                  <li class="breadcrumb-item active" aria-current="page" style="color: var(--bs-secondary-color);">
+                    <i class="fas fa-pen-nib me-1" style="font-size: 0.7rem;"></i>Designed by {{ challenge.author or 'TomCTF' }}
+                  </li>
+                </ol>
+              </nav>
 
+              <!-- Points Badge -->
+              <div class="mb-2">
+                <span class="badge rounded-pill px-4 py-2" style="font-size: 1.1rem; font-weight: 700; font-family: 'Space Grotesk', var(--bs-font-sans-serif); background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.2), rgba(var(--bs-primary-rgb), 0.05)); border: 1px solid rgba(var(--bs-primary-rgb), 0.3); color: var(--bs-primary);">
+                  <i class="fas fa-star me-1" style="font-size: 0.9rem;"></i>{{ challenge.value }} pts
+                </span>
+              </div>
+            </div>
 
             {% if tags %}
-              <div class="challenge-tags text-center pt-2 pb-3">
+              <div class="challenge-tags text-center pb-2">
                 {% block tags %}
                   {% for tag in tags %}
-                    <span class="challenge-tag badge bg-info">{{ tag }}</span>
+                    <span class="challenge-tag badge rounded-pill px-3 py-1 me-1" style="background: rgba(var(--bs-info-rgb), 0.15); color: var(--bs-info); border: 1px solid rgba(var(--bs-info-rgb), 0.25); font-family: 'Space Grotesk', var(--bs-font-sans-serif); font-size: 0.75rem;">{{ tag }}</span>
                   {% endfor %}
                 {% endblock %}
               </div>
             {% endif %}
 
-            <small class="challenge-attribution text-center text-muted">
+            <small class="challenge-attribution text-center text-muted d-block">
               {% block attribution %}{{ challenge.byline }}{% endblock %}
             </small>
 
             {% if Configs.challenge_ratings == "public" %}
-            <small class="challenge-ratings text-center text-muted d-block">
+            <div class="text-center mb-2">
               {% block ratings %}
                 {% if ratings %}
-                  <span><i class="fa-solid fa-thumbs-up"></i> {{ ratings.up }}</span>
-                  <span class="text-center px-2">
-                    {% if ratings.count %}
-                    ({{ ((ratings.up / (ratings.count)) * 100) | int }}% liked)
-                    {% endif %}
-                  </span>
-                  <span><i class="fa-solid fa-thumbs-down"></i> {{ ratings.down }}</span>
+                <div class="d-inline-flex align-items-center gap-3 px-3 py-1 rounded-pill" style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); font-family: 'Space Grotesk', var(--bs-font-sans-serif); font-size: 0.85rem;">
+                  <span style="color: var(--bs-success);"><i class="fa-solid fa-thumbs-up me-1"></i>{{ ratings.up }}</span>
+                  {% if ratings.count %}
+                  <span class="text-muted" style="font-size: 0.8rem;">({{ ((ratings.up / (ratings.count)) * 100) | int }}%)</span>
+                  {% endif %}
+                  <span style="color: var(--bs-danger);"><i class="fa-solid fa-thumbs-down me-1"></i>{{ ratings.down }}</span>
+                </div>
                 {% endif %}
               {% endblock %}
-            </small>
+            </div>
             {% endif %}
 
-            <span class="challenge-desc">{% block description %}{{ challenge.html }}{% endblock %}</span>
+            <!-- Separator -->
+            <hr class="my-3" style="border-color: rgba(255,255,255,0.08);">
+
+            <!-- Description -->
+            <div class="challenge-desc mb-3" style="font-family: 'Space Grotesk', var(--bs-font-sans-serif); line-height: 1.7;">
+              {% block description %}{{ challenge.html }}{% endblock %}
+            </div>
 
             {% if challenge.connection_info %}
-              <div class="mb-2">
+              <div class="mb-3 text-center">
                 <span class="challenge-connection-info">
                   {% block connection_info %}
                     {% set conn = challenge.connection_info %}
@@ -108,7 +122,7 @@
                     {% elif conn.startswith("http") %}
                       {{ conn | urlize(target="_blank") }}
                     {% else %}
-                      <code>{{ conn }}</code>
+                      <code class="px-3 py-2 d-inline-block rounded" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); font-size: 0.9rem;">{{ conn }}</code>
                     {% endif %}
                   {% endblock %}
                 </span>
@@ -116,23 +130,23 @@
             {% endif %}
 
             {% if hints %}
-              <div class="challenge-hints hint-row row">
-                <div class="col-12 mb-3">
+              <div class="challenge-hints mb-3">
+                <div class="px-2">
                 {% for hint in hints | sort(attribute="cost") %}
-                  <div x-data="Hint" x-init="id = {{ hint.id }}">
+                  <div x-data="Hint" x-init="id = {{ hint.id }}" class="mb-2">
                     {% if hint.content %}
-                    <details>
-                      <summary>{% trans %}View Hint{% endtrans %}{% if hint.title %}: {{ hint.title }}{% endif %}</summary>
-                      <div>{{ hint.html | safe }}</div>
+                    <details class="rounded px-3 py-2" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
+                      <summary style="font-family: 'Space Grotesk', var(--bs-font-sans-serif); font-size: 0.9rem; cursor: pointer;">{% trans %}View Hint{% endtrans %}{% if hint.title %}: {{ hint.title }}{% endif %}</summary>
+                      <div class="mt-2 ps-2" style="border-left: 2px solid rgba(var(--bs-info-rgb), 0.3);">{{ hint.html | safe }}</div>
                     </details>
                     {% else %}
-                    <details @toggle="showHint(event)">
+                    <details @toggle="showHint(event)" class="rounded px-3 py-2" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
                       {% if hint.title %}
-                      <summary>{{ hint.title }} (Cost: {{ hint.cost }} point{{ hint.cost|pluralize }})</summary>
+                      <summary style="font-family: 'Space Grotesk', var(--bs-font-sans-serif); font-size: 0.9rem; cursor: pointer;">{{ hint.title }} (Cost: {{ hint.cost }} point{{ hint.cost|pluralize }})</summary>
                       {% else %}
-                      <summary>Unlock Hint for {{ hint.cost }} point{{ hint.cost|pluralize }}</summary>
+                      <summary style="font-family: 'Space Grotesk', var(--bs-font-sans-serif); font-size: 0.9rem; cursor: pointer;">Unlock Hint for {{ hint.cost }} point{{ hint.cost|pluralize }}</summary>
                       {% endif %}
-                      <div x-html="html"></div>
+                      <div class="mt-2 ps-2" style="border-left: 2px solid rgba(var(--bs-info-rgb), 0.3);" x-html="html"></div>
                     </details>
                     {% endif %}
                   </div>
@@ -168,12 +182,14 @@
             {% endif %}
 
             <template x-if="max_attempts > 0">
-              <p class="text-center">
+              <p class="text-center text-muted" style="font-family: 'Space Grotesk', var(--bs-font-sans-serif); font-size: 0.85rem;">
+                <i class="fas fa-redo me-1"></i>
                 <span x-text="attempts"></span>/<span x-text="max_attempts"></span> {% trans c=max_attempts %}attempt{% pluralize %}attempts{% endtrans %}
               </p>
             </template>
 
-            <div class="row submit-row">
+            <!-- Submit Section -->
+            <div class="row submit-row mt-2">
               <div class="col-12 col-sm-8">
                 {% block input %}
                   <input
@@ -185,6 +201,7 @@
                       type="text" name="submission"
                       @keyup.enter="submitChallenge()"
                       placeholder="{% trans %}Flag{% endtrans %}" x-model="submission"
+                      style="font-family: 'Space Grotesk', var(--bs-font-sans-serif); border-radius: 0.5rem;"
                   >
                 {% endblock %}
               </div>
@@ -195,6 +212,7 @@
                       id="challenge-submit"
                       class="challenge-submit btn btn-outline-secondary w-100 h-100" type="submit"
                       @click.debounce.500ms="submitChallenge()"
+                      style="font-family: 'Space Grotesk', var(--bs-font-sans-serif); border-radius: 0.5rem; font-weight: 600;"
                   >
                     {% trans %}Submit{% endtrans %}
                   </button>
