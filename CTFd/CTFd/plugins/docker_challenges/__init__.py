@@ -36,6 +36,10 @@ from wtforms.validators import DataRequired, ValidationError, InputRequired
 from werkzeug.utils import secure_filename
 import requests
 import tempfile
+import subprocess
+import threading
+import socket
+import sys
 from CTFd.utils.dates import unix_time
 from datetime import datetime
 import json
@@ -50,6 +54,96 @@ from CTFd.utils.config import get_themes
 
 from pathlib import Path
 
+# Auto-start WSL Docker daemon and keep WSL alive so containers don't die
+if sys.platform == 'win32':
+    try:
+        # Start docker and keep a sleep process alive to prevent WSL idle shutdown
+        subprocess.Popen(
+            ['wsl', '-u', 'root', '-e', 'bash', '-c',
+             'service docker start >/dev/null 2>&1; exec sleep infinity'],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            creationflags=0x08000000  # CREATE_NO_WINDOW
+        )
+    except Exception:
+        pass
+
+
+# ── TCP Proxy for LAN access (no admin required) ──────────────────
+# WSL2 NAT auto-forwards container ports to 127.0.0.1 on Windows,
+# but LAN / WiFi clients can't reach localhost.  We bind a TCP relay
+# on the LAN IP (display_host) for each container port and forward
+# to 127.0.0.1 where WSL2's auto-forward is listening.  This avoids
+# port conflicts since WSL2 only binds 127.0.0.1, not 0.0.0.0.
+
+_active_proxies = {}   # port (int) -> server_socket
+
+
+def _relay(src, dst):
+    """Copy bytes one direction; close both when done."""
+    try:
+        while True:
+            data = src.recv(65536)
+            if not data:
+                break
+            dst.sendall(data)
+    except Exception:
+        pass
+    finally:
+        try: src.close()
+        except Exception: pass
+        try: dst.close()
+        except Exception: pass
+
+
+def _accept_loop(srv, target_port):
+    """Accept connections on srv and relay to 127.0.0.1:target_port (WSL2 auto-forward)."""
+    while True:
+        try:
+            client, _ = srv.accept()
+        except Exception:
+            break
+        try:
+            remote = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            remote.settimeout(5)
+            remote.connect(('127.0.0.1', target_port))
+            remote.settimeout(None)
+            threading.Thread(target=_relay, args=(client, remote), daemon=True).start()
+            threading.Thread(target=_relay, args=(remote, client), daemon=True).start()
+        except Exception:
+            try: client.close()
+            except Exception: pass
+
+
+def add_port_forward(port, display_host):
+    """Start a TCP relay on <display_host>:<port> → 127.0.0.1:<port>."""
+    if sys.platform != 'win32':
+        return
+    port = int(port)
+    if port in _active_proxies:
+        return
+    bind_ip = str(display_host) if display_host else '0.0.0.0'
+    try:
+        srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        srv.bind((bind_ip, port))
+        srv.listen(16)
+        t = threading.Thread(target=_accept_loop, args=(srv, port), daemon=True)
+        t.start()
+        _active_proxies[port] = srv
+    except OSError:
+        pass
+
+
+def remove_port_forward(port):
+    """Stop the TCP relay for a port."""
+    if sys.platform != 'win32':
+        return
+    port = int(port)
+    srv = _active_proxies.pop(port, None)
+    if srv:
+        try: srv.close()
+        except Exception: pass
+
 
 class DockerConfig(db.Model):
     """
@@ -57,6 +151,7 @@ class DockerConfig(db.Model):
 	"""
     id = db.Column(db.Integer, primary_key=True)
     hostname = db.Column("hostname", db.String(64), index=True)
+    display_host = db.Column("display_host", db.String(128), index=True)
     tls_enabled = db.Column("tls_enabled", db.Boolean, default=False, index=True)
     ca_cert = db.Column("ca_cert", db.String(2200), index=True)
     client_cert = db.Column("client_cert", db.String(2000), index=True)
@@ -83,6 +178,9 @@ class DockerConfigForm(BaseForm):
     id = HiddenField()
     hostname = StringField(
         "Docker Hostname", description="The Hostname/IP and Port of your Docker Server"
+    )
+    display_host = StringField(
+        "Display Host", description="IP shown to users for spawned instances (e.g. your WiFi IP). Leave blank to use Docker Hostname."
     )
     tls_enabled = RadioField('TLS Enabled?')
     ca_cert = FileField('CA Cert')
@@ -122,6 +220,7 @@ def define_docker_admin(app):
                 b.client_key = client_key
 
             b.hostname = request.form.get('hostname', '').strip()
+            b.display_host = request.form.get('display_host', '').strip()
             b.tls_enabled = request.form.get('tls_enabled') == "True"
             if not b.tls_enabled:
                 b.ca_cert = None
@@ -195,12 +294,13 @@ class KillContainerAPI(Resource):
         docker_tracker = DockerChallengeTracker.query.all()
         if full == "true":
             for c in docker_tracker:
-                delete_container(docker_config, c.instance_id)
+                delete_container(docker_config, c.instance_id, ports_str=c.ports)
                 DockerChallengeTracker.query.filter_by(instance_id=c.instance_id).delete()
                 db.session.commit()
 
         elif container != 'null' and container in [c.instance_id for c in docker_tracker]:
-            delete_container(docker_config, container)
+            tracker_entry = next((c for c in docker_tracker if c.instance_id == container), None)
+            delete_container(docker_config, container, ports_str=tracker_entry.ports if tracker_entry else None)
             DockerChallengeTracker.query.filter_by(instance_id=container).delete()
             db.session.commit()
 
@@ -306,7 +406,8 @@ def get_unavailable_ports(docker):
     for i in r.json():
         if not i['Ports'] == []:
             for p in i['Ports']:
-                result.append(p['PublicPort'])
+                if 'PublicPort' in p:
+                    result.append(p['PublicPort'])
     return result
 
 
@@ -369,6 +470,14 @@ def create_container(docker, image, team, portbl, fallback_container_port=None):
         r = requests.post(url="%s/containers/create?name=%s" % (URL_TEMPLATE, container_name), cert=cert,
                       verify=verify, data=data, headers=headers)
         result = r.json()
+        # Handle name conflict: remove stale container and retry
+        if 'Id' not in result and r.status_code == 409:
+            requests.delete(url="%s/containers/%s?force=true" % (URL_TEMPLATE, container_name), cert=cert, verify=verify, headers=headers)
+            r = requests.post(url="%s/containers/create?name=%s" % (URL_TEMPLATE, container_name), cert=cert,
+                              verify=verify, data=data, headers=headers)
+            result = r.json()
+        if 'Id' not in result:
+            return None, data
         s = requests.post(url="%s/containers/%s/start" % (URL_TEMPLATE, result['Id']), cert=cert, verify=verify,
                           headers=headers)
         # Clean up the cert files:
@@ -382,13 +491,31 @@ def create_container(docker, image, team, portbl, fallback_container_port=None):
         print(r.request.method, r.request.url, r.request.body)
         result = r.json()
         print(result)
-        # name conflicts are not handled properly
+        # Handle name conflict: remove stale container and retry
+        if 'Id' not in result and r.status_code == 409:
+            requests.delete(url="%s/containers/%s?force=true" % (URL_TEMPLATE, container_name), headers=headers)
+            r = requests.post(url="%s/containers/create?name=%s" % (URL_TEMPLATE, container_name),
+                              data=data, headers=headers)
+            result = r.json()
+        if 'Id' not in result:
+            return None, data
         s = requests.post(url="%s/containers/%s/start" % (URL_TEMPLATE, result['Id']), headers=headers)
     return result, data
 
 
-def delete_container(docker, instance_id):
+# NOTE: add_port_forward / remove_port_forward are defined near the top of
+# the file as no-op stubs (mirrored networking makes them unnecessary).
+
+
+def delete_container(docker, instance_id, ports_str=None):
+    """Stop/remove a container and clean up port forwarding."""
     headers = {'Content-Type': "application/json"}
+    # Remove port forwarding for each port
+    if ports_str:
+        for p in str(ports_str).split(','):
+            p = p.strip()
+            if p:
+                remove_port_forward(p)
     do_request(docker, f'/containers/{instance_id}?force=true', headers=headers, method='DELETE')
     return True
 
@@ -532,7 +659,7 @@ class DockerChallengeType(BaseChallenge):
             else:
                 docker_containers = DockerChallengeTracker.query.filter_by(
                     docker_image=challenge.docker_image).filter_by(user_id=user.id).first()
-            delete_container(docker, docker_containers.instance_id)
+            delete_container(docker, docker_containers.instance_id, ports_str=docker_containers.ports)
             DockerChallengeTracker.query.filter_by(instance_id=docker_containers.instance_id).delete()
         except:
             pass
@@ -608,7 +735,7 @@ class ContainerAPI(Resource):
             # First we'll delete all old docker containers (+2 hours)
             for i in containers:
                 if int(session.id) == int(i.team_id) and (unix_time(datetime.utcnow()) - int(i.timestamp)) >= 7200:
-                    delete_container(docker, i.instance_id)
+                    delete_container(docker, i.instance_id, ports_str=i.ports)
                     DockerChallengeTracker.query.filter_by(instance_id=i.instance_id).delete()
                     db.session.commit()
             check = DockerChallengeTracker.query.filter_by(team_id=session.id).filter_by(docker_image=container).first()
@@ -616,7 +743,7 @@ class ContainerAPI(Resource):
             session = get_current_user()
             for i in containers:
                 if int(session.id) == int(i.user_id) and (unix_time(datetime.utcnow()) - int(i.timestamp)) >= 7200:
-                    delete_container(docker, i.instance_id)
+                    delete_container(docker, i.instance_id, ports_str=i.ports)
                     DockerChallengeTracker.query.filter_by(instance_id=i.instance_id).delete()
                     db.session.commit()
             check = DockerChallengeTracker.query.filter_by(user_id=session.id).filter_by(docker_image=container).first()
@@ -637,7 +764,7 @@ class ContainerAPI(Resource):
 
         # Delete when requested
         if check is not None and request.args.get('stopcontainer'):
-            delete_container(docker, check.instance_id)
+            delete_container(docker, check.instance_id, ports_str=check.ports)
             if is_teams_mode():
                 DockerChallengeTracker.query.filter_by(team_id=session.id).filter_by(docker_image=container).delete()
             else:
@@ -646,33 +773,30 @@ class ContainerAPI(Resource):
             return {"success": True, "result": "Container stopped"}, 200
         # The exception would be if we are reverting a box. So we'll delete it if it exists and has been around for more than 5 minutes.
         elif check is not None:
-            delete_container(docker, check.instance_id)
+            delete_container(docker, check.instance_id, ports_str=check.ports)
             if is_teams_mode():
                 DockerChallengeTracker.query.filter_by(team_id=session.id).filter_by(docker_image=container).delete()
             else:
                 DockerChallengeTracker.query.filter_by(user_id=session.id).filter_by(docker_image=container).delete()
             db.session.commit()
         
-        # Check if a container is already running for this team/user.
+        # Check if too many containers are already running for this team/user.
+        MAX_CONTAINERS = 3
         containers = DockerChallengeTracker.query.all()
         if is_teams_mode():
-            for entry in containers:
-                if entry.team_id is None:
-                    continue
-                if str(session.id) == str(entry.team_id):
-                    return {
-                        "success": False,
-                        "message": f"Another container is already running for challenge: {entry.challenge}. Please stop it first. You can only run one container.",
-                    }, 403
+            running_count = sum(1 for entry in containers if entry.team_id is not None and str(session.id) == str(entry.team_id))
+            if running_count >= MAX_CONTAINERS:
+                return {
+                    "success": False,
+                    "message": f"You already have {running_count} containers running. Please stop one first. Maximum allowed: {MAX_CONTAINERS}.",
+                }, 403
         else:
-            for entry in containers:
-                if entry.user_id is None:
-                    continue
-                if str(session.id) == str(entry.user_id):
-                    return {
-                        "success": False,
-                        "message": f"Another container is already running for challenge: {entry.challenge}. Please stop it first. You can only run one container.",
-                    }, 403
+            running_count = sum(1 for entry in containers if entry.user_id is not None and str(session.id) == str(entry.user_id))
+            if running_count >= MAX_CONTAINERS:
+                return {
+                    "success": False,
+                    "message": f"You already have {running_count} containers running. Please stop one first. Maximum allowed: {MAX_CONTAINERS}.",
+                }, 403
 
         portsbl = get_unavailable_ports(docker)
 
@@ -697,6 +821,11 @@ class ContainerAPI(Resource):
         if not create or not create[0] or 'Id' not in create[0]:
             return {"success": False, "message": "Failed to create Docker container. Check Docker host connectivity and image/tag."}, 403
         ports = json.loads(create[1])['HostConfig']['PortBindings'].values()
+        host_ports = [p[0]['HostPort'] for p in ports]
+        ports_str = ','.join(host_ports)
+        # Set up port forwarding for each assigned port so LAN clients can reach them
+        for hp in host_ports:
+            add_port_forward(hp, docker.display_host)
         entry = DockerChallengeTracker(
             team_id=session.id if is_teams_mode() else None,
             user_id=session.id if not is_teams_mode() else None,
@@ -704,8 +833,8 @@ class ContainerAPI(Resource):
             timestamp=unix_time(datetime.utcnow()),
             revert_time=unix_time(datetime.utcnow()) + 300,
             instance_id=create[0]['Id'],
-            ports=','.join([p[0]['HostPort'] for p in ports]),
-            host=str(docker.hostname).split(':')[0],
+            ports=ports_str,
+            host=(docker.display_host or str(docker.hostname).split(':')[0]),
             challenge=challenge
         )
         db.session.add(entry)
@@ -729,7 +858,7 @@ class DockerStatus(Resource):
             return {"success": False, "message": "Authentication required", "data": []}, 403
 
         docker = DockerConfig.query.filter_by(id=1).first()
-        docker_host = str(docker.hostname).split(':')[0] if docker and docker.hostname else ""
+        docker_host = (docker.display_host or str(docker.hostname).split(':')[0]) if docker and docker.hostname else ""
         if is_teams_mode():
             session = get_current_team()
             tracker = DockerChallengeTracker.query.filter_by(team_id=session.id)
@@ -743,7 +872,7 @@ class DockerStatus(Resource):
             for entry in list(tracker):
                 if entry.revert_time and int(entry.revert_time) <= now:
                     if docker:
-                        delete_container(docker, entry.instance_id)
+                        delete_container(docker, entry.instance_id, ports_str=entry.ports)
                     DockerChallengeTracker.query.filter_by(instance_id=entry.instance_id).delete()
                     db.session.commit()
         except Exception:

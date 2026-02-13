@@ -27,6 +27,16 @@
                     {% endif %}
                 </div>
                 <div class="form-group">
+                    <label for="display-host-input">
+                        Display Host <small class="text-muted">(IP shown to users, e.g. your WiFi IP. Leave blank to use Docker Hostname.)</small>
+                    </label>
+                    {% if config.display_host %}
+                    <input class="form-control" type="text" name="display_host" id="display-host-input" placeholder="Ex: 192.168.1.100" value='{{ config.display_host }}'/>
+                    {% else %}
+                    <input class="form-control" type="text" name="display_host" id="display-host-input" placeholder="Ex: 192.168.1.100" />
+                    {% endif %}
+                </div>
+                <div class="form-group">
                     <p>TLS Enabled?</p>
                     <input type="radio" name="tls_enabled" id="tls-radiobox-no" value="False" onclick="enable_file_form(!this.checked)" {% if not config.tls_enabled %}checked{% endif %} />
                     <label for="tls-radiobox-no">No</label>
