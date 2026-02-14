@@ -973,6 +973,31 @@ class DockerAPI(Resource):
 
 def load(app):
     app.db.create_all()
+    # Auto-migrate: add missing columns to existing tables
+    with app.app_context():
+        from sqlalchemy import inspect as sa_inspect, text
+        insp = sa_inspect(app.db.engine)
+        migrations = []
+        # docker_config.display_host
+        if 'docker_config' in insp.get_table_names():
+            cols = [c['name'] for c in insp.get_columns('docker_config')]
+            if 'display_host' not in cols:
+                migrations.append('ALTER TABLE docker_config ADD COLUMN display_host VARCHAR(128)')
+        # docker_challenge_tracker columns
+        if 'docker_challenge_tracker' in insp.get_table_names():
+            cols = [c['name'] for c in insp.get_columns('docker_challenge_tracker')]
+            if 'host' not in cols:
+                migrations.append('ALTER TABLE docker_challenge_tracker ADD COLUMN host VARCHAR(128)')
+            if 'challenge' not in cols:
+                migrations.append('ALTER TABLE docker_challenge_tracker ADD COLUMN challenge VARCHAR(256)')
+        if migrations:
+            with app.db.engine.connect() as conn:
+                for sql in migrations:
+                    conn.execute(text(sql))
+                try:
+                    conn.commit()
+                except Exception:
+                    pass  # autocommit mode on older SA
     CHALLENGE_CLASSES['docker'] = DockerChallengeType
     @app.template_filter('datetimeformat')
     def datetimeformat(value, format='%Y-%m-%d %H:%M:%S'):
