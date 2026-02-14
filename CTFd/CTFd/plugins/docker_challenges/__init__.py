@@ -446,9 +446,9 @@ def create_container(docker, image, team, portbl, fallback_container_port=None):
     if not needed_ports and fallback_container_port:
         needed_ports = [f"{int(fallback_container_port)}/tcp"]
     team = hashlib.md5(team.encode("utf-8")).hexdigest()[:10]
-    tag = image.split(":", 1)[1] if ":" in image else "latest"
-    safe_tag = re.sub(r"[^a-zA-Z0-9_.-]", "_", tag)
-    container_name = f"{safe_tag}_{team}"
+    # Use full image name (repo + tag) for unique container naming
+    safe_image = re.sub(r"[^a-zA-Z0-9_.-]", "_", image)
+    container_name = f"{safe_image}_{team}"
 
     assigned_ports = []
     for _ in needed_ports:
