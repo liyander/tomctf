@@ -7,7 +7,7 @@ This guide covers configuring a **separate Linux server** to host Docker challen
 ## Architecture
 
 ```
-┌──────────────────┐         Docker API (TCP)        ┌──────────────────────┐
+┌──────────────────┐         Docker API (TCP)         ┌──────────────────────┐
 │   CTFd Server    │ ──────────────────────────────►  │   Linux Docker Host  │
 │  (Windows/Any)   │       http://<IP>:2375           │  Runs all challenge  │
 │  Port 4000       │   or  https://<IP>:2376 (TLS)    │  containers          │
