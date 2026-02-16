@@ -17,50 +17,23 @@ CTFd._internal.challenge.postRender = function() {
     createWarningModalBody();
 }
 
-function copyText(text) {
-    if (!text) {
-        return;
+function copyFromInput(inputId, btnEl) {
+    var inp = document.getElementById(inputId);
+    if (!inp) return;
+    inp.focus();
+    inp.select();
+    inp.setSelectionRange(0, inp.value.length);
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch(e) {}
+    if (!ok && window.isSecureContext && navigator.clipboard) {
+        navigator.clipboard.writeText(inp.value).catch(function(){});
+        ok = true;
     }
-
-    // navigator.clipboard only works on HTTPS / localhost.
-    // For HTTP over LAN we must use the textarea fallback.
-    if (window.isSecureContext && navigator && navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).catch(function () {
-            _copyFallback(text);
-        });
-        return;
+    if (btnEl) {
+        var old = btnEl.innerHTML;
+        btnEl.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        setTimeout(function(){ btnEl.innerHTML = old; }, 1200);
     }
-
-    _copyFallback(text);
-}
-
-function _copyFallback(text) {
-    var ta = document.createElement('textarea');
-    ta.value = text;
-    // Must be visible (even briefly) for execCommand to work in all browsers
-    ta.setAttribute('readonly', '');
-    ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;padding:0;border:none;outline:none;box-shadow:none;background:transparent;opacity:0.01;';
-    document.body.appendChild(ta);
-
-    // iOS needs contentEditable + range selection
-    var range = document.createRange();
-    ta.contentEditable = true;
-    ta.readOnly = false;
-    ta.focus();
-    ta.select();
-    range.selectNodeContents(ta);
-    var sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
-    ta.setSelectionRange(0, text.length);
-
-    try {
-        document.execCommand('copy');
-    } catch (e) {
-        // Last resort: prompt user to copy manually
-        window.prompt('Copy this:', text);
-    }
-    document.body.removeChild(ta);
 }
 
 function createWarningModalBody(){
@@ -121,20 +94,20 @@ function get_docker_status(container) {
                 const stopId = `${instancePrefix}_stop_btn`;
                 const revertId = `${instancePrefix}_revert_btn`;
 
-                const hostPortLine = hostPort
-                    ? `Host: ${host} Port: ${firstPort}`
-                    : `Host: ${host} Port: (pending)`;
+                const inputId = `${instancePrefix}_hostport_input`;
 
-                const copyBtn = hostPort
-                    ? `<button type="button" class="btn btn-sm btn-dark" id="${copyId}">Copy ${hostPort}</button>`
-                    : '';
+                const hostPortField = hostPort
+                    ? `<div class="input-group input-group-sm justify-content-center" style="max-width:340px;margin:0 auto">
+                         <input type="text" id="${inputId}" class="form-control text-center" value="${hostPort}" readonly onclick="this.select()" style="cursor:text;background:#1a1a2e;color:#fff;border-color:#444;">
+                         <button type="button" class="btn btn-dark" id="${copyId}"><i class="fas fa-copy"></i> Copy</button>
+                       </div>`
+                    : `<div>Host: ${host} Port: (pending)</div>`;
 
                 // Always show timer + buttons; Stop/Revert should work immediately after start.
                 CTFd.lib.$('#docker_container').html(
                     `<div class="text-center">
                         <div><strong>Docker Container Information:</strong></div>
-                        <div class="mt-1">${hostPortLine}</div>
-                        ${copyBtn ? `<div class="mt-2">${copyBtn}</div>` : ``}
+                        <div class="mt-2">${hostPortField}</div>
                         <div class="mt-2" id="${timerId}"></div>
                         <div class="mt-2">
                             <a id="${revertId}" onclick="start_container('${item.docker_image}');" class="btn btn-dark">
@@ -153,10 +126,7 @@ function get_docker_status(container) {
                 const copyEl = document.getElementById(copyId);
                 if (copyEl) {
                     copyEl.addEventListener('click', function () {
-                        copyText(hostPort);
-                        const oldText = copyEl.textContent;
-                        copyEl.textContent = 'Copied!';
-                        setTimeout(() => (copyEl.textContent = oldText), 1200);
+                        copyFromInput(inputId, copyEl);
                     });
                 }
 
