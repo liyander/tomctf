@@ -22,25 +22,45 @@ function copyText(text) {
         return;
     }
 
-    if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text);
+    // navigator.clipboard only works on HTTPS / localhost.
+    // For HTTP over LAN we must use the textarea fallback.
+    if (window.isSecureContext && navigator && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(function () {
+            _copyFallback(text);
+        });
         return;
     }
 
-    const ta = document.createElement('textarea');
+    _copyFallback(text);
+}
+
+function _copyFallback(text) {
+    var ta = document.createElement('textarea');
     ta.value = text;
-    ta.style.position = 'fixed';
-    ta.style.top = '0';
-    ta.style.left = '0';
-    ta.style.opacity = '0';
+    // Must be visible (even briefly) for execCommand to work in all browsers
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;padding:0;border:none;outline:none;box-shadow:none;background:transparent;opacity:0.01;';
     document.body.appendChild(ta);
+
+    // iOS needs contentEditable + range selection
+    var range = document.createRange();
+    ta.contentEditable = true;
+    ta.readOnly = false;
     ta.focus();
     ta.select();
+    range.selectNodeContents(ta);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    ta.setSelectionRange(0, text.length);
+
     try {
         document.execCommand('copy');
-    } finally {
-        document.body.removeChild(ta);
+    } catch (e) {
+        // Last resort: prompt user to copy manually
+        window.prompt('Copy this:', text);
     }
+    document.body.removeChild(ta);
 }
 
 function createWarningModalBody(){
