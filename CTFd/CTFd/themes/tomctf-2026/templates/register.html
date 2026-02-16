@@ -1,210 +1,460 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <div class="min-vh-100 d-flex align-items-center py-5">
-    <div class="container">
-      <div class="row justify-content-center">
-        <div class="col-lg-5 col-md-7">
-          <!-- Register Card -->
-          <div class="card border-0 shadow-lg rounded-4 overflow-hidden slide-up">
-            <!-- Card Header with Gradient -->
-            <div class="card-header text-center py-4 register-header">
-              <div class="mb-3">
-                {% if Configs.ctf_logo %}
-                  <img src="{{ url_for('views.files', path=Configs.ctf_logo) }}" alt="{{ Configs.ctf_name }}" height="32" class="mb-2 d-block mx-auto" style="max-height: 32px; width: auto; max-width: 100px; object-fit: contain;">
-                {% else %}
-                  <h3 class="text-white mb-2">{{ Configs.ctf_name }}</h3>
-                {% endif %}
+<link href="https://fonts.cdnfonts.com/css/stranger-things" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<div class="auth-page">
+  <!-- Animated background -->
+  <div class="auth-bg">
+    <div class="grid-overlay"></div>
+    <div class="floating-particles">
+      <span></span><span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="scan-line"></div>
+  </div>
+
+  <div class="container position-relative" style="z-index:2;">
+    <div class="row justify-content-center">
+      <div class="col-lg-5 col-md-7 col-11">
+
+        <!-- Stranger Things title -->
+        <div class="auth-hero text-center mb-4">
+          <h1 class="auth-stranger-title">JOIN THE FIGHT</h1>
+          <p class="auth-subtitle">
+            <span class="subtitle-line"></span>
+            {% trans %}Create your account and start competing{% endtrans %}
+            <span class="subtitle-line"></span>
+          </p>
+        </div>
+
+        <!-- Auth Card -->
+        <div class="auth-card">
+          <div class="auth-card-glow"></div>
+          <div class="auth-card-inner">
+
+            {% include "components/errors.html" %}
+
+            {% if integrations.mlc() %}
+              <a class="btn btn-mlc w-100 mb-4" href="{{ url_for('auth.oauth_login') }}">
+                <i class="fas fa-shield-alt me-2"></i>
+                Register with Major League Cyber
+              </a>
+              <div class="auth-divider mb-4">
+                <span>{% trans %}or{% endtrans %}</span>
               </div>
-              
-              <p class="text-white-50 mb-0">{% trans %}Create your account and start competing{% endtrans %}</p>
-            </div>
+            {% endif %}
 
-            <!-- Card Body -->
-            <div class="card-body p-4 p-md-5">
-              {% include "components/errors.html" %}
+            {% with form = Forms.auth.RegistrationForm() %}
+              {% from "macros/forms.html" import render_extra_fields %}
 
-              {% if integrations.mlc() %}
-                <a class="btn btn-outline-secondary btn-lg w-100 mb-4 rounded-pill d-flex align-items-center justify-content-center" href="{{ url_for('auth.oauth_login') }}">
-                  <i class="fas fa-shield-alt me-2"></i>
-                  Register with Major League Cyber
-                </a>
-
-                <div class="text-center mb-4">
-                  <span class="text-muted">{% trans %}or{% endtrans %}</span>
+              <form method="post" accept-charset="utf-8" autocomplete="on">
+                <!-- Username -->
+                <div class="auth-field mb-4">
+                  <label class="auth-label">
+                    <i class="fas fa-user"></i>
+                    {{ form.name.label.text }}
+                  </label>
+                  {{ form.name(class="auth-input", value=name, autocomplete="username", placeholder="Choose your username") }}
+                  <div class="input-glow"></div>
+                  <small class="auth-hint">{% trans %}Your username on the site{% endtrans %}</small>
                 </div>
-              {% endif %}
 
-              {% with form = Forms.auth.RegistrationForm() %}
-                {% from "macros/forms.html" import render_extra_fields %}
+                <!-- Email -->
+                <div class="auth-field mb-4">
+                  <label class="auth-label">
+                    <i class="fas fa-envelope"></i>
+                    {{ form.email.label.text }}
+                  </label>
+                  {{ form.email(class="auth-input", value=email, autocomplete="email", placeholder="Enter your email address") }}
+                  <div class="input-glow"></div>
+                  <small class="auth-hint">{% trans %}Never shown to the public{% endtrans %}</small>
+                </div>
 
-                <form method="post" accept-charset="utf-8" class="fade-in" style="animation-delay: 0.2s;">
-                  <!-- Username Field -->
-                  <div class="mb-4">
-                    <label class="form-label fw-semibold text-dark mb-2">
-                      <i class="fas fa-user me-2 text-primary"></i>
-                      {{ form.name.label.text }}
-                    </label>
-                    <div class="position-relative">
-                      {{ form.name(class="form-control form-control-lg rounded-pill ps-4", value=name, autocomplete="username", placeholder="Choose your username") }}
-                    </div>
-                    <small class="form-text text-muted">
-                      {% trans %}Your username on the site{% endtrans %}
+                <!-- Password -->
+                <div class="auth-field mb-4">
+                  <label class="auth-label">
+                    <i class="fas fa-lock"></i>
+                    {{ form.password.label.text }}
+                  </label>
+                  {{ form.password(class="auth-input", value=password, autocomplete="new-password", placeholder="Create a secure password") }}
+                  <div class="input-glow"></div>
+                  <small class="auth-hint">{% trans %}Password used to log into your account{% endtrans %}</small>
+                </div>
+
+                {{ form.nonce() }}
+                {{ render_extra_fields(form.extra) }}
+
+                <!-- Submit -->
+                <div class="mb-4">
+                  {{ form.submit(class="auth-btn", value="Create Account") }}
+                </div>
+
+                {% if Configs.tos_or_privacy %}
+                  <div class="text-center mb-3">
+                    <small class="auth-legal">
+                      {% trans trimmed privacy_link=Configs.privacy_link, tos_link=Configs.tos_link %}
+                      By registering, you agree to the
+                      <a href="{{ privacy_link }}" target="_blank" class="auth-link-sm">privacy policy</a>
+                      and <a href="{{ tos_link }}" target="_blank" class="auth-link-sm">terms of service</a>
+                      {% endtrans %}
                     </small>
                   </div>
+                {% endif %}
+              </form>
+            {% endwith %}
 
-                  <!-- Email Field -->
-                  <div class="mb-4">
-                    <label class="form-label fw-semibold text-dark mb-2">
-                      <i class="fas fa-envelope me-2 text-primary"></i>
-                      {{ form.email.label.text }}
-                    </label>
-                    <div class="position-relative">
-                      {{ form.email(class="form-control form-control-lg rounded-pill ps-4", value=email, autocomplete="email", placeholder="Enter your email address") }}
-                    </div>
-                    <small class="form-text text-muted">
-                      {% trans %}Never shown to the public{% endtrans %}
-                    </small>
-                  </div>
-
-                  <!-- Password Field -->
-                  <div class="mb-4">
-                    <label class="form-label fw-semibold text-dark mb-2">
-                      <i class="fas fa-lock me-2 text-primary"></i>
-                      {{ form.password.label.text }}
-                    </label>
-                    <div class="position-relative">
-                      {{ form.password(class="form-control form-control-lg rounded-pill ps-4", value=password, autocomplete="new-password", placeholder="Create a secure password") }}
-                    </div>
-                    <small class="form-text text-muted">
-                      {% trans %}Password used to log into your account{% endtrans %}
-                    </small>
-                  </div>
-
-                  {{ form.nonce() }}
-                  {{ render_extra_fields(form.extra) }}
-
-                  <!-- Register Button -->
-                  <div class="mb-4">
-                    {{ form.submit(class="btn btn-primary btn-lg w-100 rounded-pill fw-semibold py-3", value="Create Account") }}
-                  </div>
-
-                  {% if Configs.tos_or_privacy %}
-                    <div class="text-center mb-3">
-                      <small class="text-muted">
-                        {% trans trimmed privacy_link=Configs.privacy_link, tos_link=Configs.tos_link %}
-                        By registering, you agree to the
-                        <a href="{{ privacy_link }}" target="_blank" class="text-decoration-none">privacy policy</a>
-                        and <a href="{{ tos_link }}" target="_blank" class="text-decoration-none">terms of service</a>
-                        {% endtrans %}
-                      </small>
-                    </div>
-                  {% endif %}
-                </form>
-              {% endwith %}
-
-              <!-- Login Link -->
-              <div class="text-center">
-                <p class="text-muted mb-0">
-                  {% trans %}Already have an account?{% endtrans %}
-                  <a href="{{ url_for('auth.login') }}" class="text-decoration-none fw-semibold">
-                    {% trans %}Sign in here{% endtrans %}
-                  </a>
-                </p>
-              </div>
+            <!-- Login Link -->
+            <div class="text-center mt-3">
+              <p class="auth-footer-text">
+                {% trans %}Already have an account?{% endtrans %}
+                <a href="{{ url_for('auth.login') }}" class="auth-link">
+                  {% trans %}Sign in here{% endtrans %}
+                </a>
+              </p>
             </div>
+
           </div>
         </div>
+
       </div>
     </div>
   </div>
+</div>
 
-  <style>
-    /* Register page specific styles */
-    .min-vh-100 {
-      background: linear-gradient(135deg, 
-        rgba(139, 0, 0, 0.08) 0%, 
-        rgba(236, 19, 19, 0.05) 50%, 
-        rgba(5, 3, 3, 0.9) 100%
-      );
-      background-size: cover;
-      background-position: center;
-      position: relative;
-    }
+<style>
+  /* ===== Auth Page – Full-screen Dark Cyberpunk ===== */
+  .auth-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 0;
+    padding-top: calc(2rem + 70px);
+    margin-top: -70px;
+    position: relative;
+    overflow: hidden;
+    background: #050303;
+    font-family: 'Space Grotesk', sans-serif;
+  }
 
-    .min-vh-100::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(5, 3, 3, 0.92);
-      z-index: 0;
-    }
+  /* ---- Animated Background ---- */
+  .auth-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+  }
 
-    [data-bs-theme="dark"] .min-vh-100::before {
-      background: rgba(5, 3, 3, 0.92);
-    }
+  .grid-overlay {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(139,0,0,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(139,0,0,0.06) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridDrift 20s linear infinite;
+  }
 
-    .container {
-      position: relative;
-      z-index: 1;
-    }
+  @keyframes gridDrift {
+    0%   { transform: translate(0, 0); }
+    100% { transform: translate(60px, 60px); }
+  }
 
-    .card {
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-    }
+  .floating-particles span {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: #ec1313;
+    border-radius: 50%;
+    opacity: 0;
+    animation: particleFloat 8s ease-in-out infinite;
+  }
+  .floating-particles span:nth-child(1)  { left:10%; top:20%; animation-delay:0s; }
+  .floating-particles span:nth-child(2)  { left:25%; top:60%; animation-delay:1s; }
+  .floating-particles span:nth-child(3)  { left:45%; top:35%; animation-delay:2s; }
+  .floating-particles span:nth-child(4)  { left:70%; top:75%; animation-delay:3s; }
+  .floating-particles span:nth-child(5)  { left:85%; top:15%; animation-delay:4s; }
+  .floating-particles span:nth-child(6)  { left:15%; top:80%; animation-delay:0.5s; }
+  .floating-particles span:nth-child(7)  { left:55%; top:50%; animation-delay:1.5s; }
+  .floating-particles span:nth-child(8)  { left:35%; top:10%; animation-delay:2.5s; }
+  .floating-particles span:nth-child(9)  { left:90%; top:45%; animation-delay:3.5s; }
+  .floating-particles span:nth-child(10) { left:60%; top:90%; animation-delay:4.5s; }
 
-    .register-header {
-      background: linear-gradient(135deg, #8b0000 0%, #ec1313 100%) !important;
-      color: white !important;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-    }
+  @keyframes particleFloat {
+    0%, 100% { opacity:0; transform: translateY(0) scale(1); }
+    20%      { opacity:0.8; }
+    50%      { opacity:0.4; transform: translateY(-60px) scale(1.5); }
+    80%      { opacity:0.6; }
+  }
 
-    .form-control-lg {
-      padding: 1rem 1.5rem;
-      font-size: 1rem;
-      border: 2px solid var(--dark-border);
-      transition: all 0.3s ease;
-    }
+  .scan-line {
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, rgba(236,19,19,0.15) 50%, transparent 100%);
+    animation: scanMove 6s linear infinite;
+    z-index: 1;
+  }
+  @keyframes scanMove {
+    0%   { top: -2px; }
+    100% { top: 100%; }
+  }
 
-    .form-control-lg:focus {
-      border-color: var(--wmctf-primary);
-      box-shadow: 0 0 0 0.2rem rgba(236, 19, 19, 0.15);
-      transform: translateY(-1px);
-    }
+  /* ---- Stranger Things Title ---- */
+  .auth-stranger-title {
+    font-family: 'Stranger Things', 'Creepster', cursive;
+    font-size: 3.5rem;
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, #ec1313, #ff4444, #ec1313);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 30px rgba(236,19,19,0.5));
+    margin-bottom: 0.5rem;
+    animation: titlePulse 3s ease-in-out infinite;
+  }
 
-    /* Dark mode adjustments */
-    [data-bs-theme="dark"] .card {
-      background: rgba(26, 10, 10, 0.95);
-      border: 1px solid var(--dark-border);
-    }
+  @keyframes titlePulse {
+    0%, 100% { filter: drop-shadow(0 0 25px rgba(236,19,19,0.4)); }
+    50%      { filter: drop-shadow(0 0 40px rgba(236,19,19,0.65)); }
+  }
 
-    [data-bs-theme="dark"] .form-control-lg {
-      background: var(--dark-surface);
-      border-color: var(--dark-border);
-      color: var(--dark-text);
-    }
+  .auth-subtitle {
+    color: #d4c5b0;
+    font-size: 0.9rem;
+    font-weight: 300;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
 
-    [data-bs-theme="dark"] .form-control-lg:focus {
-      background: #0d0505;
-    }
+  .subtitle-line {
+    display: inline-block;
+    width: 40px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #8b0000, transparent);
+  }
 
-    [data-bs-theme="dark"] .form-label {
-      color: var(--dark-text) !important;
-    }
+  /* ---- Auth Card ---- */
+  .auth-card {
+    position: relative;
+    border-radius: 20px;
+    overflow: visible;
+  }
 
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-      .min-vh-100 {
-        padding: 2rem 0;
-      }
-      
-      .card-body {
-        padding: 2rem 1.5rem;
-      }
-    }
-  </style>
+  .auth-card-glow {
+    position: absolute;
+    inset: -1px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #8b0000, #ec1313, #8b0000);
+    opacity: 0.35;
+    filter: blur(1px);
+    z-index: 0;
+    transition: opacity 0.4s;
+  }
+  .auth-card:hover .auth-card-glow {
+    opacity: 0.55;
+  }
+
+  .auth-card-inner {
+    position: relative;
+    z-index: 1;
+    background: rgba(10, 5, 5, 0.92);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border-radius: 20px;
+    border: 1px solid rgba(139, 0, 0, 0.3);
+    padding: 2.5rem 2rem;
+  }
+
+  /* ---- Form Fields ---- */
+  .auth-field {
+    position: relative;
+  }
+
+  .auth-label {
+    display: block;
+    color: #d4c5b0;
+    font-size: 0.82rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .auth-label i {
+    color: #ec1313;
+    margin-right: 6px;
+    font-size: 0.78rem;
+  }
+
+  .auth-input {
+    width: 100%;
+    padding: 0.85rem 1.2rem;
+    background: rgba(26, 10, 10, 0.7);
+    border: 1.5px solid rgba(139, 0, 0, 0.3);
+    border-radius: 12px;
+    color: #fff;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    outline: none;
+  }
+
+  .auth-input::placeholder {
+    color: rgba(212, 197, 176, 0.35);
+  }
+
+  .auth-input:focus {
+    border-color: #ec1313;
+    background: rgba(26, 10, 10, 0.9);
+    box-shadow: 0 0 0 3px rgba(236, 19, 19, 0.1), 0 0 20px rgba(236, 19, 19, 0.08);
+  }
+
+  .auth-field .input-glow {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #ec1313, transparent);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+  .auth-input:focus ~ .input-glow {
+    width: 80%;
+  }
+
+  .auth-hint {
+    display: block;
+    color: rgba(212, 197, 176, 0.4);
+    font-size: 0.75rem;
+    margin-top: 0.4rem;
+    letter-spacing: 0.5px;
+  }
+
+  /* ---- Links ---- */
+  .auth-link-sm {
+    color: #ec1313;
+    font-size: 0.82rem;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .auth-link-sm:hover {
+    color: #ff4444;
+    text-shadow: 0 0 8px rgba(236, 19, 19, 0.3);
+  }
+
+  .auth-link {
+    color: #ec1313;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .auth-link:hover {
+    color: #ff4444;
+    text-shadow: 0 0 10px rgba(236, 19, 19, 0.4);
+  }
+
+  .auth-footer-text {
+    color: rgba(212, 197, 176, 0.6);
+    font-size: 0.85rem;
+    margin: 0;
+  }
+
+  .auth-legal {
+    color: rgba(212, 197, 176, 0.45);
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+
+  /* ---- Submit Button ---- */
+  .auth-btn {
+    width: 100%;
+    padding: 0.9rem 2rem;
+    background: linear-gradient(135deg, #8b0000, #ec1313);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(236, 19, 19, 0.25);
+  }
+
+  .auth-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: left 0.5s ease;
+  }
+  .auth-btn:hover::before {
+    left: 100%;
+  }
+  .auth-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(236, 19, 19, 0.4);
+  }
+  .auth-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(236, 19, 19, 0.3);
+  }
+
+  /* ---- MLC Button ---- */
+  .btn-mlc {
+    padding: 0.8rem 1.5rem;
+    background: transparent;
+    border: 1.5px solid rgba(139, 0, 0, 0.4);
+    border-radius: 12px;
+    color: #d4c5b0;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+  }
+  .btn-mlc:hover {
+    border-color: #ec1313;
+    color: #fff;
+    background: rgba(236, 19, 19, 0.08);
+  }
+
+  /* ---- Divider ---- */
+  .auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: rgba(212, 197, 176, 0.4);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .auth-divider::before,
+  .auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(139,0,0,0.3), transparent);
+  }
+
+  /* ---- Responsive ---- */
+  @media (max-width: 576px) {
+    .auth-stranger-title { font-size: 2.5rem; }
+    .auth-card-inner { padding: 2rem 1.5rem; }
+    .auth-subtitle { font-size: 0.75rem; letter-spacing: 1px; }
+  }
+</style>
 {% endblock %}
