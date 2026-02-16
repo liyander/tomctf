@@ -79,54 +79,83 @@
     background: rgba(26,10,10,0.7);
     border: 1px solid rgba(139,0,0,0.3);
     border-radius: 12px;
-    padding: 1.5rem;
+    padding: 2rem;
     backdrop-filter: blur(10px);
   }
   .settings-form-card .form-label,
   .settings-form-card b {
     color: #ec1313;
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 0.8rem;
-    font-weight: 700;
+    font-size: 0.78rem;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 1px;
+    margin-bottom: 0.35rem;
+    display: block;
   }
   .settings-form-card .form-control,
   .settings-form-card .form-select {
     background: rgba(5,3,3,0.8);
-    border: 1px solid rgba(139,0,0,0.4);
+    border: 1px solid rgba(139,0,0,0.25);
     color: #d4c5b0;
     font-family: 'Space Grotesk', sans-serif;
-    border-radius: 8px;
-    padding: 0.6rem 0.85rem;
+    font-size: 0.9rem;
+    border-radius: 10px;
+    padding: 0.6rem 1rem;
+    height: auto;
+    line-height: 1.4;
+    transition: all 0.3s ease;
   }
   .settings-form-card .form-control:focus,
   .settings-form-card .form-select:focus {
     border-color: #ec1313;
-    box-shadow: 0 0 0 2px rgba(236,19,19,0.2);
+    box-shadow: 0 0 0 2px rgba(236,19,19,0.12);
     background: rgba(5,3,3,0.9);
     color: #fff;
+    outline: none;
   }
   .settings-form-card .form-control:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
   }
+  .settings-form-card .form-control::placeholder {
+    color: rgba(212, 197, 176, 0.3);
+  }
   .settings-form-card hr {
-    border-color: rgba(139,0,0,0.3);
-    margin: 1.25rem 0;
+    border-color: rgba(139,0,0,0.2);
+    margin: 1.5rem 0;
+    opacity: 0.6;
   }
   .settings-form-card .btn-primary {
     background: linear-gradient(135deg, #8b0000, #ec1313);
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.9rem;
     font-weight: 600;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 0.7rem 2rem;
     transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(236,19,19,0.2);
   }
   .settings-form-card .btn-primary:hover {
-    box-shadow: 0 0 20px rgba(236,19,19,0.4);
+    box-shadow: 0 6px 25px rgba(236,19,19,0.35);
     transform: translateY(-1px);
+  }
+  .settings-form-card .btn-primary:active {
+    transform: translateY(0);
+  }
+
+  /* Section headings inside form */
+  .settings-section-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: rgba(212,197,176,0.35);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 1rem;
   }
 
   /* Token section */
@@ -240,14 +269,17 @@
                     class="form-horizontal"
                 >
 
-                  <div class="mb-3">
-                    <b>{{ form.name.label(class="form-label") }}</b>
-                    {{ form.name(class="form-control", value=name, disabled=True) }}
-                  </div>
+                  <div class="settings-section-label">Account Info</div>
 
-                  <div class="mb-3">
-                    <b>{{ form.email.label(class="form-label") }}</b>
-                    {{ form.email(class="form-control", value=email, disabled=True) }}
+                  <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                      <b>{{ form.name.label(class="form-label") }}</b>
+                      {{ form.name(class="form-control", value=name, disabled=True) }}
+                    </div>
+                    <div class="col-md-6">
+                      <b>{{ form.email.label(class="form-label") }}</b>
+                      {{ form.email(class="form-control", value=email, disabled=True) }}
+                    </div>
                   </div>
 
                   <div class="mb-3">
@@ -257,24 +289,32 @@
 
                   <hr>
 
-                  <div class="mb-3">
-                    <b>{{ form.confirm.label(class="form-label") }}</b>
-                    {{ form.confirm(class="form-control") }}
-                  </div>
-                  <div class="mb-3">
-                    <b>{{ form.password.label(class="form-label") }}</b>
-                    {{ form.password(class="form-control") }}
+                  <div class="settings-section-label">Security</div>
+
+                  <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                      <b>{{ form.confirm.label(class="form-label") }}</b>
+                      {{ form.confirm(class="form-control") }}
+                    </div>
+                    <div class="col-md-6">
+                      <b>{{ form.password.label(class="form-label") }}</b>
+                      {{ form.password(class="form-control") }}
+                    </div>
                   </div>
 
                   <hr>
 
-                  <div class="mb-3">
-                    <b>{{ form.affiliation.label(class="form-label") }}</b>
-                    {{ form.affiliation(class="form-control", value=affiliation or "") }}
-                  </div>
-                  <div class="mb-3">
-                    <b>{{ form.website.label(class="form-label") }}</b>
-                    {{ form.website(class="form-control", value=website or "") }}
+                  <div class="settings-section-label">Profile Details</div>
+
+                  <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                      <b>{{ form.affiliation.label(class="form-label") }}</b>
+                      {{ form.affiliation(class="form-control", value=affiliation or "") }}
+                    </div>
+                    <div class="col-md-6">
+                      <b>{{ form.website.label(class="form-label") }}</b>
+                      {{ form.website(class="form-control", value=website or "") }}
+                    </div>
                   </div>
                   <div class="mb-3">
                     <b>{{ form.country.label(class="form-label") }}</b>
@@ -309,8 +349,8 @@
                     </template>
                   </div>
 
-                  <div class="mb-3">
-                    {{ form.submit(class="btn btn-primary float-end px-4") }}
+                  <div class="d-flex justify-content-end">
+                    {{ form.submit(class="btn btn-primary px-5") }}
                   </div>
                 </form>
               {% endwith %}
