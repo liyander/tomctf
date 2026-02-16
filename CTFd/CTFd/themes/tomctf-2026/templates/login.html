@@ -105,11 +105,10 @@
     /* Login page specific styles */
     .min-vh-100 {
       background: linear-gradient(135deg, 
-        rgba(0, 122, 255, 0.05) 0%, 
-        rgba(88, 86, 214, 0.08) 50%, 
-        rgba(255, 59, 48, 0.05) 100%
+        rgba(139, 0, 0, 0.08) 0%, 
+        rgba(236, 19, 19, 0.05) 50%, 
+        rgba(5, 3, 3, 0.9) 100%
       );
-      background-image: url("/themes/core/static/img/wmctf-hero-bg.svg");
       background-size: cover;
       background-position: center;
       position: relative;
@@ -122,12 +121,12 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(5, 3, 3, 0.92);
       z-index: 0;
     }
 
     [data-bs-theme="dark"] .min-vh-100::before {
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(5, 3, 3, 0.92);
     }
 
     .container {
@@ -141,9 +140,9 @@
     }
 
     .login-header {
-      background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%) !important;
+      background: linear-gradient(135deg, #8b0000 0%, #ec1313 100%) !important;
       color: white !important;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
     }
 
     /* Custom Checkbox Styles */
@@ -160,13 +159,13 @@
     }
 
     .custom-checkbox:checked {
-      background: #007AFF !important;
-      border-color: #007AFF !important;
+      background: #ec1313 !important;
+      border-color: #ec1313 !important;
       box-shadow: none !important;
     }
 
     .custom-checkbox:checked::before {
-      content: '✓';
+      content: '\2713';
       position: absolute;
       top: 50%;
       left: 50%;
@@ -177,12 +176,12 @@
     }
 
     .custom-checkbox:focus {
-      box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2) !important;
+      box-shadow: 0 0 0 2px rgba(236, 19, 19, 0.2) !important;
       outline: none !important;
     }
 
     .custom-checkbox:hover {
-      border-color: #007AFF !important;
+      border-color: #ec1313 !important;
     }
 
     .form-check {
@@ -200,31 +199,31 @@
     }
 
     .form-check-label:hover {
-      color: #007AFF !important;
+      color: #ec1313 !important;
     }
 
     .form-control-lg {
       padding: 1rem 1.5rem;
       font-size: 1rem;
-      border: 2px solid var(--light-border);
+      border: 2px solid var(--dark-border);
       transition: all 0.3s ease;
     }
 
     .form-control-lg:focus {
       border-color: var(--wmctf-primary);
-      box-shadow: 0 0 0 0.2rem rgba(0, 122, 255, 0.15);
+      box-shadow: 0 0 0 0.2rem rgba(236, 19, 19, 0.15);
       transform: translateY(-1px);
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, var(--wmctf-primary) 0%, var(--wmctf-secondary) 100%);
+      background: linear-gradient(135deg, #ec1313 0%, #8b0000 100%);
       border: none;
       transition: all 0.3s ease;
     }
 
     .btn-primary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(0, 122, 255, 0.3);
+      box-shadow: 0 8px 25px rgba(236, 19, 19, 0.3);
     }
 
     .btn-primary:active {
@@ -233,7 +232,7 @@
 
     /* Dark mode adjustments */
     [data-bs-theme="dark"] .card {
-      background: rgba(28, 28, 30, 0.95);
+      background: rgba(26, 10, 10, 0.95);
       border: 1px solid var(--dark-border);
     }
 
@@ -244,7 +243,7 @@
     }
 
     [data-bs-theme="dark"] .form-control-lg:focus {
-      background: var(--dark-card);
+      background: #0d0505;
     }
 
     [data-bs-theme="dark"] .form-control-lg::placeholder {
@@ -256,17 +255,17 @@
     }
 
     [data-bs-theme="dark"] .custom-checkbox {
-      background: #2C2C2E !important;
-      border-color: #48484A !important;
+      background: #1a0a0a !important;
+      border-color: #8b0000 !important;
     }
 
     [data-bs-theme="dark"] .custom-checkbox:checked {
-      background: #007AFF !important;
-      border-color: #007AFF !important;
+      background: #ec1313 !important;
+      border-color: #ec1313 !important;
     }
 
     [data-bs-theme="dark"] .custom-checkbox:hover {
-      border-color: #007AFF !important;
+      border-color: #ec1313 !important;
     }
 
     [data-bs-theme="dark"] .form-check-label {
@@ -274,7 +273,7 @@
     }
 
     [data-bs-theme="dark"] .form-check-label:hover {
-      color: #007AFF !important;
+      color: #ec1313 !important;
     }
 
     /* Responsive adjustments */

@@ -1,0 +1,153 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+<div class="jumbotron">
+    <div class="container">
+        <h1>Intro Page Config</h1>
+    </div>
+</div>
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            {% if success %}
+            <div class="alert alert-success alert-dismissable" role="alert">
+                Settings saved successfully!
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            {% endif %}
+            {% for error in errors %}
+            <div class="alert alert-danger alert-dismissable" role="alert">
+                <span class="sr-only">Error:</span>
+                {{ error }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            {% endfor %}
+
+            <form method="post" accept-charset="utf-8" autocomplete="off" role="form" class="form-horizontal">
+                <!-- Intro Page Enabled -->
+                <div class="form-group">
+                    <label><strong>Intro Page Status</strong></label>
+                    <select name="intro_enabled" id="intro_enabled" class="form-control" onchange="toggleFields()">
+                        <option value="disabled" {% if not intro_enabled or intro_enabled == 'disabled' %}selected{% endif %}>Disabled (show normal CTFd index)</option>
+                        <option value="enabled" {% if intro_enabled == 'enabled' %}selected{% endif %}>Enabled</option>
+                    </select>
+                    <small class="form-text text-muted">When disabled, visitors see the normal CTFd index page.</small>
+                </div>
+
+                <div id="intro-settings" style="{% if not intro_enabled or intro_enabled == 'disabled' %}display:none{% endif %}">
+                    <!-- Intro File Selection -->
+                    <div class="form-group">
+                        <label><strong>Intro File</strong></label>
+                        <select name="intro_file" class="form-control">
+                            {% for f in intro_files %}
+                            <option value="{{ f }}" {% if intro_file == f %}selected{% endif %}>{{ f }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">HTML file from the <code>intro/</code> folder to display as the landing page.</small>
+                    </div>
+
+                    <!-- Timer Mode -->
+                    <div class="form-group">
+                        <label><strong>Timer Mode</strong></label>
+                        <select name="intro_timer_mode" id="intro_timer_mode" class="form-control" onchange="toggleTimerFields()">
+                            <option value="none" {% if not intro_timer_mode or intro_timer_mode == 'none' %}selected{% endif %}>No Timer (always show intro page)</option>
+                            <option value="countdown" {% if intro_timer_mode == 'countdown' %}selected{% endif %}>Countdown (show intro until a specific date/time)</option>
+                        </select>
+                        <small class="form-text text-muted">
+                            <strong>No Timer:</strong> The intro page is always the default landing page.<br>
+                            <strong>Countdown:</strong> The intro page is shown until the countdown ends, then switches to the normal CTFd index.
+                        </small>
+                    </div>
+
+                    <!-- Countdown End (only shown in countdown mode) -->
+                    <div id="countdown-settings" style="{% if intro_timer_mode != 'countdown' %}display:none{% endif %}">
+                        <div class="form-group">
+                            <label><strong>Countdown End Date/Time</strong></label>
+                            <input type="datetime-local" name="intro_countdown_end" class="form-control"
+                                   value="{{ intro_countdown_end or '' }}" />
+                            <small class="form-text text-muted">When this time is reached, the intro page stops showing and the normal CTFd index is displayed instead.</small>
+                        </div>
+
+                        <!-- Pause Toggle -->
+                        <div class="form-group">
+                            <label><strong>Pause Intro</strong></label>
+                            <select name="intro_paused" class="form-control">
+                                <option value="0" {% if not intro_paused or intro_paused == '0' %}selected{% endif %}>Running (show intro page)</option>
+                                <option value="1" {% if intro_paused == '1' %}selected{% endif %}>Paused (show normal CTFd index)</option>
+                            </select>
+                            <small class="form-text text-muted">When paused, the normal CTFd index page is shown regardless of the countdown timer.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <input type="hidden" name="nonce" value="{{ nonce }}" />
+                <div class="col-md-12 text-center mt-3 mb-3">
+                    <button type="submit" class="btn btn-md btn-primary btn-outlined">
+                        Save Settings
+                    </button>
+                </div>
+            </form>
+
+            <!-- Current Status -->
+            <div class="card mt-3 mb-4">
+                <div class="card-header"><strong>Current Status</strong></div>
+                <div class="card-body">
+                    <table class="table table-sm table-bordered mb-0">
+                        <tr>
+                            <td><strong>Intro Page</strong></td>
+                            <td>
+                                {% if intro_enabled == 'enabled' %}
+                                    <span class="badge badge-success">Enabled</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Disabled</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if intro_enabled == 'enabled' %}
+                        <tr>
+                            <td><strong>File</strong></td>
+                            <td>{{ intro_file or 'intro.html' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Timer Mode</strong></td>
+                            <td>{{ intro_timer_mode or 'none' }}</td>
+                        </tr>
+                        {% if intro_timer_mode == 'countdown' %}
+                        <tr>
+                            <td><strong>Countdown End</strong></td>
+                            <td>{{ intro_countdown_end or 'Not set' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Paused</strong></td>
+                            <td>
+                                {% if intro_paused == '1' %}
+                                    <span class="badge badge-warning">Yes</span>
+                                {% else %}
+                                    <span class="badge badge-success">No</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+function toggleFields() {
+    var enabled = document.getElementById('intro_enabled').value;
+    var settings = document.getElementById('intro-settings');
+    settings.style.display = (enabled === 'enabled') ? '' : 'none';
+}
+
+function toggleTimerFields() {
+    var mode = document.getElementById('intro_timer_mode').value;
+    var countdown = document.getElementById('countdown-settings');
+    countdown.style.display = (mode === 'countdown') ? '' : 'none';
+}
+</script>
+{% endblock scripts %}

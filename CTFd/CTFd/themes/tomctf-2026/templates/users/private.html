@@ -1,91 +1,306 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <div class="jumbotron">
-    <div class="container">
-      <h1>{{ user.name }}</h1>
+<style>
+  .profile-hero {
+    background: linear-gradient(135deg, #050303 0%, #1a0a0a 50%, #0d0505 100%);
+    border-bottom: 2px solid #8b0000;
+    padding: 3rem 0 2.5rem;
+    padding-top: calc(3rem + 70px);
+    margin-top: -70px;
+    position: relative;
+    overflow: hidden;
+  }
+  .profile-hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(236,19,19,0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .profile-avatar {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8b0000, #ec1313);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; color: #fff;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    border: 3px solid rgba(236,19,19,0.4);
+    box-shadow: 0 0 20px rgba(236,19,19,0.3);
+    margin: 0 auto 1rem;
+  }
+  .profile-hero h1 {
+    margin-bottom: 0.5rem;
+  }
+  .profile-hero .stranger-title {
+    font-family: 'Stranger Things', 'Creepster', cursive;
+    font-size: 3.2rem;
+    background: linear-gradient(135deg, #ec1313, #ff4444, #ec1313);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 25px rgba(236,19,19,0.5));
+  }
+  .profile-hero .badge-pill {
+    background: rgba(139,0,0,0.5);
+    border: 1px solid rgba(236,19,19,0.3);
+    color: #ff6b6b;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    padding: 0.35rem 0.85rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+  }
+  .profile-hero .badge-team {
+    background: linear-gradient(135deg, #8b0000, #ec1313);
+    border: none;
+    color: #fff;
+  }
+  .profile-stat-card {
+    background: rgba(26,10,10,0.6);
+    border: 1px solid rgba(139,0,0,0.3);
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    text-align: center;
+    display: inline-block;
+    margin: 0.3rem;
+  }
+  .profile-stat-card .stat-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: #ec1313;
+    display: block;
+  }
+  .profile-stat-card .stat-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+  .profile-hero .website-link {
+    color: rgba(255,255,255,0.5);
+    transition: all 0.3s;
+  }
+  .profile-hero .website-link:hover {
+    color: #ec1313;
+    text-shadow: 0 0 8px rgba(236,19,19,0.4);
+  }
+  .profile-custom-field {
+    color: rgba(255,255,255,0.6);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.9rem;
+  }
 
-      {% if user.team_id %}
-        <h2>
-          <a href="{{ url_for('teams.public', team_id=user.team_id) }}">
-						<span class="badge bg-secondary">
-							{{ user.team.name }}
-						</span>
+  .section-card {
+    background: rgba(26,10,10,0.7);
+    border: 1px solid rgba(139,0,0,0.3);
+    border-radius: 12px;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+  }
+  .section-card-header {
+    background: rgba(139,0,0,0.2);
+    border-bottom: 1px solid rgba(139,0,0,0.3);
+    padding: 0.85rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .section-card-header h3 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #ec1313;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .section-card-header i {
+    color: #ec1313;
+    font-size: 0.9rem;
+  }
+  .section-card .table {
+    margin-bottom: 0;
+    color: #d4c5b0;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .section-card .table thead th {
+    background: rgba(139,0,0,0.15);
+    color: rgba(236,19,19,0.8);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 1.5px;
+    border-bottom: 1px solid rgba(139,0,0,0.3);
+    padding: 0.7rem 1rem;
+  }
+  .section-card .table tbody tr {
+    border-bottom: 1px solid rgba(139,0,0,0.1);
+    transition: background 0.2s;
+  }
+  .section-card .table tbody tr:hover {
+    background: rgba(236,19,19,0.05);
+  }
+  .section-card .table tbody td {
+    padding: 0.65rem 1rem;
+    vertical-align: middle;
+    border: none;
+  }
+  .section-card .table tbody td a {
+    color: #ec1313;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .section-card .table tbody td a:hover {
+    color: #ff4444;
+    text-shadow: 0 0 8px rgba(236,19,19,0.3);
+  }
+  .section-card .table-striped > tbody > tr:nth-of-type(odd) > * {
+    background-color: rgba(139,0,0,0.04);
+    --bs-table-bg-type: transparent;
+  }
+
+  .award-card {
+    background: rgba(26,10,10,0.5);
+    border: 1px solid rgba(139,0,0,0.3);
+    border-radius: 10px;
+    padding: 1.25rem;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+  .award-card:hover {
+    border-color: rgba(236,19,19,0.5);
+    box-shadow: 0 0 15px rgba(236,19,19,0.1);
+  }
+  .award-card .award-icon { color: #ec1313; }
+  .award-card strong { color: #fff; font-family: 'Space Grotesk', sans-serif; }
+  .award-card p { color: rgba(255,255,255,0.5); margin-bottom: 0.25rem; font-size: 0.85rem; }
+
+  .stats-progress-card {
+    background: rgba(26,10,10,0.5);
+    border: 1px solid rgba(139,0,0,0.3);
+    border-radius: 10px;
+    padding: 1.25rem;
+  }
+  .stats-progress-card .progress {
+    height: 8px;
+    background: rgba(5,3,3,0.5);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .stats-progress-card small {
+    color: rgba(255,255,255,0.6);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.8rem;
+  }
+
+  .graph-card {
+    background: rgba(26,10,10,0.5);
+    border: 1px solid rgba(139,0,0,0.3);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+
+  .empty-state {
+    color: rgba(255,255,255,0.3);
+    font-family: 'Space Grotesk', sans-serif;
+    padding: 3rem 0;
+  }
+  .empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+    color: rgba(236,19,19,0.3);
+  }
+</style>
+
+  <div class="profile-hero">
+    <div class="container text-center">
+      <div class="profile-avatar">
+        {{ user.name[0] | upper }}
+      </div>
+      <h1><span class="stranger-title">{{ user.name }}</span></h1>
+
+      {% if user.team_id and Configs.user_mode == 'teams' %}
+        <div class="mb-2">
+          <a href="{{ url_for('teams.public', team_id=user.team_id) }}" style="text-decoration:none;">
+            <span class="badge-pill badge-team">
+              <i class="fas fa-users me-1"></i> {{ user.team.name }}
+            </span>
           </a>
-        </h2>
+        </div>
       {% endif %}
 
-      <div class="pt-2">
+      <div class="pt-1 d-flex flex-wrap justify-content-center gap-2">
         {% if user.oauth_id %}
-          <a href="https://majorleaguecyber.org/u/{{ user.name }}">
-            <h3 class="d-inline-block mx-1"><span class="badge rounded-pill bg-primary">{% trans %}Official{% endtrans %}</span></h3>
+          <a href="https://majorleaguecyber.org/u/{{ user.name }}" style="text-decoration:none;">
+            <span class="badge-pill"><i class="fas fa-check-circle me-1"></i> {% trans %}Official{% endtrans %}</span>
           </a>
         {% endif %}
 
         {% if user.affiliation %}
-          <h3 class="d-inline-block mx-1">
-            <span class="badge rounded-pill bg-primary">{{ user.affiliation }}</span>
-          </h3>
+          <span class="badge-pill"><i class="fas fa-building me-1"></i> {{ user.affiliation }}</span>
         {% endif %}
 
         {% if user.country %}
-          <h3 class="d-inline-block mx-1">
-            <span class="badge rounded-pill bg-primary">
-                <i class="flag-{{ user.country.lower() }}"></i>
-                {{ lookup_country_code(user.country) }}
-            </span>
-          </h3>
+          <span class="badge-pill">
+            <i class="flag-{{ user.country.lower() }} me-1"></i>
+            {{ lookup_country_code(user.country) }}
+          </span>
         {% endif %}
       </div>
 
       {% if user.bracket_id %}
         <div class="pt-2">
-          <h2>
-            <span class="badge text-bg-light">
-              {{ user.bracket.name }}
-            </span>
-          </h2>
+          <span class="badge-pill" style="background:rgba(212,197,176,0.15); color:#d4c5b0; border-color:rgba(212,197,176,0.3);">
+            {{ user.bracket.name }}
+          </span>
         </div>
       {% endif %}
 
       <div class="pt-2">
         {% for field in user.fields %}
-          <h3 class="d-block">
-            {{ field.name }}: {{ field.value }}
-          </h3>
+          <p class="profile-custom-field mb-1">
+            <strong style="color:rgba(255,255,255,0.8);">{{ field.name }}:</strong> {{ field.value }}
+          </p>
         {% endfor %}
       </div>
 
       {% if user.fields %}
-        <hr class="w-50 mx-auto">
+        <hr style="border-color:rgba(139,0,0,0.3); width:40%; margin:1rem auto;">
       {% endif %}
 
-      <div>
-        <h2 class="text-center">
-          {% if account.place %}
-            {{ account.place }} <small>place</small>
-          {% endif %}
-        </h2>
-        <h2 class="text-center">
-          {% if account %}
-            {{ account.get_score(admin=True) }} <small>points</small>
-          {% endif %}
-        </h2>
+      <div class="d-flex justify-content-center flex-wrap gap-2 mt-2">
+        {% if account.place %}
+          <div class="profile-stat-card">
+            <span class="stat-value">{{ account.place }}</span>
+            <span class="stat-label">{% trans %}Place{% endtrans %}</span>
+          </div>
+        {% endif %}
+        {% if account %}
+          <div class="profile-stat-card">
+            <span class="stat-value">{{ account.get_score(admin=True) }}</span>
+            <span class="stat-label">{% trans %}Points{% endtrans %}</span>
+          </div>
+        {% endif %}
       </div>
 
       <div class="pt-3">
         {% if user.website %}
-          <a href="{{ user.website }}" target="_blank" style="color: inherit;" rel="noopener">
-            <i
-                class="fas fa-external-link-alt fa-2x px-2" data-toggle="tooltip" data-placement="top"
-                title="{{ user.website }}"
-            ></i>
+          <a href="{{ user.website }}" target="_blank" class="website-link" rel="noopener">
+            <i class="fas fa-external-link-alt fa-lg px-2" data-toggle="tooltip" data-placement="top"
+                title="{{ user.website }}"></i>
           </a>
         {% endif %}
       </div>
     </div>
   </div>
-  <div class="container">
+
+  <div class="container py-4">
     {% include "components/errors.html" %}
 
     {% set solves = user.solves %}
@@ -93,125 +308,126 @@
 
     {% if solves or awards %}
       {% if awards %}
-        <div class="row">
-          <div class="col-md-12">
+        <div class="section-card mb-4">
+          <div class="section-card-header">
+            <i class="fas fa-trophy"></i>
             <h3>{% trans %}Awards{% endtrans %}</h3>
-
           </div>
-          {% for award in awards %}
-            <div class="col-md-3 col-sm-6">
-              <p class="text-center">
-                <i class="award-icon award-{{ award.icon }} fa-2x"></i>
-                <br>
-                <strong>{{ award.name }}</strong>
-              </p>
-              <p class="text-center">{{ award.category or "" }}</p>
-              <p class="text-center">{{ award.description or "" }}</p>
-              <p class="text-center">{{ award.value }}</p>
+          <div class="p-3">
+            <div class="row g-3">
+              {% for award in awards %}
+                <div class="col-md-3 col-sm-6">
+                  <div class="award-card">
+                    <i class="award-icon award-{{ award.icon }} fa-2x mb-2"></i><br>
+                    <strong>{{ award.name }}</strong>
+                    <p>{{ award.category or "" }}</p>
+                    <p>{{ award.description or "" }}</p>
+                    <p style="color:#ec1313; font-weight:700; font-family:'Space Grotesk',sans-serif;">{{ award.value }}</p>
+                  </div>
+                </div>
+              {% endfor %}
             </div>
-          {% endfor %}
+          </div>
         </div>
       {% endif %}
 
-      <br>
-
-      <div class="row">
-        <div class="col-md-12">
+      <div class="section-card mb-4">
+        <div class="section-card-header">
+          <i class="fas fa-flag-checkered"></i>
           <h3>{% trans %}Solves{% endtrans %}</h3>
-          <table class="table table-striped align-middle">
-            <thead>
-            <tr>
-              <th>{% trans %}Challenge{% endtrans %}</th>
-              <th class="d-none d-md-block d-lg-block">{% trans %}Category{% endtrans %}</th>
-              <th>{% trans %}Value{% endtrans %}</th>
-              <th>{% trans %}Time{% endtrans %}</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for solve in solves %}
-              <tr>
-                <td>
-                  <a href="{{ url_for('challenges.listing') }}#{{ solve.challenge.name }}-{{ solve.challenge.id }}">
-                    {{ solve.challenge.name }}
-                  </a>
-                </td>
-                <td class="d-none d-md-block d-lg-block">{{ solve.challenge.category }}</td>
-                <td>{{ solve.challenge.value }}</td>
-                <td class="solve-time">
-                  <span data-time="{{ solve.date | isoformat }}"></span>
-                </td>
-              </tr>
-            {% endfor %}
-            </tbody>
-          </table>
         </div>
+        <table class="table table-striped align-middle">
+          <thead>
+          <tr>
+            <th>{% trans %}Challenge{% endtrans %}</th>
+            <th class="d-none d-md-block d-lg-block">{% trans %}Category{% endtrans %}</th>
+            <th>{% trans %}Value{% endtrans %}</th>
+            <th>{% trans %}Time{% endtrans %}</th>
+          </tr>
+          </thead>
+          <tbody>
+          {% for solve in solves %}
+            <tr>
+              <td>
+                <a href="{{ url_for('challenges.listing') }}#{{ solve.challenge.name }}-{{ solve.challenge.id }}">
+                  {{ solve.challenge.name }}
+                </a>
+              </td>
+              <td class="d-none d-md-block d-lg-block">{{ solve.challenge.category }}</td>
+              <td style="color:#ec1313; font-weight:600;">{{ solve.challenge.value }}</td>
+              <td class="solve-time">
+                <span data-time="{{ solve.date | isoformat }}"></span>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
       </div>
 
       <div class="clearfix"></div>
 
-      <div class="row" x-data="UserGraphs">
-        <div class="col-md-6 d-none d-md-block d-lg-block py-4">
-          <div class="progress">
-            <div 
-              class="progress-bar" 
-              role="progressbar" 
-              :style="{ width: `${getSolvePercentage()}%`, 'background-color': 'rgb(0, 209, 64)' }" 
-            >
+      <div class="row g-3" x-data="UserGraphs">
+        <div class="col-md-6 d-none d-md-block d-lg-block">
+          <div class="stats-progress-card">
+            <h6 style="color:#ec1313; font-family:'Space Grotesk',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:1px; font-size:0.75rem; margin-bottom:0.75rem;">
+              <i class="fas fa-chart-bar me-1"></i> Solve vs Fail
+            </h6>
+            <div class="progress mb-2">
+              <div class="progress-bar" role="progressbar"
+                :style="{ width: `${getSolvePercentage()}%`, 'background-color': '#22c55e' }"></div>
+              <div class="progress-bar" role="progressbar"
+                :style="{ width: `${getFailPercentage()}%`, 'background-color': '#ec1313' }"></div>
             </div>
-            <div 
-              class="progress-bar" 
-              role="progressbar" 
-              :style="{ width: `${getFailPercentage()}%`, 'background-color': 'rgb(207, 38, 0)' }"
-            >
+            <div class="d-flex gap-3">
+              <div>
+                <svg height="10" width="10"><circle cx="5" cy="5" r="5" fill="#22c55e"/></svg>
+                <small x-text="`Solves (${getSolvePercentage()}%)`"></small>
+              </div>
+              <div>
+                <svg height="10" width="10"><circle cx="5" cy="5" r="5" fill="#ec1313"/></svg>
+                <small x-text="`Fails (${getFailPercentage()}%)`"></small>
+              </div>
             </div>
-          </div>
-          <div class="ps-2 float-start">
-            <svg height="16" width="16">
-              <circle cx="8" cy="8" r="5" fill="rgb(0, 209, 64)" />
-            </svg>
-            <small x-text="`Solves (${getSolvePercentage()}%)`"></small>
-          </div>
-          <div class="ps-2 float-start">
-            <svg height="16" width="16">
-              <circle cx="8" cy="8" r="5" fill="rgb(207, 38, 0)" />
-            </svg>
-            <small x-text="`Fails (${getFailPercentage()}%)`"></small>
           </div>
         </div>
-        <div class="col-md-6 d-none d-md-block d-lg-block py-4">
-          <div class="progress">
-            <template x-for="category in getCategoryBreakdown()" :key="category.name">
-              <div 
-                class="progress-bar" 
-                role="progressbar" 
-                :style="{ width: `${category.percent}%`, 'background-color': category.color }"
-              >
-              </div>
-            </template>
-          </div>
-          <template x-for="category in getCategoryBreakdown()" :key="category.name">
-            <div class="ps-2 float-start">
-              <svg height="16" width="16">
-                <circle cx="8" cy="8" r="5" :fill="category.color" />
-              </svg>
-              <small x-text="`${category.name} (${category.percent}%)`"></small>
+        <div class="col-md-6 d-none d-md-block d-lg-block">
+          <div class="stats-progress-card">
+            <h6 style="color:#ec1313; font-family:'Space Grotesk',sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:1px; font-size:0.75rem; margin-bottom:0.75rem;">
+              <i class="fas fa-th-large me-1"></i> Category Breakdown
+            </h6>
+            <div class="progress mb-2">
+              <template x-for="category in getCategoryBreakdown()" :key="category.name">
+                <div class="progress-bar" role="progressbar"
+                  :style="{ width: `${category.percent}%`, 'background-color': category.color }"></div>
+              </template>
             </div>
-          </template>
+            <div class="d-flex flex-wrap gap-2">
+              <template x-for="category in getCategoryBreakdown()" :key="category.name">
+                <div>
+                  <svg height="10" width="10"><circle cx="5" cy="5" r="5" :fill="category.color"/></svg>
+                  <small x-text="`${category.name} (${category.percent}%)`"></small>
+                </div>
+              </template>
+            </div>
+          </div>
         </div>
         <br class="clearfix">
-        <div class="col-md-12 d-none d-md-block d-lg-block py-4">
-          <div id="score-graph" x-ref="scoregraph" class="w-100 d-flex align-items-center">
-            <div class="text-center w-100">
-              <i class="fas fa-circle-notch fa-spin fa-3x fa-fw spinner"></i>
+        <div class="col-md-12 d-none d-md-block d-lg-block">
+          <div class="graph-card">
+            <div id="score-graph" x-ref="scoregraph" class="w-100 d-flex align-items-center">
+              <div class="text-center w-100">
+                <i class="fas fa-circle-notch fa-spin fa-3x fa-fw spinner" style="color:#ec1313;"></i>
+              </div>
             </div>
           </div>
         </div>
       </div>
     {% else %}
       <div class="row min-vh-25">
-        <h3 class="opacity-50 text-center w-100 justify-content-center align-self-center">
-          {% trans %}No solves yet{% endtrans %}
-        </h3>
+        <div class="empty-state text-center w-100 align-self-center">
+          <i class="fas fa-ghost"></i>
+          <h3>{% trans %}No solves yet{% endtrans %}</h3>
+        </div>
       </div>
     {% endif %}
   </div>

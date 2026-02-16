@@ -3,25 +3,34 @@
 {% block content %}
 	<div class="jumbotron">
 		<div class="container">
-			<h1>
+			<h1 class="fw-bold" style="font-family: 'Space Grotesk', sans-serif;">
+				<i class="fas fa-bell text-danger me-2"></i>
 				{% trans %}Notifications{% endtrans %}
 			</h1>
 		</div>
 	</div>
 	<div class="container">
 		{% if not notifications %}
-		<h2 class="text-center">
-			{% trans %}There are no notifications yet{% endtrans %}
-		</h2>
+		<div class="text-center py-5">
+			<i class="fas fa-bell-slash text-muted mb-3" style="font-size: 3rem; opacity: 0.3;"></i>
+			<h2 class="text-muted" style="font-family: 'Space Grotesk', sans-serif;">
+				{% trans %}There are no notifications yet{% endtrans %}
+			</h2>
+		</div>
 		{% endif %}
 		{% for notification in notifications %}
-		<div class="card bg-body-tertiary mb-4">
-			<div class="card-body">
-				<h3 class="card-title">{{ notification.title }}</h3>
-				<blockquote class="blockquote mb-0">
-					<p>{{ notification.html }}</p>
-					<small class="text-muted"><span data-time="{{ notification.date | isoformat }}"></span></small>
-				</blockquote>
+		<div class="card mb-4" style="background: #1a0a0a; border: 1px solid rgba(139,0,0,0.3); border-radius: 12px; overflow: hidden;">
+			<div class="card-body p-4">
+				<div class="d-flex align-items-start">
+					<div class="me-3 mt-1">
+						<i class="fas fa-broadcast-tower text-danger" style="font-size: 1.2rem;"></i>
+					</div>
+					<div class="flex-grow-1">
+						<h4 class="card-title fw-bold mb-2" style="font-family: 'Space Grotesk', sans-serif; color: #fff;">{{ notification.title }}</h4>
+						<div class="mb-2" style="color: rgba(255,255,255,0.7);">{{ notification.html }}</div>
+						<small class="text-muted"><i class="fas fa-clock me-1"></i><span data-time="{{ notification.date | isoformat }}"></span></small>
+					</div>
+				</div>
 			</div>
 		</div>
 		{% endfor %}

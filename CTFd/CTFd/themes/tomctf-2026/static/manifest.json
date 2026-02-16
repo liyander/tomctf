@@ -19,21 +19,21 @@
     "file": "assets/raleway-cyrillic-ext-400-normal.068d812c.woff2",
     "src": "node_modules/@fontsource/raleway/files/raleway-cyrillic-ext-400-normal.woff2"
   },
-  "node_modules/@fontsource/raleway/files/raleway-vietnamese-400-normal.woff2": {
-    "file": "assets/raleway-vietnamese-400-normal.a2f00e25.woff2",
-    "src": "node_modules/@fontsource/raleway/files/raleway-vietnamese-400-normal.woff2"
-  },
   "node_modules/@fontsource/raleway/files/raleway-cyrillic-400-normal.woff2": {
     "file": "assets/raleway-cyrillic-400-normal.a9f2a909.woff2",
     "src": "node_modules/@fontsource/raleway/files/raleway-cyrillic-400-normal.woff2"
   },
-  "node_modules/@fontsource/raleway/files/raleway-latin-400-normal.woff2": {
-    "file": "assets/raleway-latin-400-normal.1d94fd1a.woff2",
-    "src": "node_modules/@fontsource/raleway/files/raleway-latin-400-normal.woff2"
+  "node_modules/@fontsource/raleway/files/raleway-vietnamese-400-normal.woff2": {
+    "file": "assets/raleway-vietnamese-400-normal.a2f00e25.woff2",
+    "src": "node_modules/@fontsource/raleway/files/raleway-vietnamese-400-normal.woff2"
   },
   "node_modules/@fontsource/raleway/files/raleway-latin-ext-400-normal.woff2": {
     "file": "assets/raleway-latin-ext-400-normal.455b818f.woff2",
     "src": "node_modules/@fontsource/raleway/files/raleway-latin-ext-400-normal.woff2"
+  },
+  "node_modules/@fontsource/raleway/files/raleway-latin-400-normal.woff2": {
+    "file": "assets/raleway-latin-400-normal.1d94fd1a.woff2",
+    "src": "node_modules/@fontsource/raleway/files/raleway-latin-400-normal.woff2"
   },
   "node_modules/@fontsource/lato/files/lato-all-400-normal.woff": {
     "file": "assets/lato-all-400-normal.8844f83a.woff",
@@ -86,7 +86,7 @@
     ]
   },
   "assets/js/scoreboard.js": {
-    "file": "assets/scoreboard.eb6dce9b.js",
+    "file": "assets/scoreboard.a43c5149.js",
     "src": "assets/js/scoreboard.js",
     "isEntry": true,
     "imports": [
@@ -200,7 +200,7 @@
     ]
   },
   "assets/scss/main.scss": {
-    "file": "assets/main.94fdbea8.css",
+    "file": "assets/main.7d5a85ad.css",
     "src": "assets/scss/main.scss",
     "isEntry": true
   }

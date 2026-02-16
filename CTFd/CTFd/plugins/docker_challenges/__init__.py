@@ -1,4 +1,5 @@
 import traceback
+import os
 
 from CTFd.plugins.challenges import BaseChallenge, CHALLENGE_CLASSES, get_chal_class
 from CTFd.plugins.flags import get_flag_class
@@ -195,6 +196,54 @@ class DockerConfigForm(BaseForm):
     )
     repositories = SelectMultipleField('Repositories')
     submit = SubmitField('Submit')
+
+
+def define_intro_admin(app):
+    admin_intro_config = Blueprint('admin_intro_config', __name__, template_folder='templates',
+                                   static_folder='assets')
+
+    @admin_intro_config.route("/admin/intro_config", methods=["GET", "POST"])
+    @admins_only
+    def intro_config():
+        from CTFd.utils import get_config, set_config
+        errors = []
+        success = False
+
+        if request.method == "POST":
+            intro_enabled = request.form.get('intro_enabled', 'disabled')
+            intro_file = request.form.get('intro_file', 'intro.html')
+            intro_timer_mode = request.form.get('intro_timer_mode', 'none')
+            intro_countdown_end = request.form.get('intro_countdown_end', '')
+            intro_paused = request.form.get('intro_paused', '0')
+
+            set_config('intro_enabled', intro_enabled)
+            set_config('intro_file', intro_file)
+            set_config('intro_timer_mode', intro_timer_mode)
+            set_config('intro_countdown_end', intro_countdown_end)
+            set_config('intro_paused', intro_paused)
+            success = True
+
+        # List HTML files from intro/ folder
+        intro_dir = os.path.abspath(os.path.join(app.root_path, '../../intro'))
+        intro_files = []
+        if os.path.isdir(intro_dir):
+            for f in os.listdir(intro_dir):
+                if f.endswith('.html') or f.endswith('.htm'):
+                    intro_files.append(f)
+        intro_files.sort()
+
+        return render_template('intro_config.html',
+                               intro_enabled=get_config('intro_enabled') or 'disabled',
+                               intro_file=get_config('intro_file') or 'intro.html',
+                               intro_timer_mode=get_config('intro_timer_mode') or 'none',
+                               intro_countdown_end=get_config('intro_countdown_end') or '',
+                               intro_paused=get_config('intro_paused') or '0',
+                               intro_files=intro_files,
+                               errors=errors,
+                               success=success,
+                               nonce=session.get('nonce'))
+
+    app.register_blueprint(admin_intro_config)
 
 
 def define_docker_admin(app):
@@ -1036,6 +1085,8 @@ def load(app):
         return datetime.fromtimestamp(value).strftime(format)
     register_plugin_assets_directory(app, base_path='/plugins/docker_challenges/assets')
     define_docker_admin(app)
+    define_intro_admin(app)
+    register_admin_plugin_menu_bar('Intro Config', '/admin/intro_config')
     define_docker_status(app)
     CTFd_API_v1.add_namespace(docker_namespace, '/docker')
     CTFd_API_v1.add_namespace(container_namespace, '/container')

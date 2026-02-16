@@ -123,11 +123,10 @@
     /* Register page specific styles */
     .min-vh-100 {
       background: linear-gradient(135deg, 
-        rgba(0, 122, 255, 0.05) 0%, 
-        rgba(88, 86, 214, 0.08) 50%, 
-        rgba(255, 59, 48, 0.05) 100%
+        rgba(139, 0, 0, 0.08) 0%, 
+        rgba(236, 19, 19, 0.05) 50%, 
+        rgba(5, 3, 3, 0.9) 100%
       );
-      background-image: url("/themes/core/static/img/wmctf-hero-bg.svg");
       background-size: cover;
       background-position: center;
       position: relative;
@@ -140,12 +139,12 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(5, 3, 3, 0.92);
       z-index: 0;
     }
 
     [data-bs-theme="dark"] .min-vh-100::before {
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(5, 3, 3, 0.92);
     }
 
     .container {
@@ -159,27 +158,27 @@
     }
 
     .register-header {
-      background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%) !important;
+      background: linear-gradient(135deg, #8b0000 0%, #ec1313 100%) !important;
       color: white !important;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
     }
 
     .form-control-lg {
       padding: 1rem 1.5rem;
       font-size: 1rem;
-      border: 2px solid var(--light-border);
+      border: 2px solid var(--dark-border);
       transition: all 0.3s ease;
     }
 
     .form-control-lg:focus {
       border-color: var(--wmctf-primary);
-      box-shadow: 0 0 0 0.2rem rgba(0, 122, 255, 0.15);
+      box-shadow: 0 0 0 0.2rem rgba(236, 19, 19, 0.15);
       transform: translateY(-1px);
     }
 
     /* Dark mode adjustments */
     [data-bs-theme="dark"] .card {
-      background: rgba(28, 28, 30, 0.95);
+      background: rgba(26, 10, 10, 0.95);
       border: 1px solid var(--dark-border);
     }
 
@@ -190,7 +189,7 @@
     }
 
     [data-bs-theme="dark"] .form-control-lg:focus {
-      background: var(--dark-card);
+      background: #0d0505;
     }
 
     [data-bs-theme="dark"] .form-label {

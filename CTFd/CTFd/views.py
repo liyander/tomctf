@@ -352,6 +352,22 @@ def intro_assets(path):
     return send_from_directory(os.path.abspath(os.path.join(app.root_path, '../../intro')), path)
 
 
+@views.route("/api/intro_status")
+def intro_status():
+    """Public API endpoint for the intro page to fetch countdown info."""
+    from flask import jsonify
+    intro_enabled = get_config('intro_enabled') or 'disabled'
+    intro_timer_mode = get_config('intro_timer_mode') or 'none'
+    intro_countdown_end = get_config('intro_countdown_end') or ''
+    intro_paused = get_config('intro_paused') or '0'
+    return jsonify({
+        'enabled': intro_enabled == 'enabled',
+        'timer_mode': intro_timer_mode,
+        'countdown_end': intro_countdown_end,
+        'paused': intro_paused == '1'
+    })
+
+
 @views.route("/", defaults={"route": "index"})
 @views.route("/<path:route>")
 def static_html(route):
@@ -361,7 +377,40 @@ def static_html(route):
     :return:
     """
     if route == "index" and not request.args.get('no_intro'):
-        return send_from_directory(os.path.abspath(os.path.join(app.root_path, '../../intro')), 'intro.html')
+        # Dynamic intro page logic based on admin config
+        intro_enabled = get_config('intro_enabled')
+        if intro_enabled == 'enabled':
+            intro_timer_mode = get_config('intro_timer_mode') or 'none'
+            intro_paused = get_config('intro_paused') or '0'
+            intro_file = get_config('intro_file') or 'intro.html'
+            show_intro = False
+
+            if intro_timer_mode == 'none':
+                # No timer mode: always show intro page
+                show_intro = True
+            elif intro_timer_mode == 'countdown':
+                if intro_paused == '1':
+                    # Paused: show normal CTFd index
+                    show_intro = False
+                else:
+                    # Check if countdown has ended
+                    intro_countdown_end = get_config('intro_countdown_end') or ''
+                    if intro_countdown_end:
+                        from datetime import datetime as dt
+                        try:
+                            end_time = dt.fromisoformat(intro_countdown_end)
+                            if dt.now() < end_time:
+                                show_intro = True
+                            else:
+                                show_intro = False
+                        except (ValueError, TypeError):
+                            show_intro = True  # Invalid date, default to showing intro
+                    else:
+                        show_intro = True  # No end time set, show intro
+
+            if show_intro:
+                intro_dir = os.path.abspath(os.path.join(app.root_path, '../../intro'))
+                return send_from_directory(intro_dir, intro_file)
 
     page = get_page(route)
     if page is None:

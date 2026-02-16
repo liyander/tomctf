@@ -6,15 +6,19 @@
 	<div class="row">
 		<div class="col-md-12">
 			<div class="pt-5 mt-5 text-center">
-				<h1>{% trans %}Too many requests{% endtrans %}</h1>
-				<h1>{% trans %}Please slow down!{% endtrans %}</h1>
-				<hr class="w-50 m-auto">
-				<br/>
-				<h2>{% trans %}429 Too Many Requests{% endtrans %}</h2>
+				<div class="mb-3">
+					<i class="fas fa-hourglass-half text-danger" style="font-size: 4rem; filter: drop-shadow(0 0 20px rgba(236,19,19,0.5));"></i>
+				</div>
+				<h1 class="display-1 fw-bold text-danger" style="font-family: 'Space Grotesk', sans-serif; text-shadow: 0 0 30px rgba(236,19,19,0.3);">429</h1>
+				<div class="mx-auto mb-3" style="width: 80px; height: 3px; background: linear-gradient(90deg, transparent, #ec1313, transparent);"></div>
+				<h2 class="text-white-50" style="font-family: 'Space Grotesk', sans-serif;">{% trans %}Too Many Requests{% endtrans %}</h2>
+				<p class="text-muted mt-3">{% trans %}Please slow down! You're sending requests too fast.{% endtrans %}</p>
+				<a href="/" class="btn btn-outline-danger mt-3 rounded-pill px-4">
+					<i class="fas fa-arrow-left me-2"></i>{% trans %}Return Home{% endtrans %}
+				</a>
 			</div>
 		</div>
 	</div>
 </div>
-
 
 {% endblock %}

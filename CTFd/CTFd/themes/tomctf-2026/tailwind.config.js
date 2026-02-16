@@ -8,32 +8,32 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // WMCTF Brand Colors - Modern Apple-inspired palette
+        // TomCTF Brand Colors - Dark Red Cyberpunk palette
         wmctf: {
-          primary: '#007AFF',    // Apple Blue
-          secondary: '#5856D6',  // Apple Purple
-          accent: '#FF3B30',     // Apple Red
-          success: '#34C759',    // Apple Green
-          warning: '#FF9500',    // Apple Orange
-          danger: '#FF3B30',     // Apple Red
+          primary: '#ec1313',    // TomCTF Red
+          secondary: '#8b0000',  // Dark Red
+          accent: '#ff4444',     // Bright Red
+          success: '#34C759',    // Green
+          warning: '#FF9500',    // Orange
+          danger: '#FF3B30',     // Red
         },
         // Dark mode colors
         dark: {
-          bg: '#000000',
-          surface: '#1C1C1E',
-          card: '#2C2C2E',
-          border: '#38383A',
+          bg: '#050303',
+          surface: '#1a0a0a',
+          card: '#1a0a0a',
+          border: '#8b0000',
           text: '#FFFFFF',
           muted: '#8E8E93',
         },
-        // Light mode colors
+        // Light mode colors (forced dark)
         light: {
-          bg: '#FFFFFF',
-          surface: '#F2F2F7',
-          card: '#FFFFFF',
-          border: '#C6C6C8',
-          text: '#000000',
-          muted: '#6D6D70',
+          bg: '#050303',
+          surface: '#1a0a0a',
+          card: '#1a0a0a',
+          border: '#8b0000',
+          text: '#FFFFFF',
+          muted: '#8E8E93',
         }
       },
       fontFamily: {
@@ -67,11 +67,11 @@ module.exports = {
         '4xl': '2rem',
       },
       boxShadow: {
-        'apple': '0 4px 16px rgba(0, 0, 0, 0.12)',
-        'apple-lg': '0 8px 32px rgba(0, 0, 0, 0.16)',
-        'apple-xl': '0 12px 48px rgba(0, 0, 0, 0.2)',
-        'glow': '0 0 20px rgba(0, 122, 255, 0.3)',
-        'glow-purple': '0 0 20px rgba(88, 86, 214, 0.3)',
+        'apple': '0 4px 16px rgba(0, 0, 0, 0.3)',
+        'apple-lg': '0 8px 32px rgba(0, 0, 0, 0.4)',
+        'apple-xl': '0 12px 48px rgba(0, 0, 0, 0.5)',
+        'glow': '0 0 20px rgba(236, 19, 19, 0.3)',
+        'glow-red': '0 0 20px rgba(139, 0, 0, 0.4)',
       },
       backdropBlur: {
         'apple': '20px',
@@ -101,8 +101,8 @@ module.exports = {
           '50%': { transform: 'translateY(-5px)' },
         },
         pulseGlow: {
-          '0%, 100%': { boxShadow: '0 0 20px rgba(0, 122, 255, 0.3)' },
-          '50%': { boxShadow: '0 0 40px rgba(0, 122, 255, 0.6)' },
+          '0%, 100%': { boxShadow: '0 0 20px rgba(236, 19, 19, 0.3)' },
+          '50%': { boxShadow: '0 0 40px rgba(236, 19, 19, 0.6)' },
         },
       },
     },

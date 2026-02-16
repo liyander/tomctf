@@ -1,20 +1,17 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <!-- Compact Hero Section -->
-  <div class="jumbotron">
-    <div class="container">
-      <div class="row align-items-center">
-        <div class="col-12 text-center">
-          <h1 class="display-5 fw-bold mb-2 slide-up">
-            <i class="fas fa-flag text-primary me-2"></i>
-            {% trans %}Challenges{% endtrans %}
-          </h1>
-          <p class="lead mb-0 slide-up" style="animation-delay: 0.1s;">
-            {% trans %}Test your skills and solve challenging problems{% endtrans %}
-          </p>
-        </div>
-      </div>
+  <!-- Challenges Hero -->
+  <div class="challenges-hero">
+    <div class="hero-grid-bg"></div>
+    <div class="container position-relative text-center">
+      <div class="hero-subtitle-sm slide-up">CAPTURE THE FLAG</div>
+      <h1 class="slide-up" style="animation-delay: 0.05s;">
+        <span class="stranger-title">{% trans %}Challenges{% endtrans %}</span>
+      </h1>
+      <p class="hero-desc slide-up" style="animation-delay: 0.1s;">
+        {% trans %}Test your skills and solve challenging problems{% endtrans %}
+      </p>
     </div>
   </div>
 
@@ -152,10 +149,10 @@
       <!-- Left Sidebar - Category Filter -->
       <div class="col-lg-2 col-md-3">
         <div class="category-sidebar sticky-top" style="top: 90px;">
-          <div class="card border-0 shadow-sm rounded-3">
-            <div class="card-header bg-light border-0 py-3">
-              <h6 class="card-title mb-0 fw-bold">
-                <i class="fas fa-filter me-2 text-primary"></i>
+          <div class="card border-0 rounded-3" style="background: rgba(26,10,10,0.85); border: 1px solid rgba(139,0,0,0.3) !important; backdrop-filter: blur(10px);">
+            <div class="card-header border-0 py-3" style="background: rgba(139,0,0,0.15) !important; border-bottom: 1px solid rgba(139,0,0,0.2) !important;">
+              <h6 class="card-title mb-0 fw-bold" style="font-family: 'Space Grotesk', sans-serif; color: #ec1313; letter-spacing: 1px; text-transform: uppercase; font-size: 0.8rem;">
+                <i class="fas fa-filter me-2"></i>
                 {% trans %}Challenges{% endtrans %}
               </h6>
             </div>
@@ -217,14 +214,14 @@
             <template x-for="(category, idx) in getFilteredCategories()" :key="idx">
               <div class="challenge-category mb-4" x-show="!selectedCategory || selectedCategory === category">
                 <!-- Category Header (only show when not filtering) -->
-                <div x-show="!selectedCategory" class="category-header mb-3 p-3 rounded-3 glass-effect">
+                <div x-show="!selectedCategory" class="category-header mb-3 p-3 rounded-3" style="background: rgba(26,10,10,0.7); border: 1px solid rgba(139,0,0,0.2);">
                   <div class="d-flex align-items-center">
                     <div class="category-icon me-3">
-                      <i :class="getCategoryIcon(category) + ' ' + getCategoryColor(category)" style="font-size: 1.2rem;"></i>
+                      <i :class="getCategoryIcon(category)" style="font-size: 1.2rem; color: #ec1313;"></i>
                     </div>
                     <div>
-                      <h4 class="mb-1 fw-bold" x-text="category"></h4>
-                      <small class="text-muted">
+                      <h4 class="mb-1 fw-bold" style="font-family: 'Space Grotesk', sans-serif; color: #fff;" x-text="category"></h4>
+                      <small style="color: rgba(255,255,255,0.4); font-family: 'Space Grotesk', sans-serif;">
                         <span x-text="getSortedChallenges(category).length"></span> {% trans %}challenges{% endtrans %}
                         · <span x-text="getSortedChallenges(category).filter(c => c.solved_by_me).length"></span> {% trans %}solved{% endtrans %}
                       </small>
@@ -352,29 +349,29 @@
       <div class="col-lg-3 col-md-3">
         <div class="user-sidebar sticky-top" style="top: 90px;">
           <!-- User Stats Card -->
-            <div class="card border-0 shadow-sm rounded-3 mb-3" x-data="UserStats" x-init="loadUserStats()">
-              <div class="card-header text-center py-3 user-header">
-                <h6 class="mb-1 fw-bold">{{ User.name }}</h6>
-                <small class="opacity-75">{% trans %}Competitor{% endtrans %}</small>
+            <div class="card border-0 rounded-3 mb-3" style="background: rgba(26,10,10,0.85); border: 1px solid rgba(139,0,0,0.3) !important; backdrop-filter: blur(10px);" x-data="UserStats" x-init="loadUserStats()">
+              <div class="card-header text-center py-3 user-header" style="background: linear-gradient(135deg, #8b0000, #ec1313) !important; border-bottom: 1px solid rgba(139,0,0,0.3) !important;">
+                <h6 class="mb-1 fw-bold" style="font-family: 'Space Grotesk', sans-serif; color: #fff;">{{ User.name }}</h6>
+                <small style="color: rgba(255,255,255,0.7);">{% trans %}Competitor{% endtrans %}</small>
               </div>
-            <div class="card-body p-3">
+            <div class="card-body p-3" style="color: #d4c5b0;">
               <div class="row g-3 text-center">
                 <div class="col-4">
                   <div class="stat-item">
-                    <div class="stat-number fw-bold text-primary" x-text="userScore || '{{ User.score }}'">{{ User.score }}</div>
-                    <div class="stat-label small text-muted">{% trans %}Points{% endtrans %}</div>
+                    <div class="stat-number fw-bold" style="color: #ec1313; font-family: 'Space Grotesk', sans-serif;" x-text="userScore || '{{ User.score }}'">{{ User.score }}</div>
+                    <div class="stat-label small" style="color: rgba(255,255,255,0.5); font-family: 'Space Grotesk', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">{% trans %}Points{% endtrans %}</div>
                   </div>
                 </div>
                 <div class="col-4">
                   <div class="stat-item">
-                    <div class="stat-number fw-bold text-success" x-text="solvedCount || 0">0</div>
-                    <div class="stat-label small text-muted">{% trans %}Solved{% endtrans %}</div>
+                    <div class="stat-number fw-bold" style="color: #34C759; font-family: 'Space Grotesk', sans-serif;" x-text="solvedCount || 0">0</div>
+                    <div class="stat-label small" style="color: rgba(255,255,255,0.5); font-family: 'Space Grotesk', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">{% trans %}Solved{% endtrans %}</div>
                   </div>
                 </div>
                 <div class="col-4">
                   <div class="stat-item">
-                    <div class="stat-number fw-bold text-warning" x-text="userRank || '#{{ User.place or '-' }}'">#{{ User.place or '-' }}</div>
-                    <div class="stat-label small text-muted">{% trans %}Rank{% endtrans %}</div>
+                    <div class="stat-number fw-bold" style="color: #FF9500; font-family: 'Space Grotesk', sans-serif;" x-text="userRank || '#{{ User.place or '-' }}'">#{{ User.place or '-' }}</div>
+                    <div class="stat-label small" style="color: rgba(255,255,255,0.5); font-family: 'Space Grotesk', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">{% trans %}Rank{% endtrans %}</div>
                   </div>
                 </div>
               </div>
@@ -382,13 +379,13 @@
               <!-- Progress Bar -->
               <div class="mt-3">
                 <div class="d-flex justify-content-between align-items-center mb-1">
-                  <small class="text-muted">{% trans %}Progress{% endtrans %}</small>
-                  <small class="text-muted">
+                  <small style="color: rgba(255,255,255,0.4); font-family: 'Space Grotesk', sans-serif; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">{% trans %}Progress{% endtrans %}</small>
+                  <small style="color: rgba(255,255,255,0.5); font-family: 'Space Grotesk', sans-serif;">
                     <span x-text="solvedCount || 0">0</span> / <span x-text="totalChallenges || 0">0</span>
                   </small>
                 </div>
-                <div class="progress" style="height: 6px;">
-                  <div class="progress-bar bg-primary" 
+                <div class="progress" style="height: 6px; background: rgba(139,0,0,0.2); border-radius: 3px;">
+                  <div class="progress-bar" style="background: linear-gradient(90deg, #8b0000, #ec1313); border-radius: 3px;"
                        :style="{ width: totalChallenges > 0 ? ((solvedCount / totalChallenges) * 100) + '%' : '0%' }">
                   </div>
                 </div>
@@ -397,8 +394,8 @@
           </div>
 
           <!-- Activity & Notifications Card -->
-          <div class="card border-0 shadow-sm rounded-3" x-data="ActivityFeed" x-init="loadActivityData()">
-            <div class="card-header border-0 py-3">
+          <div class="card border-0 rounded-3" style="background: rgba(26,10,10,0.85); border: 1px solid rgba(139,0,0,0.3) !important; backdrop-filter: blur(10px);" x-data="ActivityFeed" x-init="loadActivityData()">
+            <div class="card-header border-0 py-3" style="background: transparent !important; border-bottom: 1px solid rgba(139,0,0,0.2) !important;">
               <!-- Tab Navigation -->
               <nav class="nav nav-pills nav-fill" role="tablist">
                 <button 
@@ -423,7 +420,7 @@
               </nav>
             </div>
             
-            <div class="card-body p-3" style="min-height: 200px;">
+            <div class="card-body p-3" style="min-height: 200px; color: #d4c5b0;">
               <!-- Notifications Tab Content -->
               <div x-show="activeTab === 'notifications'" x-transition>
                 <div x-show="notifications.length === 0" class="text-center text-muted py-3">
@@ -496,15 +493,62 @@
   </div>
 
   <style>
+    /* Challenges Hero */
+    .challenges-hero {
+      position: relative;
+      background: linear-gradient(135deg, #050303 0%, #1a0505 40%, #2d0a0a 70%, #050303 100%);
+      padding: 3rem 0 1.5rem;
+      padding-top: calc(3rem + 70px);
+      margin-top: -70px;
+      overflow: hidden;
+      border-bottom: 1px solid rgba(236, 19, 19, 0.2);
+    }
+    .challenges-hero .hero-grid-bg {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(236,19,19,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(236,19,19,0.05) 1px, transparent 1px);
+      background-size: 40px 40px;
+      animation: gridScroll 20s linear infinite;
+    }
+    @keyframes gridScroll {
+      0% { background-position: 0 0; }
+      100% { background-position: 40px 40px; }
+    }
+    .challenges-hero .hero-subtitle-sm {
+      font-family: 'Space Grotesk', monospace;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      color: #ec1313;
+      text-transform: uppercase;
+      margin-bottom: 0.4rem;
+    }
+    .challenges-hero .stranger-title {
+      font-family: 'Stranger Things', 'Creepster', cursive;
+      font-size: 3.8rem;
+      background: linear-gradient(135deg, #ec1313, #ff4444, #ec1313);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 25px rgba(236,19,19,0.5));
+    }
+    .challenges-hero .hero-desc {
+      color: rgba(255,255,255,0.5);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.05rem;
+      margin-bottom: 0;
+    }
+
     /* User Header Styles */
     .user-header {
-      background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%) !important;
+      background: linear-gradient(135deg, #8b0000 0%, #ec1313 100%) !important;
       color: white !important;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
     }
 
     [data-bs-theme="dark"] .user-header {
-      background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%) !important;
+      background: linear-gradient(135deg, #8b0000 0%, #ec1313 100%) !important;
       color: white !important;
     }
 
@@ -531,11 +575,11 @@
     }
 
     .category-filter-btn:hover {
-      background: rgba(0, 122, 255, 0.05) !important;
+      background: rgba(236, 19, 19, 0.08) !important;
     }
 
     .category-filter-btn.active {
-      background: rgba(0, 122, 255, 0.1) !important;
+      background: rgba(236, 19, 19, 0.15) !important;
       border-left: 4px solid var(--wmctf-primary);
       font-weight: 600;
     }
@@ -551,19 +595,19 @@
     }
 
     [data-bs-theme="dark"] .category-filter-btn:hover {
-      background: rgba(0, 122, 255, 0.15) !important;
+      background: rgba(236, 19, 19, 0.15) !important;
       color: var(--wmctf-primary) !important;
     }
 
     [data-bs-theme="dark"] .category-filter-btn.active {
-      background: rgba(0, 122, 255, 0.2) !important;
+      background: rgba(236, 19, 19, 0.2) !important;
       color: var(--wmctf-primary) !important;
     }
 
     /* Category Colors */
-    .category-web { border-left-color: #007AFF !important; }
-    .category-crypto { border-left-color: #5856D6 !important; }
-    .category-pwn { border-left-color: #FF3B30 !important; }
+    .category-web { border-left-color: #ec1313 !important; }
+    .category-crypto { border-left-color: #7c4dff !important; }
+    .category-pwn { border-left-color: #ff4444 !important; }
     .category-reverse { border-left-color: #34C759 !important; }
     .category-forensics { border-left-color: #FF9500 !important; }
     .category-misc { border-left-color: #8E8E93 !important; }
@@ -630,26 +674,26 @@
 
     /* Card Body */
     .quest-body {
-      padding: 1.25rem 1.25rem 0.75rem;
+      padding: 1.35rem 1.35rem 0.85rem;
       flex: 1;
     }
 
     .quest-category {
       font-family: 'Space Grotesk', var(--bs-font-sans-serif);
-      font-size: 0.65rem;
+      font-size: 0.68rem;
       font-weight: 600;
       letter-spacing: 0.15em;
       text-transform: uppercase;
       color: rgba(255, 255, 255, 0.4);
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.55rem;
     }
 
     .quest-title {
       font-family: 'Space Grotesk', var(--bs-font-sans-serif);
-      font-size: 1.15rem;
+      font-size: 1.2rem;
       font-weight: 700;
       color: #fff;
-      margin-bottom: 0.6rem;
+      margin-bottom: 0.65rem;
       line-height: 1.3;
       letter-spacing: -0.01em;
       display: -webkit-box;
@@ -682,11 +726,11 @@
 
     .quest-diff-badge {
       font-family: 'Space Grotesk', var(--bs-font-sans-serif);
-      font-size: 0.7rem;
+      font-size: 0.72rem;
       font-weight: 600;
       letter-spacing: 0.03em;
       padding: 3px 10px;
-      border-radius: 4px;
+      border-radius: 5px;
       display: inline-flex;
       align-items: center;
     }
@@ -727,7 +771,7 @@
 
     /* Footer */
     .quest-footer {
-      padding: 0.75rem 1.25rem;
+      padding: 0.85rem 1.35rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -747,7 +791,7 @@
 
     .quest-reward-value {
       font-family: 'Space Grotesk', var(--bs-font-sans-serif);
-      font-size: 1.1rem;
+      font-size: 1.15rem;
       font-weight: 800;
       color: #fff;
       line-height: 1;

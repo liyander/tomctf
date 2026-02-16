@@ -648,7 +648,8 @@
 		// URL to redirect to after the countdown and music finish
 		const REDIRECT_URL = "/?no_intro=1"; 
 		let prefers_reduced = getPrefersReducedMotion();
-		let TARGET_TIME = Date.now() + 1000 * 60 * 10 + 3500; // 1737741600*1000;
+		let TARGET_TIME = Date.now() + 1000 * 60 * 10 + 3500; // fallback
+		let INTRO_TIMER_MODE = 'none'; // will be set from API
 		let time_offset = null;
 		let C_DEBUG_MODE = false;
 
@@ -1241,10 +1242,21 @@
 		}
 
 		window.onload = async () => {
-			// DISABLED FOR ARCHIVED VERSION
+			// Fetch intro config from admin panel
+			try {
+				const res = await fetch('/api/intro_status');
+				const data = await res.json();
+				INTRO_TIMER_MODE = data.timer_mode || 'none';
+				if (data.timer_mode === 'countdown' && data.countdown_end) {
+					TARGET_TIME = new Date(data.countdown_end).getTime();
+				} else if (data.timer_mode === 'none') {
+					// No timer mode - default 10 minute countdown
+					TARGET_TIME = Date.now() + 1000 * 60 * 10;
+				}
+			} catch(e) {
+				console.warn('Could not fetch intro status, using defaults', e);
+			}
 			animate();
-			// ws_connect();
-			// await xD.init();
 			checkLogin();
 		};
 	</script>

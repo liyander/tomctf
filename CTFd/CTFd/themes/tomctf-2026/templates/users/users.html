@@ -1,123 +1,326 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <div class="jumbotron">
-    <div class="container">
-      <h1>{% trans %}Users{% endtrans %}</h1>
+<style>
+  .users-hero {
+    background: linear-gradient(135deg, #050303 0%, #1a0a0a 50%, #0d0505 100%);
+    border-bottom: 2px solid #8b0000;
+    padding: 3rem 0;
+    padding-top: calc(3rem + 70px);
+    margin-top: -70px;
+    position: relative;
+    overflow: hidden;
+  }
+  .users-hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(236,19,19,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .users-hero h1 {
+    margin-bottom: 0.5rem;
+  }
+  .users-hero .stranger-title {
+    font-family: 'Stranger Things', 'Creepster', cursive;
+    font-size: 3.8rem;
+    background: linear-gradient(135deg, #ec1313, #ff4444, #ec1313);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 25px rgba(236,19,19,0.5));
+  }
+  .users-hero .hero-icon {
+    color: #ec1313;
+    font-size: 2.2rem;
+    filter: drop-shadow(0 0 8px rgba(236,19,19,0.5));
+  }
+  .users-hero .hero-subtitle {
+    color: rgba(255,255,255,0.5);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.05rem;
+    letter-spacing: 1px;
+  }
+
+  .search-card {
+    background: rgba(26,10,10,0.85);
+    border: 1px solid rgba(139,0,0,0.4);
+    border-radius: 16px;
+    padding: 1.5rem 2rem;
+    backdrop-filter: blur(10px);
+  }
+  .search-card .search-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.45);
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+  .search-card .form-control,
+  .search-card .form-select {
+    background: rgba(5,3,3,0.8);
+    border: 1px solid rgba(139,0,0,0.4);
+    color: #d4c5b0;
+    font-family: 'Space Grotesk', sans-serif;
+    height: 48px;
+    font-size: 0.95rem;
+    border-radius: 10px;
+    padding: 0.5rem 1rem;
+  }
+  .search-card .form-control:focus,
+  .search-card .form-select:focus {
+    border-color: #ec1313;
+    box-shadow: 0 0 0 2px rgba(236,19,19,0.2);
+    background: rgba(5,3,3,0.9);
+    color: #fff;
+  }
+  .search-card .form-control::placeholder {
+    color: rgba(212,197,176,0.4);
+  }
+  .search-card .btn-search {
+    background: linear-gradient(135deg, #c41010, #ec1313);
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+    height: 48px;
+    transition: all 0.3s ease;
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(236,19,19,0.3);
+  }
+  .search-card .btn-search:hover {
+    box-shadow: 0 6px 25px rgba(236,19,19,0.5);
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, #ec1313, #ff4444);
+  }
+
+  .users-table-card {
+    background: rgba(26,10,10,0.7);
+    border: 1px solid rgba(139,0,0,0.3);
+    border-radius: 12px;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+  }
+  .users-table-card .table {
+    margin-bottom: 0;
+    color: #d4c5b0;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .users-table-card .table thead th {
+    background: rgba(139,0,0,0.25);
+    color: #ec1313;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 1.5px;
+    border-bottom: 2px solid rgba(139,0,0,0.4);
+    padding: 0.85rem 1rem;
+  }
+  .users-table-card .table tbody tr {
+    border-bottom: 1px solid rgba(139,0,0,0.15);
+    transition: all 0.2s ease;
+  }
+  .users-table-card .table tbody tr:hover {
+    background: rgba(236,19,19,0.06);
+  }
+  .users-table-card .table tbody td {
+    padding: 0.75rem 1rem;
+    vertical-align: middle;
+    border: none;
+  }
+  .users-table-card .table tbody td a {
+    color: #ec1313;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  .users-table-card .table tbody td a:hover {
+    color: #ff4444;
+    text-shadow: 0 0 8px rgba(236,19,19,0.3);
+  }
+  .users-table-card .table-striped > tbody > tr:nth-of-type(odd) > * {
+    background-color: rgba(139,0,0,0.06);
+    --bs-table-bg-type: transparent;
+  }
+
+  .pagination-bar {
+    background: rgba(26,10,10,0.6);
+    border: 1px solid rgba(139,0,0,0.3);
+    border-radius: 10px;
+    padding: 0.75rem 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .pagination-bar a {
+    color: #ec1313;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1rem;
+    transition: all 0.2s;
+  }
+  .pagination-bar a:hover {
+    color: #ff4444;
+    text-shadow: 0 0 8px rgba(236,19,19,0.4);
+  }
+  .pagination-bar .page-select {
+    background: rgba(5,3,3,0.8);
+    border: 1px solid rgba(139,0,0,0.4);
+    color: #ec1313;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+  }
+  .pagination-bar .page-label {
+    color: rgba(255,255,255,0.4);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .search-results-info {
+    color: rgba(255,255,255,0.5);
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .search-results-info strong {
+    color: #ec1313;
+  }
+</style>
+
+  <div class="users-hero">
+    <div class="container text-center">
+      <i class="fas fa-users hero-icon mb-2"></i>
+      <h1><span class="stranger-title">{% trans %}Users{% endtrans %}</span></h1>
+      <p class="hero-subtitle mb-0">{% trans %}Browse registered participants{% endtrans %}</p>
     </div>
   </div>
-  <div class="container">
-    <div class="row">
-      <div class="col-md-12">
-        {% if q and field %}
-          <h5 class="text-muted text-center">
-            {% trans %}Searching for users with <strong>{{ field }}</strong> matching <strong>{{ q }}</strong>{% endtrans %}
-          </h5>
-          <h6 class="text-muted text-center pb-3">
-            {% trans page=users.page, total=users.total %}Page {{ page }} of {{ total }} results{% endtrans %}
-          </h6>
-        {% endif %}
 
+  <div class="container py-4">
+    {% if q and field %}
+      <div class="text-center mb-3">
+        <p class="search-results-info">
+          {% trans %}Searching for users with <strong>{{ field }}</strong> matching <strong>{{ q }}</strong>{% endtrans %}
+        </p>
+        <small class="search-results-info">
+          {% trans page=users.page, total=users.total %}Page {{ page }} of {{ total }} results{% endtrans %}
+        </small>
+      </div>
+    {% endif %}
+
+    <div class="row mb-4">
+      <div class="col-12">
         {% with form = Forms.users.PublicUserSearchForm(field=field, q=q) %}
-          <form method="GET" class="row justify-content-around align-items-center">
-            <div class="mb-3 col-md-2">
+        <div class="search-card">
+          <form method="GET" class="d-flex align-items-end gap-3 flex-wrap flex-md-nowrap">
+            <div style="flex: 0 0 180px; min-width: 140px;">
+              <span class="search-label">{% trans %}Field{% endtrans %}</span>
               {{ form.field(class="form-select w-100") }}
             </div>
-            <div class="mb-3 col-md-8">
+            <div style="flex: 1 1 auto; min-width: 200px;">
+              <span class="search-label">{% trans %}Search{% endtrans %}</span>
               {{ form.q(class="form-control w-100", placeholder=form.q.description) }}
             </div>
-            <div class="mb-3 col-md-2">
-              <button type="submit" class="btn btn-primary w-100">
-                <i class="fas fa-search" aria-hidden="true"></i>
+            <div style="flex: 0 0 160px; min-width: 140px;">
+              <button type="submit" class="btn btn-search w-100">
+                <i class="fas fa-search me-2" aria-hidden="true"></i>{% trans %}Search{% endtrans %}
               </button>
             </div>
           </form>
+        </div>
         {% endwith %}
       </div>
     </div>
 
-
     <div class="row">
-      <div class="col-md-12">
-        <table class="table table-striped align-middle">
-          <thead>
-          <tr>
-            <th>{% trans %}User{% endtrans %}</th>
-            <th class="text-center" style="width: 80px;">{% trans %}Website{% endtrans %}</th>
-            <th class="d-none d-md-table-cell">{% trans %}Affiliation{% endtrans %}</th>
-            <th class="d-none d-md-table-cell">{% trans %}Country{% endtrans %}</th>
-          </tr>
-          </thead>
-          <tbody>
-          {% for user in users.items %}
+      <div class="col-12">
+        <div class="users-table-card">
+          <table class="table table-striped align-middle">
+            <thead>
             <tr>
-              <td>
-                {% if scores_visible() %}
-                  <a href="{{ url_for('users.public', user_id=user.id) }}">
-                    {{ user.name | truncate(50) }}
-                  </a>
-                {% else %}
-                  <span>{{ user.name | truncate(50) }}</span>
-                {% endif %}
-
-                {% if user.bracket_id %}
-                  <span class="badge bg-secondary ms-2">{{ user.bracket.name }}</span>
-                {% endif %}
-
-                {% if user.oauth_id %}
-                  <a href="https://majorleaguecyber.org/u/{{ user.name }}">
-                    <span class="badge bg-primary ms-2">{% trans %}Official{% endtrans %}</span>
-                  </a>
-                {% endif %}
-              </td>
-
-              <td class="text-center">
-                {% if user.website and (user.website.startswith('http://') or user.website.startswith('https://')) %}
-                  <a href="{{ user.website }}" target="_blank" rel="noopener">
-                    <i
-                        class="fas fa-external-link-alt" data-toggle="tooltip" data-placement="top"
-                        title="{{ user.website }}"
-                    ></i>
-                  </a>
-                {% endif %}
-              </td>
-
-              <td class="d-none d-md-table-cell d-lg-table-cell">
-                {% if user.affiliation %}
-                  {% if user.affiliation | length > 50 %}
-                    <span data-toggle="tooltip" data-placement="top" title="{{ user.affiliation }}">
-									{% if user.affiliation %}{{ user.affiliation | truncate(50) }}{% endif %}
-								</span>
-                  {% else %}
-                    <span>
-									{% if user.affiliation %}{{ user.affiliation | truncate(50) }}{% endif %}
-								</span>
-                  {% endif %}
-                {% endif %}
-              </td>
-              <td class="d-none d-md-table-cell d-lg-table-cell">
-								<span>
-									{% if user.country %}
-                    <i class="flag-{{ user.country.lower() }}"></i>
-                    {{ lookup_country_code(user.country) }}
-                  {% endif %}
-								</span>
-              </td>
+              <th><i class="fas fa-user me-1"></i> {% trans %}User{% endtrans %}</th>
+              <th class="text-center" style="width: 80px;"><i class="fas fa-globe me-1"></i> {% trans %}Website{% endtrans %}</th>
+              <th class="d-none d-md-table-cell"><i class="fas fa-building me-1"></i> {% trans %}Affiliation{% endtrans %}</th>
+              <th class="d-none d-md-table-cell"><i class="fas fa-flag me-1"></i> {% trans %}Country{% endtrans %}</th>
             </tr>
-          {% endfor %}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+            {% for user in users.items %}
+              <tr>
+                <td>
+                  {% if scores_visible() %}
+                    <a href="{{ url_for('users.public', user_id=user.id) }}">
+                      {{ user.name | truncate(50) }}
+                    </a>
+                  {% else %}
+                    <span>{{ user.name | truncate(50) }}</span>
+                  {% endif %}
+
+                  {% if user.bracket_id %}
+                    <span class="badge ms-2" style="background:rgba(139,0,0,0.4); color:#ff6b6b;">{{ user.bracket.name }}</span>
+                  {% endif %}
+
+                  {% if user.oauth_id %}
+                    <a href="https://majorleaguecyber.org/u/{{ user.name }}">
+                      <span class="badge ms-2" style="background:linear-gradient(135deg,#8b0000,#ec1313); color:#fff;">{% trans %}Official{% endtrans %}</span>
+                    </a>
+                  {% endif %}
+                </td>
+
+                <td class="text-center">
+                  {% if user.website and (user.website.startswith('http://') or user.website.startswith('https://')) %}
+                    <a href="{{ user.website }}" target="_blank" rel="noopener" style="color:#ec1313;">
+                      <i
+                          class="fas fa-external-link-alt" data-toggle="tooltip" data-placement="top"
+                          title="{{ user.website }}"
+                      ></i>
+                    </a>
+                  {% endif %}
+                </td>
+
+                <td class="d-none d-md-table-cell d-lg-table-cell">
+                  {% if user.affiliation %}
+                    {% if user.affiliation | length > 50 %}
+                      <span data-toggle="tooltip" data-placement="top" title="{{ user.affiliation }}">
+                        {% if user.affiliation %}{{ user.affiliation | truncate(50) }}{% endif %}
+                      </span>
+                    {% else %}
+                      <span>
+                        {% if user.affiliation %}{{ user.affiliation | truncate(50) }}{% endif %}
+                      </span>
+                    {% endif %}
+                  {% endif %}
+                </td>
+                <td class="d-none d-md-table-cell d-lg-table-cell">
+                  <span>
+                    {% if user.country %}
+                      <i class="flag-{{ user.country.lower() }}"></i>
+                      {{ lookup_country_code(user.country) }}
+                    {% endif %}
+                  </span>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
     {% if users.pages > 1 %}
-      <div class="row">
-        <div class="col-md-12">
-          <div class="text-center">
-            {% trans %}Page{% endtrans %} <br>
+      <div class="row mt-4">
+        <div class="col-12 text-center">
+          <div class="pagination-bar">
+            <span class="page-label">{% trans %}Page{% endtrans %}</span>
 
             {% if users.page != 1 %}
-              <a href="{{ prev_page }}">&lt;&lt;&lt;</a>
+              <a href="{{ prev_page }}"><i class="fas fa-chevron-left"></i></a>
             {% endif %}
 
             <select class="page-select">
@@ -127,7 +330,7 @@
             </select>
 
             {% if users.next_num %}
-              <a href="{{ next_page }}">&gt;&gt;&gt;</a>
+              <a href="{{ next_page }}"><i class="fas fa-chevron-right"></i></a>
             {% endif %}
           </div>
         </div>

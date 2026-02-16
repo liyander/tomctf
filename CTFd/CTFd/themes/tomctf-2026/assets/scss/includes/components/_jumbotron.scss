@@ -1,14 +1,14 @@
 /* Jumbotron styles
 -------------------------------------------------- */
 
-// Move down content because we have a fixed navbar that is 3.5rem tall
+// No extra padding on main — heroes handle their own top offset
 main {
-  padding-top: 3.5rem;
+  padding-top: 0;
 }
 
 .jumbotron {
   padding: 2rem 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 0;
   text-align: center;
 
   background-color: var(--bs-dark);
