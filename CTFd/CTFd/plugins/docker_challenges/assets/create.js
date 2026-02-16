@@ -9,18 +9,24 @@ CTFd.plugin.run((_CTFd) => {
             );
         }
     });
-    $(document).ready(function(){
     $('[data-toggle="tooltip"]').tooltip();
-    $.getJSON("/api/v1/docker", function(result){
-        $.each(result['data'], function(i, item){
-            if (item.name == 'Error in Docker Config!') { 
-                document.docker_form.dockerimage_select.disabled = true;
-                $("label[for='DockerImage']").text('Docker Image ' + item.name)
+    CTFd.fetch("/api/v1/docker", { method: "GET" })
+        .then(function (response) { return response.json(); })
+        .then(function (result) {
+            if (result && result.data) {
+                $.each(result.data, function (i, item) {
+                    if (item.name === 'Error in Docker Config!') {
+                        $("#dockerimage_select").prop('disabled', true);
+                        $("label[for='DockerImage']").text('Docker Image: ' + item.name);
+                    } else {
+                        $("#dockerimage_select").append($("<option />").val(item.name).text(item.name));
+                    }
+                });
             }
-            else {
-                $("#dockerimage_select").append($("<option />").val(item.name).text(item.name));
-            }
+        })
+        .catch(function (err) {
+            console.error("Failed to load Docker images:", err);
+            $("#dockerimage_select").prop('disabled', true);
+            $("label[for='DockerImage']").text('Docker Image: Failed to load');
         });
-    });
-});
 });

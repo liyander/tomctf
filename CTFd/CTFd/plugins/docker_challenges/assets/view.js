@@ -45,11 +45,11 @@ function createWarningModalBody(){
 
 function get_docker_status(container) {
     const NormalStartButtonHTML=`
-        <span>
-            <a onclick="start_container('${CTFd._internal.challenge.data.docker_image}');" class='btn btn-dark'>
-                <small style='color:white;'><i class="fas fa-play"></i>  Start Docker Instance for challenge</small>
-            </a>
-        </span>`;
+        <div style="max-width:420px;margin:0 auto;text-align:center;padding:1rem 0">
+            <button onclick="start_container('${CTFd._internal.challenge.data.docker_image}');" class='btn' style='background:rgba(0,230,118,0.12);color:#00e676;border:1px solid rgba(0,230,118,0.25);border-radius:10px;padding:12px 32px;font-size:.9rem;cursor:pointer;transition:all .2s'>
+                <i class="fas fa-play" style="margin-right:6px"></i> Start Instance
+            </button>
+        </div>`;
 
     // Default UI: show the start button; if a running container exists we'll replace it.
     CTFd.lib.$('#docker_container').html(NormalStartButtonHTML);
@@ -98,27 +98,32 @@ function get_docker_status(container) {
 
                 const hostPortField = hostPort
                     ? `<div class="input-group input-group-sm justify-content-center" style="max-width:340px;margin:0 auto">
-                         <input type="text" id="${inputId}" class="form-control text-center" value="${hostPort}" readonly onclick="this.select()" style="cursor:text;background:#1a1a2e;color:#fff;border-color:#444;">
-                         <button type="button" class="btn btn-dark" id="${copyId}"><i class="fas fa-copy"></i> Copy</button>
+                         <input type="text" id="${inputId}" class="form-control text-center" value="${hostPort}" readonly onclick="this.select()" style="cursor:text;background:rgba(255,255,255,0.06);color:#e0e0e0;border-color:rgba(255,255,255,0.12);border-radius:6px 0 0 6px;font-family:monospace;letter-spacing:.5px">
+                         <button type="button" class="btn btn-outline-light btn-sm" id="${copyId}" style="border-color:rgba(255,255,255,0.12);border-radius:0 6px 6px 0"><i class="fas fa-copy"></i></button>
                        </div>`
-                    : `<div>Host: ${host} Port: (pending)</div>`;
+                    : `<div style="color:#aaa">Host: ${host} &middot; Port: (pending)</div>`;
 
-                // Always show timer + buttons; Stop/Revert should work immediately after start.
+                // Container info panel — admin controls the max duration
+                const containerExpiry = parseInt(item.container_expiry || 300);
+
                 CTFd.lib.$('#docker_container').html(
-                    `<div class="text-center">
-                        <div><strong>Docker Container Information:</strong></div>
-                        <div class="mt-2">${hostPortField}</div>
-                        <div class="mt-2" id="${timerId}"></div>
-                        <div class="mt-2">
-                            <a id="${revertId}" onclick="start_container('${item.docker_image}');" class="btn btn-dark">
-                                <small style="color:white;"><i class="fas fa-redo"></i> Revert</small>
-                            </a>
-                            <a id="${stopId}" onclick="stop_container('${item.docker_image}');" class="btn btn-dark">
-                                <small style="color:white;"><i class="fas fa-stop"></i> Stop</small>
-                            </a>
-                            <a id="${instancePrefix}_extend_btn" class="btn btn-dark">
-                                <small style="color:white;"><i class="fas fa-clock"></i> Extend to 10 min</small>
-                            </a>
+                    `<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.2rem 1rem;max-width:420px;margin:0 auto">
+                        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:.8rem">
+                            <span style="width:8px;height:8px;border-radius:50%;background:#00e676;display:inline-block;box-shadow:0 0 6px #00e676"></span>
+                            <span style="font-size:.85rem;font-weight:600;color:#e0e0e0;text-transform:uppercase;letter-spacing:1px">Instance Active</span>
+                        </div>
+                        <div style="margin-bottom:.8rem">${hostPortField}</div>
+                        <div id="${timerId}" style="font-size:.8rem;color:#aaa;margin-bottom:.8rem"></div>
+                        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+                            <button id="${revertId}" onclick="start_container('${item.docker_image}');" class="btn btn-sm" style="background:rgba(255,255,255,0.07);color:#e0e0e0;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px 16px;font-size:.8rem;transition:all .2s">
+                                <i class="fas fa-redo" style="margin-right:4px"></i>Revert
+                            </button>
+                            <button id="${stopId}" onclick="stop_container('${item.docker_image}');" class="btn btn-sm" style="background:rgba(255,82,82,0.15);color:#ff5252;border:1px solid rgba(255,82,82,0.25);border-radius:8px;padding:6px 16px;font-size:.8rem;transition:all .2s">
+                                <i class="fas fa-stop" style="margin-right:4px"></i>Stop
+                            </button>
+                            <button id="${instancePrefix}_extend_btn" class="btn btn-sm" style="background:rgba(0,230,118,0.1);color:#00e676;border:1px solid rgba(0,230,118,0.2);border-radius:8px;padding:6px 16px;font-size:.8rem;transition:all .2s">
+                                <i class="fas fa-clock" style="margin-right:4px"></i>Extend
+                            </button>
                         </div>
                     </div>`
                 );
@@ -135,7 +140,7 @@ function get_docker_status(container) {
 
                 if (extendEl) {
                     extendEl.addEventListener('click', function () {
-                        extend_container_to_10min(item.docker_image);
+                        extend_container(item.docker_image);
                     });
                 }
 
@@ -177,11 +182,12 @@ function get_docker_status(container) {
 
                 // Set up the expiry countdown timer. When it hits 0, the container should stop.
                 const startedAtSeconds = parseInt(item.timestamp || 0) || 0;
-                const expiresAtSeconds = (parseInt(item.revert_time || 0) || 0) || (startedAtSeconds ? startedAtSeconds + 300 : 0);
-                const maxExpiresAtSeconds = startedAtSeconds ? (startedAtSeconds + 600) : 0;
+                const expiresAtSeconds = (parseInt(item.revert_time || 0) || 0) || (startedAtSeconds ? startedAtSeconds + containerExpiry : 0);
 
+                // Show extend button only when timer is low (under 5 min left)
                 if (extendEl) {
-                    if (!startedAtSeconds || !expiresAtSeconds || (maxExpiresAtSeconds && expiresAtSeconds >= maxExpiresAtSeconds)) {
+                    const now = Math.floor(Date.now() / 1000);
+                    if (!expiresAtSeconds || (expiresAtSeconds - now) > 300) {
                         extendEl.style.display = 'none';
                     }
                 }
@@ -199,15 +205,21 @@ function get_docker_status(container) {
 
                     // Update the countdown display
                     if (isNaN(countDownDate) || !expiresAtSeconds) {
-                        if (timerEl) timerEl.textContent = 'Instance timer unavailable';
+                        if (timerEl) timerEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="margin-right:4px"></i>Timer unavailable';
                         return;
                     }
-                    if (timerEl) timerEl.textContent = 'Instance stops in ' + minutes + ':' + seconds;
+                    var color = distance < 60000 ? '#ff5252' : (distance < 120000 ? '#ffab40' : '#aaa');
+                    if (timerEl) timerEl.innerHTML = '<i class="fas fa-hourglass-half" style="margin-right:4px;color:' + color + '"></i><span style="color:' + color + '">Expires in ' + minutes + ':' + seconds + '</span>';
+
+                    // Show extend button when under 5 min left
+                    if (extendEl && distance <= 300000 && distance > 0) {
+                        extendEl.style.display = '';
+                    }
 
                     // Auto-stop when the countdown is finished
                     if (distance < 0) {
                         clearInterval(x);
-                        if (timerEl) timerEl.textContent = 'Instance expired. Stopping...';
+                        if (timerEl) timerEl.innerHTML = '<i class="fas fa-times-circle" style="margin-right:4px;color:#ff5252"></i><span style="color:#ff5252">Instance expired</span>';
                         if (!didAutoStop) {
                             didAutoStop = true;
                             stop_container_api(item.docker_image, { silent: true });
@@ -284,13 +296,13 @@ function stop_container_api(container, { silent } = {}) {
         });
 }
 
-function extend_container_to_10min(container) {
+function extend_container(container) {
     return CTFd.fetch(
         "/api/v1/container?name=" +
             encodeURIComponent(container) +
             "&challenge=" +
             encodeURIComponent(CTFd._internal.challenge.data.name) +
-            "&extend=10",
+            "&extend=1",
         {
             method: "GET",
         }
@@ -328,7 +340,7 @@ function start_container(container) {
             get_docker_status(container);
             updateWarningModal({
                 title: "Attention!",
-                warningText: "A Docker container is started for you.<br>This instance will stop automatically when the timer ends. You can Stop/Revert any time, and you can extend up to 10 minutes.",
+                warningText: "A Docker container is started for you.<br>This instance will stop automatically when the timer ends. You can Stop, Revert, or Extend when time is running low.",
                 buttonText: "Got it!"
             });
             return;

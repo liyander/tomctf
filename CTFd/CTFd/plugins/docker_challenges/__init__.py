@@ -157,6 +157,7 @@ class DockerConfig(db.Model):
     client_cert = db.Column("client_cert", db.String(2000), index=True)
     client_key = db.Column("client_key", db.String(3300), index=True)
     repositories = db.Column("repositories", db.String(1024), index=True)
+    container_expiry = db.Column("container_expiry", db.Integer, default=1200)
 
 
 class DockerChallengeTracker(db.Model):
@@ -186,6 +187,12 @@ class DockerConfigForm(BaseForm):
     ca_cert = FileField('CA Cert')
     client_cert = FileField('Client Cert')
     client_key = FileField('Client Key')
+    container_expiry = SelectField(
+        'Container Duration',
+        choices=[('300', '5 Minutes'), ('600', '10 Minutes'), ('1200', '20 Minutes')],
+        default='1200',
+        description='Maximum lifetime for each spawned Docker container'
+    )
     repositories = SelectMultipleField('Repositories')
     submit = SubmitField('Submit')
 
@@ -226,6 +233,9 @@ def define_docker_admin(app):
                 b.ca_cert = None
                 b.client_cert = None
                 b.client_key = None
+            expiry_val = request.form.get('container_expiry', '1200')
+            if expiry_val in ('300', '600', '1200'):
+                b.container_expiry = int(expiry_val)
             selected_repositories = request.form.getlist('repositories')
             b.repositories = ','.join(selected_repositories) if selected_repositories else None
             db.session.add(b)
@@ -589,6 +599,7 @@ class DockerChallengeType(BaseChallenge):
             'name': challenge.name,
             'value': challenge.value,
             'docker_image': challenge.docker_image,
+            'container_expiry': challenge.container_expiry or 1200,
             'description': challenge.description,
             'category': challenge.category,
             'state': challenge.state,
@@ -703,6 +714,7 @@ class DockerChallenge(Challenges):
     __mapper_args__ = {'polymorphic_identity': 'docker'}
     id = db.Column(None, db.ForeignKey('challenges.id'), primary_key=True)
     docker_image = db.Column(db.String(128), index=True)
+    container_expiry = db.Column(db.Integer, default=1200)
 
 
 # API
@@ -748,19 +760,20 @@ class ContainerAPI(Resource):
                     db.session.commit()
             check = DockerChallengeTracker.query.filter_by(user_id=session.id).filter_by(docker_image=container).first()
 
-        # Extend lifetime to at most 10 minutes total (from creation timestamp)
+        # Extend lifetime — resets timer to full admin-set duration from now
         if check is not None and request.args.get('extend'):
-            extend_value = str(request.args.get('extend')).strip()
-            if extend_value != '10':
-                return {"success": False, "message": "Unsupported extend value"}, 400
             if check.timestamp is None:
                 return {"success": False, "message": "Container timestamp missing; cannot extend"}, 400
 
-            max_expiry = int(check.timestamp) + 600
-            # Cap expiry strictly to 10 minutes total from start
-            check.revert_time = max_expiry
+            # Look up per-challenge container_expiry
+            chal_obj = DockerChallenge.query.filter_by(docker_image=container).first()
+            expiry_seconds = (chal_obj.container_expiry if chal_obj and chal_obj.container_expiry else None) \
+                             or (docker.container_expiry if docker and docker.container_expiry else 1200)
+            new_expiry = unix_time(datetime.utcnow()) + expiry_seconds
+            check.revert_time = new_expiry
+            check.timestamp = unix_time(datetime.utcnow())  # reset start time
             db.session.commit()
-            return {"success": True, "result": "Container extended", "revert_time": max_expiry}, 200
+            return {"success": True, "result": "Container extended", "revert_time": new_expiry}, 200
 
         # Delete when requested
         if check is not None and request.args.get('stopcontainer'):
@@ -826,12 +839,16 @@ class ContainerAPI(Resource):
         # Set up port forwarding for each assigned port so LAN clients can reach them
         for hp in host_ports:
             add_port_forward(hp, docker.display_host)
+        # Look up per-challenge container_expiry for initial timer
+        chal_obj = DockerChallenge.query.filter_by(docker_image=container).first()
+        initial_expiry = (chal_obj.container_expiry if chal_obj and chal_obj.container_expiry else None) \
+                         or (docker.container_expiry if docker and docker.container_expiry else 1200)
         entry = DockerChallengeTracker(
             team_id=session.id if is_teams_mode() else None,
             user_id=session.id if not is_teams_mode() else None,
             docker_image=container,
             timestamp=unix_time(datetime.utcnow()),
-            revert_time=unix_time(datetime.utcnow()) + 300,
+            revert_time=unix_time(datetime.utcnow()) + initial_expiry,
             instance_id=create[0]['Id'],
             ports=ports_str,
             host=(docker.display_host or str(docker.hostname).split(':')[0]),
@@ -910,6 +927,10 @@ class DockerStatus(Resource):
             revert_time_value = i.revert_time
             if (revert_time_value is None or revert_time_value == 0) and i.timestamp is not None:
                 revert_time_value = int(i.timestamp) + 300
+            # Per-challenge expiry (fallback to global config, then 1200)
+            chal_obj = DockerChallenge.query.filter_by(docker_image=i.docker_image).first()
+            chal_expiry = (chal_obj.container_expiry if chal_obj and chal_obj.container_expiry else None) \
+                          or (docker.container_expiry if docker and docker.container_expiry else 1200)
             data.append({
                 'id': i.id,
                 'team_id': i.team_id,
@@ -919,7 +940,8 @@ class DockerStatus(Resource):
                 'revert_time': revert_time_value,
                 'instance_id': i.instance_id,
                 'ports': ports_list,
-                'host': docker_host
+                'host': docker_host,
+                'container_expiry': chal_expiry
             })
         return {
             'success': True,
@@ -983,6 +1005,11 @@ def load(app):
             cols = [c['name'] for c in insp.get_columns('docker_config')]
             if 'display_host' not in cols:
                 migrations.append('ALTER TABLE docker_config ADD COLUMN display_host VARCHAR(128)')
+            if 'container_expiry' not in cols:
+                migrations.append('ALTER TABLE docker_config ADD COLUMN container_expiry INTEGER DEFAULT 1200')
+            else:
+                # Update old default (300) or NULL to new default (1200)
+                migrations.append('UPDATE docker_config SET container_expiry = 1200 WHERE container_expiry IS NULL OR container_expiry = 300')
         # docker_challenge_tracker columns
         if 'docker_challenge_tracker' in insp.get_table_names():
             cols = [c['name'] for c in insp.get_columns('docker_challenge_tracker')]
@@ -990,6 +1017,11 @@ def load(app):
                 migrations.append('ALTER TABLE docker_challenge_tracker ADD COLUMN host VARCHAR(128)')
             if 'challenge' not in cols:
                 migrations.append('ALTER TABLE docker_challenge_tracker ADD COLUMN challenge VARCHAR(256)')
+        # docker_challenge (challenges child table) columns
+        if 'docker_challenge' in insp.get_table_names():
+            cols = [c['name'] for c in insp.get_columns('docker_challenge')]
+            if 'container_expiry' not in cols:
+                migrations.append('ALTER TABLE docker_challenge ADD COLUMN container_expiry INTEGER DEFAULT 1200')
         if migrations:
             with app.db.engine.connect() as conn:
                 for sql in migrations:

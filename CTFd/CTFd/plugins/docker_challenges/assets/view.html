@@ -2,11 +2,11 @@
 {% block description %}
 {{ challenge.html }}
 <div class='mb-3 text-center' id='docker_container' name='{{ challenge.docker_image | safe }}'>
-    <span>
-        <a onclick="start_container('{{ challenge.docker_image | safe }}');" class='btn btn-dark'>
-            <small style='color:white;'><i class="fas fa-play"></i>  Start Docker Instance for challenge</small>
-        </a>
-    </span>
+    <div style="max-width:420px;margin:0 auto;text-align:center;padding:1rem 0">
+        <button onclick="start_container('{{ challenge.docker_image | safe }}');" class='btn' style='background:rgba(0,230,118,0.12);color:#00e676;border:1px solid rgba(0,230,118,0.25);border-radius:10px;padding:12px 32px;font-size:.9rem;cursor:pointer;transition:all .2s'>
+            <i class="fas fa-play" style="margin-right:6px"></i> Start Instance
+        </button>
+    </div>
 </div>
 {% endblock %}
 {% block input %}
