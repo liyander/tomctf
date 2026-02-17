@@ -444,7 +444,8 @@
       background: rgba(26,10,10,0.95);
       border: 1px solid rgba(236,19,19,0.15);
       border-radius: 12px;
-      overflow: visible;
+      overflow: hidden;
+      max-width: 100%;
     }
     .matrix-header {
       display: flex;
@@ -452,7 +453,6 @@
       gap: 0.6rem;
       padding: 1.15rem 1.5rem;
       border-bottom: 1px solid rgba(236,19,19,0.1);
-      border-radius: 12px 12px 0 0;
       background: rgba(26,10,10,0.8);
     }
     .matrix-icon { font-size: 1.25rem; }
@@ -467,7 +467,8 @@
       padding: 0;
       overflow-x: auto;
       overflow-y: visible;
-      border-radius: 0 0 12px 12px;
+      width: 100%;
+      max-width: 100%;
     }
     .matrix-body::-webkit-scrollbar {
       height: 8px;
@@ -491,6 +492,8 @@
       color: #fff;
       border-collapse: separate !important;
       border-spacing: 0 !important;
+      min-width: 100%;
+      width: max-content;
     }
     .challenge-matrix thead {
       font-family: 'Space Grotesk', monospace;
