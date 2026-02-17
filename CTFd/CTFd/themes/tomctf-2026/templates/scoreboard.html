@@ -114,7 +114,6 @@
               <h5 class="matrix-title">{% trans %}Challenge Completion Matrix{% endtrans %}</h5>
             </div>
             <div class="matrix-body">
-              <div class="table-responsive">
                 <table class="table table-sm align-middle mb-0 challenge-matrix">
                   <thead>
                     <!-- Category Headers Row -->
@@ -194,7 +193,6 @@
                     </template>
                   </tbody>
                 </table>
-              </div>
             </div>
           </div>
         </div>
@@ -446,7 +444,7 @@
       background: rgba(26,10,10,0.8);
       border: 1px solid rgba(236,19,19,0.15);
       border-radius: 12px;
-      overflow: hidden;
+      overflow: visible;
       backdrop-filter: blur(12px);
     }
     .matrix-header {
@@ -455,6 +453,8 @@
       gap: 0.6rem;
       padding: 1.15rem 1.5rem;
       border-bottom: 1px solid rgba(236,19,19,0.1);
+      border-radius: 12px 12px 0 0;
+      background: rgba(26,10,10,0.8);
     }
     .matrix-icon { font-size: 1.25rem; }
     .matrix-title {
@@ -464,7 +464,26 @@
       font-weight: 600;
       color: #fff;
     }
-    .matrix-body { padding: 0; }
+    .matrix-body {
+      padding: 0;
+      overflow-x: auto;
+      overflow-y: visible;
+      border-radius: 0 0 12px 12px;
+    }
+    .matrix-body::-webkit-scrollbar {
+      height: 8px;
+    }
+    .matrix-body::-webkit-scrollbar-track {
+      background: #0d0404;
+      border-radius: 4px;
+    }
+    .matrix-body::-webkit-scrollbar-thumb {
+      background: rgba(236,19,19,0.3);
+      border-radius: 4px;
+    }
+    .matrix-body::-webkit-scrollbar-thumb:hover {
+      background: rgba(236,19,19,0.5);
+    }
 
     /* Challenge Matrix Table */
     .challenge-matrix {
@@ -476,13 +495,16 @@
       font-family: 'Space Grotesk', monospace;
     }
     .sticky-col {
-      position: sticky;
+      position: sticky !important;
       z-index: 10;
       background: #1a0a0a !important;
     }
-    .col-rank { left: 0; width: 55px; min-width: 55px; }
-    .col-name { left: 55px; width: 180px; min-width: 180px; }
-    .col-score { left: 235px; width: 90px; min-width: 90px; }
+    thead .sticky-col {
+      z-index: 12;
+    }
+    .col-rank { left: 0; width: 55px; min-width: 55px; max-width: 55px; }
+    .col-name { left: 55px; width: 180px; min-width: 180px; max-width: 180px; }
+    .col-score { left: 235px; width: 90px; min-width: 90px; max-width: 90px; }
     .sticky-col::after {
       content: '';
       position: absolute;
@@ -492,7 +514,8 @@
       pointer-events: none;
     }
     .col-score::after {
-      width: 6px;
+      width: 8px;
+      background: linear-gradient(90deg, rgba(0,0,0,0.5), transparent);
     }
     .category-row th {
       background: #1a0505 !important;
@@ -541,7 +564,7 @@
       background: rgba(236,19,19,0.06) !important;
     }
     .matrix-row:hover .sticky-col {
-      background: rgba(26,10,10,0.95) !important;
+      background: #1e0c0c !important;
     }
     .matrix-row.top-3 {
       background: rgba(236,19,19,0.03);
