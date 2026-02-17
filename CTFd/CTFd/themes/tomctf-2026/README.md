@@ -1,13 +1,13 @@
-# WMCTF Modern Theme
+# TomCTF Modern Theme
 
-A beautifully designed, modern CTFd theme inspired by Apple Design principles and tailored for the WMCTF competition. This theme features a contemporary flat design with smooth animations, excellent user experience, and full responsive support.
+A beautifully designed, modern CTFd theme inspired by Apple Design principles and tailored for the TomCTF competition. This theme features a contemporary flat design with smooth animations, excellent user experience, and full responsive support.
 
-> 🏆 **Production Verified**: This theme has been successfully deployed and tested in **WMCTF 2025** competition at [wmctf.wm-team.cn](https://wmctf.wm-team.cn/), serving hundreds of participants with excellent performance and user experience.
+> 🏆 **Production Verified**: This theme has been successfully deployed and tested in **TomCTF 2026** competition at [tomctf.example.com](https://tomctf.example.com/), serving hundreds of participants with excellent performance and user experience.
 
 ## 📸 Screenshots & Demo
 
 ### Live Demo
-🌐 **Experience it live**: [WMCTF 2025 Platform](https://wmctf.wm-team.cn/)
+🌐 **Experience it live**: [TomCTF 2026 Platform](https://tomctf.example.com/)
 
 ### Theme Showcase
 
@@ -72,7 +72,7 @@ A beautifully designed, modern CTFd theme inspired by Apple Design principles an
 
 ### Login Page
 - **Centered Design**: Card-based layout with gradient header
-- **Brand Integration**: WMCTF logo and branding
+- **Brand Integration**: TomCTF logo and branding
 - **Form Enhancement**: Rounded inputs with focus effects
 - **Feature Highlights**: Security, speed, and competition icons
 
@@ -110,7 +110,7 @@ A beautifully designed, modern CTFd theme inspired by Apple Design principles an
 
 ## 🎯 Brand Identity
 
-### WMCTF Branding
+### TomCTF Branding
 - **Logo**: Custom SVG logo with circuit pattern
 - **Colors**: Brand-consistent color scheme
 - **Typography**: Professional and readable font choices
@@ -166,7 +166,7 @@ static/               # Compiled assets (generated)
 #### How to use?
 
 ```
-git clone https://github.com/wm-team/ctfd-wmctf2025-theme.git CTFd/themes/wmctf2025
+git clone https://github.com/tomctf/tomctf-2026-theme.git CTFd/themes/tomctf-2026
 ```
 
 ## 🎨 Customization
@@ -175,11 +175,11 @@ git clone https://github.com/wm-team/ctfd-wmctf2025-theme.git CTFd/themes/wmctf2
 The theme uses CSS custom properties for easy customization:
 ```css
 :root {
-  --wmctf-primary: #007AFF;    /* Apple Blue */
-  --wmctf-secondary: #5856D6;  /* Apple Purple */
-  --wmctf-accent: #FF3B30;     /* Apple Red */
-  --wmctf-success: #34C759;    /* Apple Green */
-  --wmctf-warning: #FF9500;    /* Apple Orange */
+  --TomCTF-primary: #007AFF;    /* Apple Blue */
+  --TomCTF-secondary: #5856D6;  /* Apple Purple */
+  --TomCTF-accent: #FF3B30;     /* Apple Red */
+  --TomCTF-success: #34C759;    /* Apple Green */
+  --TomCTF-warning: #FF9500;    /* Apple Orange */
 }
 ```
 
@@ -207,13 +207,13 @@ Full dark mode support with automatic theme switching:
 
 This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
 
-The custom WMCTF branding and enhancements are designed specifically for the WMCTF competition.
+The custom TomCTF branding and enhancements are designed specifically for the TomCTF competition.
 
 ## 🎉 Production Success
 
-**WMCTF 2025 Achievement**: This theme has been successfully deployed and battle-tested in the real-world WMCTF 2025 competition:
+**TomCTF 2026 Achievement**: This theme has been successfully deployed and battle-tested in the real-world TomCTF 2026 competition:
 
-- 🌐 **Live Platform**: [wmctf.wm-team.cn](https://wmctf.wm-team.cn/)
+- 🌐 **Live Platform**: [tomctf.example.com](https://tomctf.example.com/)
 - 👥 **Participants**: Successfully served hundreds of CTF participants
 - ⚡ **Performance**: Excellent loading speeds and responsive design
 - 🔧 **Stability**: Zero major issues during the competition period
@@ -224,4 +224,5 @@ The theme has proven its reliability, performance, and user-friendliness in a hi
 
 ---
 
-**Created with ❤️ for WMCTF** - A modern, beautiful, and user-friendly CTF platform experience that has been proven in production.
+**Created with ❤️ for TomCTF** - A modern, beautiful, and user-friendly CTF platform experience that has been proven in production.
+

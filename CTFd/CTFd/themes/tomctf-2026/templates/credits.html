@@ -1,9 +1,9 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block stylesheets %}
   {{ Assets.css("assets/scss/main.scss") }}
   <style>
-    /* ── Credits Page ── */
+    /* â”€â”€ Credits Page â”€â”€ */
     .credits-page {
       min-height: 100vh;
       position: relative;
@@ -56,7 +56,7 @@
       font-weight: 600;
       letter-spacing: 0.25em;
       text-transform: uppercase;
-      color: var(--wmctf-primary);
+      color: var(--tomctf-primary);
       opacity: 0.8;
       animation: pulseSlow 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
@@ -72,7 +72,7 @@
       text-transform: uppercase;
       letter-spacing: -0.03em;
       line-height: 0.95;
-      background: linear-gradient(180deg, var(--wmctf-primary) 0%, #1a0000 100%);
+      background: linear-gradient(180deg, var(--tomctf-primary) 0%, #1a0000 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -88,7 +88,7 @@
     .credits-bar {
       width: 80px;
       height: 4px;
-      background: var(--wmctf-primary);
+      background: var(--tomctf-primary);
       border-radius: 2px;
       box-shadow: 0 0 15px rgba(236, 19, 19, 0.7);
     }
@@ -153,7 +153,7 @@
       font-family: 'Space Grotesk', var(--bs-font-sans-serif);
       font-size: clamp(2rem, 4vw, 3rem);
       font-weight: 700;
-      color: var(--wmctf-primary);
+      color: var(--tomctf-primary);
       letter-spacing: -0.02em;
       line-height: 1.1;
       text-shadow: 0 0 10px rgba(236, 19, 19, 0.5),
@@ -182,7 +182,7 @@
       text-transform: uppercase;
       color: rgba(255, 255, 255, 0.92);
       padding-left: 12px;
-      border-left: 2px solid var(--wmctf-primary);
+      border-left: 2px solid var(--tomctf-primary);
     }
 
     .creator-contributions {
@@ -221,7 +221,7 @@
       transition: color 0.2s ease;
     }
     .volunteer-name:hover {
-      color: var(--wmctf-primary);
+      color: var(--tomctf-primary);
     }
 
     /* Footer glow */
@@ -242,7 +242,7 @@
       transition: all 0.3s ease;
     }
     .back-link:hover {
-      color: var(--wmctf-primary);
+      color: var(--tomctf-primary);
     }
     .back-link .material-symbols-outlined {
       font-size: 1rem;
@@ -282,7 +282,7 @@
 <div class="credits-page" style="position:relative;z-index:5;">
   <div class="container" style="max-width:820px;">
 
-    <!-- ── Header ── -->
+    <!-- â”€â”€ Header â”€â”€ -->
     <div class="text-center mb-5 position-relative">
       <div style="position:absolute;inset:0;background:radial-gradient(circle,rgba(236,19,19,0.04) 0%,transparent 70%);pointer-events:none;"></div>
       <p class="credits-subtitle mb-2">TomCTF 2026</p>
@@ -290,16 +290,16 @@
       <div class="credits-bar mx-auto mt-4"></div>
       <p class="credits-quote mx-auto mt-4 mb-0">
         "Behind every great CTF, there's a team that didn't sleep."
-        <span class="credits-quote-attr d-block mt-2">— The War Room</span>
+        <span class="credits-quote-attr d-block mt-2">â€” The War Room</span>
       </p>
     </div>
 
-    <!-- ───────────────────────────────────────── -->
+    <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <!-- MAIN TEAM                                  -->
-    <!-- ───────────────────────────────────────── -->
+    <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div class="mb-5">
       <span class="section-heading">Main Team</span>
-      <div class="dept-label mt-3 mb-4">CSE (Cyber-Security) — A &middot; 3rd Year</div>
+      <div class="dept-label mt-3 mb-4">CSE (Cyber-Security) â€” A &middot; 3rd Year</div>
       
     </div>
 
@@ -363,16 +363,16 @@
 
     </div>
 
-    <!-- ───────────────────────────────────────── -->
+    <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <!-- OTHER CREATORS                             -->
-    <!-- ───────────────────────────────────────── -->
+    <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div class="mt-5 mb-4">
       <span class="section-heading">Other Creators</span>
     </div>
 
     <!-- CSE-A 2nd year (Jeeva) -->
     <div class="mb-4">
-      <div class="dept-label mb-4">CSE (Cyber-Security) — A</div>
+      <div class="dept-label mb-4">CSE (Cyber-Security) â€” A</div>
 
       <div class="creator-group mb-2">
         <div class="mb-3">
@@ -390,7 +390,7 @@
 
     <!-- CSE-A 2nd year -->
     <div class="mb-4">
-      <div class="dept-label mb-4">CSE (Cyber-Security) — A &middot; 2nd Year</div>
+      <div class="dept-label mb-4">CSE (Cyber-Security) â€” A &middot; 2nd Year</div>
 
       <div class="creator-group mb-2">
         <div class="mb-3">
@@ -447,7 +447,7 @@
 
     <!-- CSE-B 2nd year -->
     <div class="mb-4">
-      <div class="dept-label mb-4">CSE (Cyber-Security) — B &middot; 2nd Year</div>
+      <div class="dept-label mb-4">CSE (Cyber-Security) â€” B &middot; 2nd Year</div>
 
       <div class="creator-group mb-2">
         <div class="mb-3">
@@ -499,16 +499,16 @@
       </div>
     </div>
 
-    <!-- ───────────────────────────────────────── -->
+    <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <!-- VOLUNTEERS                                 -->
-    <!-- ───────────────────────────────────────── -->
+    <!-- â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
     <div class="mt-5 mb-4">
       <span class="section-heading">Volunteers</span>
     </div>
 
     <!-- CSE-A 1st year -->
     <div class="mb-4">
-      <div class="dept-label mb-4">CSE (Cyber-Security) — A &middot; 1st Year</div>
+      <div class="dept-label mb-4">CSE (Cyber-Security) â€” A &middot; 1st Year</div>
       <div class="d-flex flex-wrap gap-4 mb-3">
         <span class="volunteer-name">Janikaa S</span>
         <span class="volunteer-name">Abhinesh John V</span>
@@ -518,7 +518,7 @@
 
     <!-- CSE-B 1st year -->
     <div class="mb-4">
-      <div class="dept-label mb-4">CSE (Cyber-Security) — B &middot; 1st Year</div>
+      <div class="dept-label mb-4">CSE (Cyber-Security) â€” B &middot; 1st Year</div>
       <div class="d-flex flex-wrap gap-4 mb-3">
         <span class="volunteer-name">Rasiha K</span>
         <span class="volunteer-name">Sree Murgan N M</span>
@@ -527,7 +527,7 @@
       <div class="separator-glow my-4"></div>
     </div>
 
-    <!-- ── Footer ── -->
+    <!-- â”€â”€ Footer â”€â”€ -->
     <footer class="text-center mt-5 pt-4">
       <a href="{{ url_for('challenges.listing') }}" class="back-link">
         <span class="material-symbols-outlined me-1">west</span>

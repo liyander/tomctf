@@ -1,4 +1,4 @@
-/** @type {import('tailwindcss').Config} */
+﻿/** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
     "./templates/**/*.html",
@@ -9,7 +9,7 @@ module.exports = {
     extend: {
       colors: {
         // TomCTF Brand Colors - Dark Red Cyberpunk palette
-        wmctf: {
+        tomctf: {
           primary: '#ec1313',    // TomCTF Red
           secondary: '#8b0000',  // Dark Red
           accent: '#ff4444',     // Bright Red

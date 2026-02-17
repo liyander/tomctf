@@ -1,4 +1,4 @@
-// Import Bootstrap with custom variables (must be first for @use rules)
+﻿// Import Bootstrap with custom variables (must be first for @use rules)
 @use "bootstrap/scss/bootstrap" as * with (
   $primary: #ec1313,
   $secondary: #8b0000,
@@ -38,7 +38,7 @@
 @import 'tailwindcss/components';
 @import 'tailwindcss/utilities';
 
-// Import fonts - 移除有问题的字体导入，使用系统字体
+// Import fonts - ç§»é™¤æœ‰é—®é¢˜çš„å­—ä½“å¯¼å…¥ï¼Œä½¿ç”¨ç³»ç»Ÿå­—ä½“
 // @import '@fontsource/inter/400.css';
 // @import '@fontsource/inter/500.css';
 // @import '@fontsource/inter/600.css';
@@ -50,11 +50,11 @@
 
 :root {
   
-  --wmctf-primary: #ec1313;
-  --wmctf-secondary: #8b0000;
-  --wmctf-accent: #FF3B30;
-  --wmctf-success: #34C759;
-  --wmctf-warning: #FF9500;
+  --tomctf-primary: #ec1313;
+  --tomctf-secondary: #8b0000;
+  --tomctf-accent: #FF3B30;
+  --tomctf-success: #34C759;
+  --tomctf-warning: #FF9500;
   
   // Dark mode colors
   --dark-bg: #050303;
@@ -114,7 +114,7 @@ body {
   background: var(--light-bg);
   color: var(--light-text);
   transition: background-color 0.3s ease, color 0.3s ease;
-  padding-top: 70px; // 减少导航栏间隙
+  padding-top: 70px; // å‡å°‘å¯¼èˆªæ é—´éš™
 }
 
 // Dark mode
@@ -157,11 +157,11 @@ p {
 
 a {
   text-decoration: none !important;
-  color: var(--wmctf-primary);
+  color: var(--tomctf-primary);
   transition: color 0.2s ease;
   
   &:hover {
-    color: var(--wmctf-secondary);
+    color: var(--tomctf-secondary);
   }
 }
 
@@ -186,34 +186,34 @@ a {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--wmctf-primary) 0%, var(--wmctf-secondary) 100%) !important;
+  background: linear-gradient(135deg, var(--tomctf-primary) 0%, var(--tomctf-secondary) 100%) !important;
   border: none !important;
   color: white !important;
   
   &:hover {
-    background: linear-gradient(135deg, var(--wmctf-secondary) 0%, var(--wmctf-primary) 100%) !important;
+    background: linear-gradient(135deg, var(--tomctf-secondary) 0%, var(--tomctf-primary) 100%) !important;
     color: white !important;
   }
   
   &:focus {
-    background: linear-gradient(135deg, var(--wmctf-primary) 0%, var(--wmctf-secondary) 100%) !important;
+    background: linear-gradient(135deg, var(--tomctf-primary) 0%, var(--tomctf-secondary) 100%) !important;
     color: white !important;
     box-shadow: 0 0 0 0.2rem rgba(0, 122, 255, 0.25) !important;
   }
   
   &:active {
-    background: linear-gradient(135deg, var(--wmctf-secondary) 0%, var(--wmctf-primary) 100%) !important;
+    background: linear-gradient(135deg, var(--tomctf-secondary) 0%, var(--tomctf-primary) 100%) !important;
     color: white !important;
   }
 }
 
 .btn-outline-primary {
-  border: 2px solid var(--wmctf-primary);
-  color: var(--wmctf-primary);
+  border: 2px solid var(--tomctf-primary);
+  color: var(--tomctf-primary);
   background: transparent;
   
   &:hover {
-    background: var(--wmctf-primary);
+    background: var(--tomctf-primary);
     color: white;
   }
 }
@@ -229,7 +229,7 @@ input, select, textarea {
   color: var(--light-text) !important;
   
   &:focus {
-    border-color: var(--wmctf-primary) !important;
+    border-color: var(--tomctf-primary) !important;
     box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1) !important;
     outline: none !important;
   }
@@ -275,7 +275,7 @@ input, select, textarea {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   background: rgba(5, 3, 3, 0.95) !important;
-  border-bottom: 1px solid var(--wmctf-primary);
+  border-bottom: 1px solid var(--tomctf-primary);
   box-shadow: 0 0 20px rgba(236, 19, 19, 0.35) !important;
   transition: all 0.3s ease;
   
@@ -320,7 +320,7 @@ input, select, textarea {
     font-size: 0.95rem;
     
     &:hover, &.active {
-        color: var(--wmctf-primary) !important;
+        color: var(--tomctf-primary) !important;
         text-shadow: 0 0 8px rgba(236, 19, 19, 0.6);
         background: rgba(255, 255, 255, 0.05);
     }
@@ -476,7 +476,7 @@ input, select, textarea {
 
 [data-bs-theme="dark"] .navbar {
   background: rgba(5, 3, 3, 0.95) !important;
-  border-bottom-color: var(--wmctf-primary);
+  border-bottom-color: var(--tomctf-primary);
   box-shadow: 0 0 15px rgba(236, 19, 19, 0.4) !important;
   
   .navbar-brand {
@@ -626,7 +626,7 @@ input, select, textarea {
 .fa-spin.spinner {
   text-align: center;
   opacity: 0.6;
-  color: var(--wmctf-primary);
+  color: var(--tomctf-primary);
 }
 
 // Notification badge
@@ -634,7 +634,7 @@ input, select, textarea {
   vertical-align: top;
   margin-left: -1.5em;
   font-size: 50%;
-  background: var(--wmctf-accent) !important;
+  background: var(--tomctf-accent) !important;
   color: white;
   border-radius: 50%;
   animation: pulse 2s ease-in-out infinite;
@@ -642,7 +642,7 @@ input, select, textarea {
 
 // Modern blockquote
 blockquote {
-  border-left: 4px solid var(--wmctf-primary);
+  border-left: 4px solid var(--tomctf-primary);
   padding-left: var(--spacing-lg);
   margin: var(--spacing-xl) 0;
   font-style: italic;
@@ -708,7 +708,7 @@ blockquote {
 
 // Text gradient utilities
 .text-gradient {
-  background: linear-gradient(135deg, var(--wmctf-primary) 0%, var(--wmctf-secondary) 100%);
+  background: linear-gradient(135deg, var(--tomctf-primary) 0%, var(--tomctf-secondary) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -739,7 +739,7 @@ blockquote {
   position: absolute;
   bottom: 0;
   width: 100%;
-  height: 60px; // 紧凑高度
+  height: 60px; // ç´§å‡‘é«˜åº¦
   background: var(--light-surface);
   border-top: 1px solid var(--light-border);
   backdrop-filter: blur(20px);
@@ -788,7 +788,7 @@ blockquote {
     align-items: center;
     
     &:hover {
-      color: var(--wmctf-primary);
+      color: var(--tomctf-primary);
       transform: translateY(-1px);
     }
   }
@@ -825,7 +825,7 @@ blockquote {
     
     &:hover {
       background: rgba(0, 122, 255, 0.1);
-      color: var(--wmctf-primary);
+      color: var(--tomctf-primary);
       transform: translateY(-1px);
       box-shadow: 0 4px 12px rgba(0, 122, 255, 0.15);
     }
@@ -847,7 +847,7 @@ blockquote {
     letter-spacing: 0.01em;
   }
   
-  // 移动端响应式设计
+  // ç§»åŠ¨ç«¯å“åº”å¼è®¾è®¡
   @media (max-width: 768px) {
     height: 80px;
     
@@ -906,7 +906,7 @@ blockquote {
     color: var(--dark-muted);
     
     &:hover {
-      color: var(--wmctf-primary);
+      color: var(--tomctf-primary);
     }
   }
   
@@ -920,7 +920,7 @@ blockquote {
     
     &:hover {
       background: rgba(0, 122, 255, 0.15);
-      color: var(--wmctf-primary);
+      color: var(--tomctf-primary);
     }
   }
   
@@ -973,21 +973,21 @@ blockquote {
     border-bottom: 2px solid var(--light-border);
     font-weight: 600;
     color: var(--light-text);
-    white-space: nowrap; // 防止表头文字换行
-    padding: 0.75rem; // 确保有足够的内边距
+    white-space: nowrap; // é˜²æ­¢è¡¨å¤´æ–‡å­—æ¢è¡Œ
+    padding: 0.75rem; // ç¡®ä¿æœ‰è¶³å¤Ÿçš„å†…è¾¹è·
   }
   
   td {
     border-bottom: 1px solid var(--light-border);
     vertical-align: middle;
-    padding: 0.75rem; // 确保有足够的内边距
+    padding: 0.75rem; // ç¡®ä¿æœ‰è¶³å¤Ÿçš„å†…è¾¹è·
   }
   
   tr:hover {
     background: rgba(0, 122, 255, 0.05);
   }
   
-  // 修复窄列的显示问题
+  // ä¿®å¤çª„åˆ—çš„æ˜¾ç¤ºé—®é¢˜
   th[style*="width: 10px"], td[style*="width: 10px"] {
     width: auto !important;
     min-width: 60px !important;
@@ -1023,26 +1023,26 @@ blockquote {
 
 .alert-primary {
   background: rgba(0, 122, 255, 0.1);
-  color: var(--wmctf-primary);
-  border-left: 4px solid var(--wmctf-primary);
+  color: var(--tomctf-primary);
+  border-left: 4px solid var(--tomctf-primary);
 }
 
 .alert-success {
   background: rgba(52, 199, 89, 0.1);
-  color: var(--wmctf-success);
-  border-left: 4px solid var(--wmctf-success);
+  color: var(--tomctf-success);
+  border-left: 4px solid var(--tomctf-success);
 }
 
 .alert-warning {
   background: rgba(255, 149, 0, 0.1);
-  color: var(--wmctf-warning);
-  border-left: 4px solid var(--wmctf-warning);
+  color: var(--tomctf-warning);
+  border-left: 4px solid var(--tomctf-warning);
 }
 
 .alert-danger {
   background: rgba(255, 59, 48, 0.1);
-  color: var(--wmctf-accent);
-  border-left: 4px solid var(--wmctf-accent);
+  color: var(--tomctf-accent);
+  border-left: 4px solid var(--tomctf-accent);
 }
 
 // Enhanced badges
@@ -1072,7 +1072,7 @@ blockquote {
   border-radius: 4px;
   
   &:hover {
-    background: var(--wmctf-primary);
+    background: var(--tomctf-primary);
   }
 }
 
@@ -1085,19 +1085,19 @@ blockquote {
     background: var(--dark-border);
     
     &:hover {
-      background: var(--wmctf-primary);
+      background: var(--tomctf-primary);
     }
   }
 }
 
 // Selection styling
 ::selection {
-  background: var(--wmctf-primary);
+  background: var(--tomctf-primary);
   color: white;
 }
 
 ::-moz-selection {
-  background: var(--wmctf-primary);
+  background: var(--tomctf-primary);
   color: white;
 }
 
@@ -1319,19 +1319,19 @@ body {
 
 .ctf-name {
     font-family: 'Creepster', system-ui;
-    color: var(--wmctf-primary);
+    color: var(--tomctf-primary);
 }
 
 
 /* Sickle Icons */
 .sickle-left {
     transform: rotate(-45deg) scaleX(-1);
-    color: var(--wmctf-primary);
+    color: var(--tomctf-primary);
     text-shadow: 0 0 10px rgba(236, 19, 19, 0.8);
 }
 .sickle-right {
     transform: rotate(45deg);
-    color: var(--wmctf-primary);
+    color: var(--tomctf-primary);
     text-shadow: 0 0 10px rgba(236, 19, 19, 0.8);
 }
 .ms-n2 {
@@ -1347,13 +1347,13 @@ body {
 .btn-register-glow {
     background: rgba(236, 19, 19, 0.2);
     border: 1px solid rgba(236, 19, 19, 0.4);
-    color: var(--wmctf-primary);
+    color: var(--tomctf-primary);
     font-weight: 900;
     letter-spacing: 0.15em;
     text-transform: uppercase;
     
     &:hover {
-        background: var(--wmctf-primary);
+        background: var(--tomctf-primary);
         color: #fff;
         box-shadow: 0 0 20px rgba(236, 19, 19, 0.6);
     }

@@ -1,6 +1,6 @@
 # Screenshots
 
-This directory contains screenshot images showcasing the WMCTF Modern Theme.
+This directory contains screenshot images showcasing the TomCTF Modern Theme.
 
 ## Required Screenshots
 
@@ -30,4 +30,5 @@ Recommended tools for taking screenshots:
 
 ## Live Reference
 
-Take screenshots from the live WMCTF 2025 platform: https://wmctf.wm-team.cn/
+Take screenshots from the live TomCTF 2026 platform: https://tomctf.example.com/
+
