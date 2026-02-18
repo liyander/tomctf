@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>TomCTF — Outro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Orbitron:wght@400..900&family=Cherry+Bomb+One&display=block" rel="stylesheet">
+    <link href="https://fonts.cdnfonts.com/css/stranger-things" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #000;
+    color: #fff;
+    font-family: 'Space Grotesk', monospace;
+}
+canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+#offCanvas { display: none; }
+
+/* Loading overlay */
+#loadOverlay {
+    position: fixed; inset: 0; z-index: 200;
+    background: #050303;
+    display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 1.4rem;
+    transition: opacity 1.2s ease;
+}
+#loadOverlay.hidden { opacity: 0; pointer-events: none; }
+#loadOverlay .spinner {
+    width: 48px; height: 48px;
+    border: 3px solid rgba(236,19,19,0.15);
+    border-top-color: #ec1313;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#loadOverlay .status {
+    color: rgba(255,255,255,0.45);
+    font-size: 0.95rem;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.05em;
+}
+
+/* Disabled overlay */
+#disabledOverlay {
+    position: fixed; inset: 0; z-index: 300;
+    background: #050303;
+    display: none; align-items: center; justify-content: center; flex-direction: column; gap: 1.2rem;
+}
+#disabledOverlay.show { display: flex; }
+#disabledOverlay h2 {
+    font-family: 'Stranger Things', sans-serif;
+    font-size: clamp(2rem, 6vw, 3.8rem);
+    background: linear-gradient(135deg, #333, #555);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: 0.15em;
+}
+#disabledOverlay p { color: #555; font-size: 0.95rem; }
+
+/* Progress */
+#progressBar {
+    position: fixed; bottom: 0; left: 0; width: 0%; height: 4px;
+    background: linear-gradient(90deg, #ec1313, #ff4444, #ec1313);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+    z-index: 50; transition: width 0.12s linear;
+    box-shadow: 0 0 18px rgba(236,19,19,0.7), 0 -2px 8px rgba(236,19,19,0.3);
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* Font preload (invisible) */
+#fontPreload {
+    position: absolute; top: -9999px; left: -9999px; opacity: 0; pointer-events: none;
+}
+</style>
+</head>
+<body>
+
+<!-- SVG Filters -->
+<svg style="position:absolute;width:0;height:0">
+    <defs>
+        <filter id="turb" x="-20%" y="-20%" width="140%" height="140%">
+            <feTurbulence id="feTurb" type="fractalNoise" baseFrequency="0.003" numOctaves="4" seed="42" result="noise"/>
+            <feDisplacementMap id="feDis" in="SourceGraphic" in2="noise" scale="0" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+        <filter id="noiseFilter1">
+            <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/>
+        </filter>
+        <filter id="glow">
+            <feGaussianBlur stdDeviation="10" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="chromatic">
+            <feOffset in="SourceGraphic" dx="3" dy="0" result="r">
+                <animate attributeName="dx" values="3;-2;4;-1;3" dur="0.4s" repeatCount="indefinite"/>
+            </feOffset>
+            <feOffset in="SourceGraphic" dx="-3" dy="0" result="b">
+                <animate attributeName="dx" values="-3;2;-4;1;-3" dur="0.4s" repeatCount="indefinite"/>
+            </feOffset>
+            <feColorMatrix in="r" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="red"/>
+            <feColorMatrix in="b" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="blue"/>
+            <feBlend in="red" in2="SourceGraphic" mode="screen" result="rg"/>
+            <feBlend in="rg" in2="blue" mode="screen"/>
+        </filter>
+    </defs>
+</svg>
+
+<!-- Font preload -->
+<div id="fontPreload">
+    <span style="font-family:'Stranger Things'">.</span>
+    <span style="font-family:'Cherry Bomb One'">.</span>
+    <span style="font-family:'Orbitron'">.</span>
+    <span style="font-family:'Space Mono'">.</span>
+    <span style="font-family:'Space Grotesk'">.</span>
+</div>
+
+<canvas id="canvas" width="1920" height="1080"></canvas>
+<canvas id="offCanvas" width="1920" height="1080"></canvas>
+
+<!-- Loading spinner (auto-disappears) -->
+<div id="loadOverlay">
+    <div class="spinner"></div>
+    <div class="status" id="statusText">Initializing…</div>
+</div>
+
+<!-- Disabled page (shown if outro is disabled) -->
+<div id="disabledOverlay">
+    <h2>NOT YET</h2>
+    <p>The outro page is not available right now.</p>
+</div>
+
+<div id="progressBar"></div>
+
+<script>
+/*********************
+ * TomCTF Outro — AUTO-START
+ * Energetic canvas-based closing ceremony
+ * No start button — loads data then launches immediately
+ *********************/
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const offCanvas = document.getElementById('offCanvas');
+const offCtx = offCanvas.getContext('2d');
+const statusText = document.getElementById('statusText');
+const loadOverlay = document.getElementById('loadOverlay');
+const disabledOverlay = document.getElementById('disabledOverlay');
+const progressBar = document.getElementById('progressBar');
+const feTurb = document.getElementById('feTurb');
+const feDis = document.getElementById('feDis');
+
+/* ---- STATE ---- */
+let challenges = [];
+let solves = [];
+let teams = [];
+let isRunning = false;
+let startTime = 0;
+let noiseTex = new Image();
+let shakeX = 0, shakeY = 0, shakeDecay = 0;
+
+/* ---- SCREEN SHAKE ---- */
+function triggerShake(intensity = 15) {
+    shakeDecay = intensity;
+}
+function updateShake() {
+    if (shakeDecay > 0.5) {
+        shakeX = (Math.random() - 0.5) * shakeDecay * 2;
+        shakeY = (Math.random() - 0.5) * shakeDecay * 2;
+        shakeDecay *= 0.88;
+    } else {
+        shakeX = 0; shakeY = 0; shakeDecay = 0;
+    }
+}
+
+/* ---- SIZING ---- */
+let SW = 1920, SH = 1080, SX = 0, SY = 0;
+function setCanvasSize() {
+    const ratio = window.innerWidth / window.innerHeight;
+    if (ratio * 1080 > 1920) {
+        SH = 1080; SW = ratio * 1080;
+        SX = (SW - 1920) / 2; SY = 0;
+    } else {
+        SH = 1920 / ratio; SW = 1920;
+        SX = 0; SY = (SH - 1080) / 2;
+    }
+    canvas.width = SW; canvas.height = SH;
+    offCanvas.width = SW; offCanvas.height = SH;
+}
+window.addEventListener('resize', setCanvasSize);
+setCanvasSize();
+
+function generateNoiseTex() {
+    ctx.filter = "url('#noiseFilter1')";
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(0, 0, SW, SH);
+    ctx.filter = 'none';
+    noiseTex.src = canvas.toDataURL('image/png');
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, SW, SH);
+}
+generateNoiseTex();
+
+/* ---- EASING ---- */
+function easeOutExpo(x) { return x >= 1 ? 1 : 1 - Math.pow(2, -10 * x); }
+function easeInExpo(x) { return x <= 0 ? 0 : Math.pow(2, 10 * x - 10); }
+function easeOutQuint(x) { return 1 - Math.pow(1 - x, 5); }
+function easeInOutCubic(x) { return x < 0.5 ? 4*x*x*x : 1 - Math.pow(-2*x+2,3)/2; }
+function easeInOutExpo(x) {
+    return x === 0 ? 0 : x === 1 ? 1 : x < 0.5
+        ? Math.pow(2, 20 * x - 10) / 2
+        : (2 - Math.pow(2, -20 * x + 10)) / 2;
+}
+function easeOutSine(x) { return Math.sin((x * Math.PI) / 2); }
+function easeInCubic(x) { return x * x * x; }
+function easeOutBack(x) { const c1 = 1.70158; const c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }
+function easeOutBounce(x) {
+    const n1 = 7.5625, d1 = 2.75;
+    if (x < 1/d1) return n1*x*x;
+    else if (x < 2/d1) return n1*(x-=1.5/d1)*x+.75;
+    else if (x < 2.5/d1) return n1*(x-=2.25/d1)*x+.9375;
+    else return n1*(x-=2.625/d1)*x+.984375;
+}
+function s(v) { return Math.max(0, Math.min(1, isNaN(v) ? 0 : v)); }
+function m(a, b, t) { return a * (1 - t) + b * t; }
+
+/* ---- GRADIENT CACHE ---- */
+const gradCache = {};
+function gradY(c1, c2) {
+    const k = c1 + c2;
+    if (gradCache[k]) return gradCache[k];
+    const g = ctx.createLinearGradient(0, 0, 0, SH);
+    g.addColorStop(0, c1); g.addColorStop(1, c2);
+    gradCache[k] = g;
+    return g;
+}
+
+/* ---- FONTS (BIGGER) ---- */
+function font(name, px) {
+    const fonts = {
+        stranger: `${px || 200}px 'Stranger Things', sans-serif`,
+        cherry:   `${px || 300}px 'Cherry Bomb One', system-ui`,
+        orb:      `700 ${px || 72}px 'Orbitron', sans-serif`,
+        space:    `600 ${px || 38}px 'Space Grotesk', monospace`,
+        mono:     `400 ${px || 26}px 'Space Mono', monospace`,
+    };
+    ctx.font = fonts[name] || fonts.space;
+    return ctx.font;
+}
+
+/* ---- DRAWING HELPERS ---- */
+function bg(style) {
+    ctx.fillStyle = style;
+    ctx.fillRect(-SW, -SH, SW * 3, SH * 3);
+}
+
+function noiseOverlay(alpha = 0.15) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(noiseTex, 0, 0, SW, SH, -100, -100, SW + 200, SH + 200);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    ctx.restore();
+}
+
+function drawGlowText(text, x, y, fontName, size, color, glowColor, blur = 16) {
+    ctx.save();
+    font(fontName, size);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = color;
+    ctx.shadowColor = glowColor || color;
+    ctx.shadowBlur = blur;
+    ctx.fillText(text, x, y);
+    ctx.shadowBlur = blur * 2.5;
+    ctx.fillText(text, x, y);
+    ctx.shadowBlur = blur * 4;
+    ctx.globalAlpha *= 0.3;
+    ctx.fillText(text, x, y);
+    ctx.shadowBlur = 0;
+    ctx.restore();
+}
+
+/* Scan line effect */
+function scanLines(alpha = 0.04) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    for (let y = 0; y < SH; y += 4) {
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, y, SW, 2);
+    }
+    ctx.restore();
+}
+
+/* Vignette */
+function vignette(strength = 0.5) {
+    const g = ctx.createRadialGradient(SW/2, SH/2, SH*0.3, SW/2, SH/2, SH*0.85);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, `rgba(0,0,0,${strength})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, SW, SH);
+}
+
+/* Particle burst at (x,y) */
+let bursts = [];
+function addBurst(x, y, count = 40, color = '#ec1313') {
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 8;
+        bursts.push({
+            x, y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1,
+            decay: 0.015 + Math.random() * 0.02,
+            size: 2 + Math.random() * 4,
+            color
+        });
+    }
+}
+function updateBursts() {
+    for (let i = bursts.length - 1; i >= 0; i--) {
+        const p = bursts[i];
+        p.x += p.vx; p.y += p.vy;
+        p.vy += 0.12; // gravity
+        p.life -= p.decay;
+        if (p.life <= 0) { bursts.splice(i, 1); continue; }
+        ctx.globalAlpha = p.life * 0.8;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+}
+
+/* Floating ambient particles */
+function ambientParticles(el, count = 100, color = '236,19,19', speed = 1) {
+    for (let i = 0; i < count; i++) {
+        const px = ((Math.sin(7 + i * 137.5 + el * 0.0004 * speed) + 1) / 2) * SW;
+        const py = ((Math.cos(7 + i * 97.3 + el * 0.00025 * speed) + 1) / 2) * SH;
+        const sz = 1.5 + Math.sin(i * 0.7 + el * 0.0015) * 3;
+        const al = 0.06 + Math.sin(i * 1.3 + el * 0.002) * 0.05;
+        ctx.beginPath();
+        ctx.arc(px, py, Math.max(0.5, sz), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${color},${Math.abs(al).toFixed(3)})`;
+        ctx.fill();
+    }
+}
+
+function getMedalColor(i) {
+    return ['#FFD700', '#C0C0C0', '#CD7F32', '#ec1313', '#8b0000'][i] || 'rgba(255,255,255,0.4)';
+}
+function getMedalEmoji(i) { return ['🥇', '🥈', '🥉'][i] || `#${i + 1}`; }
+function th(n) {
+    if (n > 3 && n < 21) return `${n}th`;
+    if (n % 10 === 1) return `${n}st`;
+    if (n % 10 === 2) return `${n}nd`;
+    if (n % 10 === 3) return `${n}rd`;
+    return `${n}th`;
+}
+
+function mulberry32(a) {
+    return function () {
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+}
+
+/* ---- DATA LOADING ---- */
+async function loadData() {
+    statusText.textContent = 'Fetching challenges…';
+    try {
+        let challResp = await fetch('/api/v1/challenges?view=admin', { credentials: 'same-origin' });
+        if (!challResp.ok) challResp = await fetch('/api/v1/challenges', { credentials: 'same-origin' });
+        challenges = (await challResp.json()).data || [];
+
+        statusText.textContent = `Loading solves (${challenges.length} challenges)…`;
+        solves = [];
+        for (const c of challenges) {
+            try {
+                const sr = await fetch(`/api/v1/challenges/${c.id}/solves`, { credentials: 'same-origin' });
+                const sd = await sr.json();
+                if (sd.data) {
+                    for (const sv of sd.data) {
+                        solves.push({
+                            cid: c.id, cname: c.name, ccat: c.category, cval: c.value,
+                            aid: sv.account_id, aname: sv.name, date: sv.date,
+                        });
+                    }
+                }
+            } catch (e) { console.warn(`Solve fetch fail: ${c.name}`, e); }
+        }
+
+        statusText.textContent = 'Fetching scoreboard…';
+        const stResp = await fetch('/api/v1/scoreboard', { credentials: 'same-origin' });
+        teams = (await stResp.json()).data || [];
+
+        statusText.textContent = 'Launching…';
+        return true;
+    } catch (e) {
+        console.error('Load fail', e);
+        statusText.textContent = 'Failed to load data. Retrying in 5s…';
+        await new Promise(r => setTimeout(r, 5000));
+        return loadData(); // auto retry
+    }
+}
+
+/* ---- TIMELINE BUILDER ---- */
+function buildTimeline() {
+    const tl = [];
+    let t = 0;
+
+    // Big dramatic splash with screen shake
+    tl.push({ type: 'splash', start: t, dur: 7000 });
+    t += 7000;
+
+    // Intense transition text
+    tl.push({ type: 'intro_text', start: t, dur: 3500 });
+    t += 3500;
+
+    // Challenge groups (3 per frame) — faster pacing
+    const sorted = [...challenges].sort((a, b) => {
+        if (a.category !== b.category) return a.category.localeCompare(b.category);
+        return (b.value || 0) - (a.value || 0);
+    });
+    for (let i = 0; i < sorted.length; i += 3) {
+        const grp = sorted.slice(i, i + 3).map(c => {
+            const cs = solves.filter(sv => sv.cid === c.id).sort((a, b) => new Date(a.date) - new Date(b.date));
+            return { ...c, solveCount: cs.length, topSolvers: cs.slice(0, 3).map(sv => sv.aname) };
+        });
+        tl.push({ type: 'challs', start: t, dur: 6000, data: grp, idx: i });
+        t += 6000;
+    }
+
+    // Unsolved
+    const unsolved = challenges.filter(c => !solves.some(sv => sv.cid === c.id));
+    if (unsolved.length > 0) {
+        tl.push({ type: 'unsolved', start: t, dur: 5500, data: unsolved });
+        t += 5500;
+    }
+
+    // Tension building transition
+    tl.push({ type: 'top_trans', start: t, dur: 4000 });
+    t += 4000;
+
+    // Top 5 teams — dramatic reveal 5th to 1st with increasing intensity
+    const top5 = teams.slice(0, 5);
+    for (let i = Math.min(4, top5.length - 1); i >= 0; i--) {
+        const dur = i === 0 ? 7000 : 5500; // 1st place gets more time
+        tl.push({ type: 'team_reveal', start: t, dur, data: top5[i], rank: i });
+        t += dur;
+    }
+
+    // Score breakdown chart
+    tl.push({ type: 'scores', start: t, dur: 7000, data: top5 });
+    t += 7000;
+
+    // Fast replay
+    const allSorted = [...solves].sort((a, b) => new Date(a.date) - new Date(b.date));
+    tl.push({ type: 'replay', start: t, dur: 10000, data: allSorted });
+    t += 10000;
+
+    // Goodbye — epic
+    tl.push({ type: 'goodbye', start: t, dur: 9000 });
+    t += 9000;
+
+    return { tl, total: t };
+}
+
+/* ===================== FRAME RENDERERS ===================== */
+
+/* -- SPLASH -- */
+function renderSplash(f, el) {
+    const t = s(el / f.dur);
+    const tE = easeOutExpo(s(t * 2));
+    const fadeOut = t > 0.8 ? easeInExpo((t - 0.8) * 5) : 0;
+
+    // Initial BANG shake
+    if (el < 50) triggerShake(30);
+
+    bg(gradY('#0a0004', '#1a000a'));
+    noiseOverlay(0.12);
+    ambientParticles(el, 120, '236,19,19', 1.5);
+
+    ctx.globalAlpha = tE * (1 - fadeOut);
+
+    // Distortion on title — more intense
+    const turbScale = (1 - tE) * 900;
+    feDis.setAttribute('scale', turbScale);
+    if (turbScale > 5) ctx.filter = "url('#turb')";
+
+    // Title — BIGGER
+    font('stranger', 220);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const scl = 1 + (1 - tE) * 5;
+    ctx.save();
+    ctx.translate(SW / 2, SH / 2 - 50);
+    ctx.scale(scl, scl);
+    ctx.letterSpacing = `${(1 - tE) * 80}px`;
+    ctx.globalCompositeOperation = 'screen';
+    const titleGrad = ctx.createLinearGradient(-400, 0, 400, 0);
+    titleGrad.addColorStop(0, '#ec1313'); titleGrad.addColorStop(0.4, '#ff6b6b');
+    titleGrad.addColorStop(0.6, '#ff2222'); titleGrad.addColorStop(1, '#8b0000');
+    ctx.fillStyle = titleGrad;
+    ctx.fillText('TOMCTF', 0, 0);
+    // Triple glow layer
+    ctx.filter = 'blur(8px)';
+    ctx.globalAlpha *= 0.6;
+    ctx.fillText('TOMCTF', 0, 0);
+    ctx.filter = 'blur(25px)';
+    ctx.globalAlpha *= 0.4;
+    ctx.fillText('TOMCTF', 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.letterSpacing = '0px';
+    ctx.restore();
+
+    ctx.filter = 'none';
+    feDis.setAttribute('scale', 0);
+
+    // Subtitle — bigger
+    ctx.globalAlpha = tE * (1 - fadeOut);
+    font('orb', 50);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.letterSpacing = '8px';
+    ctx.fillText('CLOSING CEREMONY', SW / 2, SH / 2 + 85);
+    ctx.letterSpacing = '0px';
+
+    // Stats — bigger
+    font('space', 32);
+    ctx.fillStyle = 'rgba(236,19,19,0.6)';
+    ctx.fillText(`${challenges.length} Challenges  ·  ${solves.length} Solves  ·  ${teams.length} Teams`, SW / 2, SH / 2 + 140);
+
+    // Red pulse ring
+    if (t < 0.3) {
+        const ringT = s(t / 0.3);
+        const ringR = ringT * 600;
+        ctx.beginPath();
+        ctx.arc(SW / 2, SH / 2, ringR, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(236,19,19,${(1 - ringT) * 0.4})`;
+        ctx.lineWidth = 4 + (1 - ringT) * 12;
+        ctx.stroke();
+    }
+
+    scanLines(0.03);
+    vignette(0.5);
+    ctx.globalAlpha = 1;
+}
+
+/* -- INTRO TEXT -- */
+function renderIntroText(f, el) {
+    const t = s(el / f.dur);
+    bg('#080005');
+    noiseOverlay(0.06);
+    ambientParticles(el, 50, '236,19,19');
+
+    const appear = easeOutBack(s(t * 3));
+    const fadeOut = t > 0.65 ? easeInExpo((t - 0.65) * 2.86) : 0;
+    ctx.globalAlpha = appear * (1 - fadeOut);
+
+    // Glitch line flicker
+    if (Math.random() > 0.92) {
+        const gy = Math.random() * SH;
+        ctx.fillStyle = 'rgba(236,19,19,0.08)';
+        ctx.fillRect(0, gy, SW, 3 + Math.random() * 8);
+    }
+
+    drawGlowText("LET'S SEE WHAT HAPPENED", SW / 2, SH / 2 - 15, 'space', 60, '#fff', 'rgba(255,255,255,0.3)', 12);
+
+    font('orb', 32);
+    ctx.fillStyle = 'rgba(236,19,19,0.5)';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(`${challenges.length} CHALLENGES AWAIT`, SW / 2, SH / 2 + 45);
+
+    vignette(0.4);
+    ctx.globalAlpha = 1;
+}
+
+/* -- CHALLENGES (3 per frame) -- */
+function renderChalls(f, el) {
+    const t = s(el / f.dur);
+    const grp = f.data;
+
+    // Color cycling bg
+    const hue = (f.idx * 37) % 360;
+    bg(gradY(`hsl(${hue},40%,4%)`, `hsl(${(hue + 30) % 360},50%,9%)`));
+    noiseOverlay(0.08);
+    ambientParticles(el, 40, '255,255,255', 0.5);
+
+    // Shake on entry
+    if (el < 40) triggerShake(8);
+
+    // Category label — bigger
+    const cat = grp[0]?.category || 'Challenges';
+    const catAppear = easeOutExpo(s(t * 5));
+    ctx.globalAlpha = catAppear;
+    font('orb', 34);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = `hsl(${hue},80%,60%)`;
+    ctx.letterSpacing = '8px';
+    ctx.fillText(cat.toUpperCase(), SW / 2, SY + 75);
+    ctx.letterSpacing = '0px';
+
+    // Cards — bigger
+    const cardW = 580, cardH = 640, gap = 50;
+    const totalW = grp.length * cardW + (grp.length - 1) * gap;
+    const sx = (SW - totalW) / 2;
+
+    for (let i = 0; i < grp.length; i++) {
+        const c = grp[i];
+        const delay = i * 0.08;
+        const a = easeOutBack(s((t - delay) * 4));
+        const yOff = (1 - easeOutExpo(s((t - delay) * 4))) * 100;
+
+        ctx.globalAlpha = easeOutExpo(s((t - delay) * 4));
+        const cx = sx + i * (cardW + gap);
+        const cy = SY + 120 + yOff;
+
+        // Card bg with glow border
+        ctx.save();
+        ctx.shadowColor = `hsla(${hue},80%,50%,0.25)`;
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.roundRect(cx, cy, cardW, cardH, 22);
+        ctx.fillStyle = `hsla(${hue},30%,6%,0.92)`;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = `hsla(${hue},60%,45%,0.5)`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+
+        // Challenge name — BIGGER
+        font('cherry', 46);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        const nm = c.name.length > 20 ? c.name.slice(0, 18) + '…' : c.name;
+        // Glow effect on name
+        ctx.save();
+        ctx.shadowColor = `hsla(${hue},80%,50%,0.4)`;
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = '#fff';
+        ctx.fillText(nm, cx + cardW / 2, cy + 60);
+        ctx.restore();
+
+        // Points — BIGGER orbitron
+        font('orb', 68);
+        ctx.fillStyle = `hsl(${hue},90%,55%)`;
+        ctx.fillText(`${c.value}`, cx + cardW / 2, cy + 140);
+        font('mono', 22);
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.fillText('POINTS', cx + cardW / 2, cy + 178);
+
+        // Solve count — bigger
+        font('space', 28);
+        ctx.fillStyle = c.solveCount > 0 ? 'rgba(52,199,89,0.9)' : 'rgba(255,59,48,0.7)';
+        ctx.fillText(c.solveCount > 0 ? `${c.solveCount} solve${c.solveCount !== 1 ? 's' : ''}` : '× UNSOLVED ×', cx + cardW / 2, cy + 212);
+
+        // Divider with glow
+        ctx.save();
+        ctx.shadowColor = `hsla(${hue},50%,50%,0.2)`;
+        ctx.shadowBlur = 6;
+        ctx.strokeStyle = `hsla(${hue},40%,40%,0.25)`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx + 50, cy + 245); ctx.lineTo(cx + cardW - 50, cy + 245);
+        ctx.stroke();
+        ctx.restore();
+
+        // "First Bloods" header — bigger
+        font('orb', 22);
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        ctx.fillText('FIRST BLOODS', cx + cardW / 2, cy + 280);
+
+        // Top 3 solvers — bigger
+        if (c.topSolvers.length > 0) {
+            for (let j = 0; j < c.topSolvers.length; j++) {
+                const sy2 = cy + 325 + j * 65;
+                const sa = easeOutExpo(s((t - delay - 0.12 - j * 0.06) * 5));
+                ctx.globalAlpha = easeOutExpo(s((t - delay) * 4)) * sa;
+
+                const mColor = getMedalColor(j);
+                ctx.beginPath();
+                ctx.arc(cx + 70, sy2, 18, 0, Math.PI * 2);
+                ctx.fillStyle = mColor;
+                ctx.globalAlpha *= 0.25;
+                ctx.fill();
+                ctx.globalAlpha = easeOutExpo(s((t - delay) * 4)) * sa;
+                font('space', 22);
+                ctx.fillStyle = mColor;
+                ctx.textAlign = 'center';
+                ctx.fillText(getMedalEmoji(j), cx + 70, sy2 + 1);
+
+                ctx.textAlign = 'left';
+                font('space', 28);
+                ctx.fillStyle = '#fff';
+                const sn = c.topSolvers[j].length > 18 ? c.topSolvers[j].slice(0, 16) + '…' : c.topSolvers[j];
+                ctx.fillText(sn, cx + 105, sy2 + 1);
+            }
+        } else {
+            ctx.globalAlpha = easeOutExpo(s((t - delay) * 4)) * 0.3;
+            font('mono', 24);
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgba(255,255,255,0.25)';
+            ctx.fillText('No solvers', cx + cardW / 2, cy + 340);
+        }
+        ctx.textAlign = 'center';
+        ctx.globalAlpha = 1;
+    }
+
+    scanLines(0.02);
+    vignette(0.35);
+    ctx.globalAlpha = 1;
+}
+
+/* -- UNSOLVED -- */
+function renderUnsolved(f, el) {
+    const t = s(el / f.dur);
+    const items = f.data;
+
+    if (el < 40) triggerShake(10);
+
+    bg(gradY('#0a0000', '#1a0005'));
+    noiseOverlay(0.12);
+
+    // Intense red particles
+    ambientParticles(el, 80, '255,59,48', 1.8);
+
+    const appear = easeOutExpo(s(t * 3));
+    ctx.globalAlpha = appear;
+    drawGlowText('UNSOLVED', SW / 2, SY + 100, 'orb', 84, '#ff4444', 'rgba(255,59,48,0.8)', 25);
+
+    font('space', 32);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${items.length} challenge${items.length !== 1 ? 's' : ''} remained unconquered`, SW / 2, SY + 160);
+
+    const cols = Math.min(4, items.length);
+    const cellW = 400, cellH = 72, gX = 26, gY = 14;
+    const tw = cols * cellW + (cols - 1) * gX;
+    const ssx = (SW - tw) / 2;
+    const ssy = SY + 210;
+
+    for (let i = 0; i < items.length; i++) {
+        const col = i % cols, row = Math.floor(i / cols);
+        const a = easeOutExpo(s((t - i * 0.018) * 3.5));
+        ctx.globalAlpha = a;
+        const x = ssx + col * (cellW + gX);
+        const y = ssy + row * (cellH + gY) + (1 - a) * 30;
+
+        ctx.beginPath(); ctx.roundRect(x, y, cellW, cellH, 12);
+        ctx.fillStyle = 'rgba(40,5,5,0.75)'; ctx.fill();
+        ctx.strokeStyle = 'rgba(255,59,48,0.25)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+        font('space', 26); ctx.textAlign = 'left';
+        ctx.fillStyle = '#ff4444';
+        ctx.fillText(items[i].name.length > 26 ? items[i].name.slice(0,24)+'…' : items[i].name, x + 18, y + 28);
+        font('mono', 20);
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.fillText(`${items[i].category} · ${items[i].value} pts`, x + 18, y + 52);
+    }
+    scanLines(0.03);
+    vignette(0.45);
+    ctx.globalAlpha = 1;
+}
+
+/* -- TOP TRANSITION (tension building) -- */
+function renderTopTrans(f, el) {
+    const t = s(el / f.dur);
+    bg('#050003');
+
+    // Pulsing background flashes
+    const flashA = Math.sin(t * Math.PI * 8) * 0.03 + 0.02;
+    ctx.globalAlpha = flashA;
+    bg('#ec1313');
+    ctx.globalAlpha = 1;
+
+    noiseOverlay(0.08);
+    ambientParticles(el, 60, '236,19,19');
+
+    const a = easeOutExpo(s(t * 2));
+    const fo = t > 0.65 ? easeInExpo((t - 0.65) * 2.85) : 0;
+    ctx.globalAlpha = a * (1 - fo);
+
+    // Bigger text
+    drawGlowText('AND NOW…', SW / 2, SH / 2 - 30, 'space', 64, '#fff', 'rgba(255,255,255,0.3)', 10);
+
+    const sub = easeOutExpo(s((t - 0.15) * 3));
+    ctx.globalAlpha = sub * (1 - fo);
+    drawGlowText('THE TOP TEAMS', SW / 2, SH / 2 + 40, 'orb', 46, '#ec1313', 'rgba(236,19,19,0.6)', 15);
+
+    // Growing ring
+    const ringT = easeOutExpo(s(t * 1.5));
+    ctx.beginPath();
+    ctx.arc(SW/2, SH/2, ringT * 450, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(236,19,19,${(1 - ringT) * 0.15})`;
+    ctx.lineWidth = 2 + (1 - ringT) * 6;
+    ctx.stroke();
+
+    vignette(0.5);
+    ctx.globalAlpha = 1;
+}
+
+/* -- TEAM REVEAL (DRAMATIC, one at a time 5th->1st) -- */
+function renderTeamReveal(f, el) {
+    const t = s(el / f.dur);
+    const team = f.data;
+    const rank = f.rank; // 0 = 1st, 4 = 5th
+    const hueOff = [0, 40, 80, 120, 160][rank] || 0;
+    const intensity = 1 + (4 - rank) * 0.3; // 1st place = most intense
+
+    // MASSIVE initial shake — stronger for higher ranks
+    if (el < 50) triggerShake(20 + (4 - rank) * 10);
+
+    const tE = easeOutExpo(s(t * 1.8));
+    const tEx = m(tE, easeOutExpo(tE), 0.5);
+
+    // Turbulence distortion — MORE INTENSE
+    const turbScale = (1 - tE) * 1600 * intensity;
+    feTurb.setAttribute('seed', rank * 13 + 42);
+    feDis.setAttribute('scale', turbScale);
+
+    const useFilter = turbScale > 5;
+    if (useFilter) ctx.filter = "url('#turb')";
+
+    // Dynamic saturation/brightness — more extreme
+    const satBoost = 100 * (1 - easeInExpo(Math.max(0, 1 - t * 2)) * 0.6);
+    const brightBoost = 100 * (1 + easeInExpo(Math.max(0, 1 - t)) * 6);
+    if (useFilter) ctx.filter += ` saturate(${satBoost}%) brightness(${brightBoost}%)`;
+
+    bg(gradY(
+        `hsl(${(330 + hueOff) % 360},60%,3%)`,
+        `hsl(${(280 + hueOff) % 360},80%,16%)`
+    ));
+
+    // Noise texture
+    ctx.globalAlpha = 0.3;
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(noiseTex, 0, 0, SW, SH, -80, -80, SW + 160, SH + 160);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+
+    ctx.filter = 'none';
+    feDis.setAttribute('scale', 0);
+
+    // Particle burst on entry
+    if (el > 30 && el < 100) {
+        addBurst(SW / 2, SH / 2, 25 + (4 - rank) * 10,
+            `hsl(${(0 + hueOff) % 360},100%,50%)`);
+    }
+
+    // Team name — MASSIVE scaling reveal
+    ctx.save();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    font('stranger', 220);
+    const teamName = team.name || `Team ${team.account_id}`;
+    const textWM = Math.min(1.6, (1920 * 0.85) / ctx.measureText(teamName).width);
+    const scl = (1 + (1 - tEx) * 15) * textWM;
+
+    ctx.translate(SW / 2, SH / 2 - 30);
+    ctx.scale(scl, scl);
+    ctx.letterSpacing = `${(1 - tEx) * 200}px`;
+
+    ctx.globalCompositeOperation = 'screen';
+    const nameGrad = ctx.createLinearGradient(0, -120, 0, 120);
+    nameGrad.addColorStop(0, `hsl(${(0 + hueOff) % 360},100%,55%)`);
+    nameGrad.addColorStop(0.5, `hsl(${(30 + hueOff) % 360},100%,65%)`);
+    nameGrad.addColorStop(1, `hsl(${(60 + hueOff) % 360},100%,50%)`);
+    ctx.fillStyle = nameGrad;
+    ctx.fillText(teamName, 0, 0);
+
+    // Triple glow layer
+    ctx.filter = 'blur(8px)';
+    ctx.globalAlpha = 0.7;
+    ctx.fillText(teamName, 0, 0);
+    ctx.filter = 'blur(25px)';
+    ctx.globalAlpha = 0.3;
+    ctx.fillText(teamName, 0, 0);
+    ctx.filter = 'none';
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.letterSpacing = '0px';
+    ctx.restore();
+
+    // Solved challenges scattered in background
+    const placeAppear = easeOutExpo(s((t - 0.12) * 3));
+    ctx.globalAlpha = placeAppear;
+
+    offCtx.clearRect(0, 0, SW, SH);
+    offCtx.font = font('mono', 24);
+    offCtx.textAlign = 'left'; offCtx.textBaseline = 'top';
+    offCtx.fillStyle = '#fff';
+    const teamSolves = solves.filter(sv => sv.aname === teamName).map(sv => sv.cname);
+    const rng = mulberry32(1337 + rank);
+    for (let j = 0; j < teamSolves.length; j++) {
+        const pt = Math.max(0, (t - (0.08 + 0.35 * j / teamSolves.length)) * 3);
+        if (!pt) continue;
+        const pte = easeOutExpo(pt);
+        const px = rng() * (SW - 200);
+        const py = rng() * (SH - 40);
+        offCtx.globalAlpha = pte * 0.7;
+        offCtx.fillText(teamSolves[j].slice(0, Math.ceil(pte * teamSolves[j].length)), px, py);
+    }
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = 0.15;
+    ctx.drawImage(offCanvas, 0, 0, SW, SH);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+
+    // Placement badge — BIGGER, with bounce
+    ctx.globalAlpha = placeAppear;
+    const badgeScale = easeOutBounce(s((t - 0.15) * 2.5));
+    ctx.save();
+    ctx.translate(SW / 2, SH * 0.7);
+    ctx.scale(badgeScale, badgeScale);
+    font('orb', 88);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.letterSpacing = `${(1 - placeAppear) * 150}px`;
+
+    // Glow behind badge
+    ctx.shadowColor = getMedalColor(rank);
+    ctx.shadowBlur = 30;
+    ctx.fillStyle = getMedalColor(rank);
+    ctx.fillText(`${th(rank + 1)} PLACE`, 0, 0);
+    ctx.shadowBlur = 0;
+    ctx.letterSpacing = '0px';
+    ctx.restore();
+
+    // Score — bigger
+    ctx.globalAlpha = easeOutExpo(s((t - 0.25) * 3));
+    font('orb', 54);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(`${team.score} pts`, SW / 2, SH * 0.78);
+
+    // Burst Particles
+    updateBursts();
+
+    noiseOverlay(0.12);
+    scanLines(0.025);
+
+    // FLASH on first beat — more dramatic
+    if (t < 0.06) {
+        ctx.globalAlpha = (1 - t / 0.06) * 0.8;
+        bg('#fff');
+    }
+
+    vignette(0.4);
+    ctx.globalAlpha = 1;
+
+    // Fade out at end
+    if (t > 0.85) {
+        ctx.globalAlpha = easeInExpo((t - 0.85) * 6.67);
+        bg('#000');
+        ctx.globalAlpha = 1;
+    }
+}
+
+/* -- SCORE BREAKDOWN -- */
+function renderScores(f, el) {
+    const t = s(el / f.dur);
+    const data = f.data;
+
+    if (el < 40) triggerShake(10);
+
+    bg(gradY('#050005', '#0a0012'));
+    noiseOverlay(0.06);
+    ambientParticles(el, 40, '100,100,255');
+
+    const appear = easeOutExpo(s(t * 2.5));
+    ctx.globalAlpha = appear;
+    drawGlowText('SCORE BREAKDOWN', SW / 2, SY + 90, 'orb', 64, '#ec1313', 'rgba(236,19,19,0.6)', 20);
+
+    if (data.length > 0) {
+        const maxScore = data[0].score || 1;
+        const barMaxW = 750, barH = 70, gap = 32;
+        const ssx = (SW - barMaxW) / 2 - 130;
+        const ssy = SY + 180;
+
+        for (let i = 0; i < data.length; i++) {
+            const delay = 0.06 + i * 0.07;
+            const a = easeOutExpo(s((t - delay) * 2.5));
+            const barW = (data[i].score / maxScore) * barMaxW * a;
+            const y = ssy + i * (barH + gap);
+
+            ctx.globalAlpha = a;
+
+            // Team name — bigger
+            font('space', 30);
+            ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = getMedalColor(i);
+            const nm = (data[i].name || `Team ${data[i].account_id}`);
+            ctx.fillText(nm.length > 14 ? nm.slice(0, 12) + '…' : nm, ssx - 18, y + barH / 2);
+
+            // Bar with gradient + glow
+            const g = ctx.createLinearGradient(ssx, 0, ssx + barW, 0);
+            g.addColorStop(0, `hsl(${350 - i * 12},80%,${32 - i * 4}%)`);
+            g.addColorStop(1, `hsl(${0 - i * 8},90%,${52 - i * 5}%)`);
+            ctx.save();
+            ctx.shadowColor = getMedalColor(i);
+            ctx.shadowBlur = 15;
+            ctx.fillStyle = g;
+            ctx.beginPath(); ctx.roundRect(ssx, y, Math.max(1, barW), barH, 12); ctx.fill();
+            ctx.restore();
+
+            // Glow haze
+            ctx.save();
+            ctx.filter = 'blur(15px)';
+            ctx.globalAlpha = a * 0.2;
+            ctx.fillStyle = getMedalColor(i);
+            ctx.fillRect(ssx, y, barW, barH);
+            ctx.filter = 'none';
+            ctx.restore();
+
+            // Score — bigger
+            ctx.globalAlpha = a;
+            font('orb', 40);
+            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.fillText(`${data[i].score}`, ssx + barW + 22, y + barH / 2);
+        }
+    }
+    scanLines(0.02);
+    vignette(0.35);
+    ctx.globalAlpha = 1;
+}
+
+/* -- FAST REPLAY -- */
+function renderReplay(f, el) {
+    const t = s(el / f.dur);
+    const all = f.data;
+
+    bg('#030002');
+    ambientParticles(el, 30, '52,199,89', 0.8);
+
+    if (all.length === 0) {
+        drawGlowText('No solves to replay', SW / 2, SH / 2, 'space', 40, 'rgba(255,255,255,0.4)', 'rgba(255,255,255,0.1)');
+        return;
+    }
+
+    // Title — bigger
+    const ta = easeOutExpo(s(t * 4));
+    const fo = t > 0.92 ? easeInExpo((t - 0.92) * 12.5) : 0;
+    ctx.globalAlpha = ta * (1 - fo);
+    drawGlowText('SOLVE TIMELINE', SW / 2, SY + 55, 'orb', 50, 'rgba(236,19,19,0.9)', 'rgba(236,19,19,0.4)', 12);
+
+    const solveIdx = Math.floor(t * all.length);
+    const visible = all.slice(0, solveIdx);
+    const showCount = Math.min(14, visible.length);
+    const recent = visible.slice(-showCount);
+
+    for (let i = 0; i < recent.length; i++) {
+        const sv = recent[i];
+        const rowY = SY + 110 + i * 62;
+        const age = 1 - (i < showCount - 4 ? 0.35 : 0);
+        ctx.globalAlpha = age * ta;
+
+        // Pulse dot
+        const pulse = i === recent.length - 1 ? 1 + Math.sin(el * 0.012) * 0.4 : 0;
+        ctx.beginPath();
+        ctx.arc(SW / 2 - 420, rowY + 16, 6 + pulse * 4, 0, Math.PI * 2);
+        ctx.fillStyle = i === recent.length - 1 ? '#34C759' : 'rgba(52,199,89,0.6)';
+        ctx.fill();
+        if (pulse) {
+            ctx.beginPath();
+            ctx.arc(SW / 2 - 420, rowY + 16, 6 + pulse * 10, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(52,199,89,0.12)';
+            ctx.fill();
+        }
+
+        // Player — bigger
+        font('space', 26); ctx.textAlign = 'left';
+        ctx.fillStyle = '#fff';
+        ctx.fillText(sv.aname.length > 16 ? sv.aname.slice(0, 14) + '…' : sv.aname, SW / 2 - 395, rowY + 20);
+
+        // Arrow
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.fillText('→', SW / 2 - 115, rowY + 20);
+
+        // Challenge — bigger
+        ctx.fillStyle = '#ec1313';
+        ctx.fillText(sv.cname.length > 18 ? sv.cname.slice(0, 16) + '…' : sv.cname, SW / 2 - 85, rowY + 20);
+
+        // Points — bigger
+        font('orb', 24); ctx.textAlign = 'right';
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.fillText(`+${sv.cval}`, SW / 2 + 420, rowY + 20);
+    }
+
+    // Giant counter — bigger
+    ctx.globalAlpha = 0.1;
+    font('orb', 130);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ec1313';
+    ctx.fillText(`${solveIdx}/${all.length}`, SW / 2, SY + 1080 - 65);
+
+    scanLines(0.02);
+    vignette(0.3);
+    ctx.globalAlpha = 1;
+}
+
+/* -- GOODBYE -- */
+function renderGoodbye(f, el) {
+    const t = s(el / f.dur);
+    const tE = easeOutExpo(s(t * 1.5));
+    const fo = t > 0.8 ? easeInExpo((t - 0.8) * 5) : 0;
+
+    // Shake on entry
+    if (el < 50) triggerShake(25);
+
+    bg(gradY('#050003', '#0a0008'));
+    noiseOverlay(0.1);
+    ambientParticles(el, 150, '236,19,19', 1.3);
+
+    // Burst on entry
+    if (el > 40 && el < 120) {
+        addBurst(SW / 2, SH / 2 - 50, 60, '#ec1313');
+        addBurst(SW / 2 - 200, SH / 2, 30, '#ff6b6b');
+        addBurst(SW / 2 + 200, SH / 2, 30, '#ff6b6b');
+    }
+
+    ctx.globalAlpha = tE * (1 - fo);
+
+    // "GG" with massive scale — BIGGER
+    ctx.save();
+    font('cherry', 320);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.translate(SW / 2, SH / 2 - 60);
+    const scl2 = 1 + (1 - tE) * 4;
+    ctx.scale(scl2, scl2);
+    ctx.globalCompositeOperation = 'screen';
+    const ggGrad = ctx.createLinearGradient(-300, 0, 300, 0);
+    ggGrad.addColorStop(0, '#ec1313'); ggGrad.addColorStop(0.5, '#ff4444'); ggGrad.addColorStop(1, '#ff6b6b');
+    ctx.fillStyle = ggGrad;
+    ctx.fillText('GG', 0, 0);
+    ctx.filter = 'blur(12px)';
+    ctx.globalAlpha *= 0.5;
+    ctx.fillText('GG', 0, 0);
+    ctx.filter = 'blur(30px)';
+    ctx.globalAlpha *= 0.3;
+    ctx.fillText('GG', 0, 0);
+    ctx.filter = 'none';
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
+
+    ctx.globalAlpha = tE * (1 - fo);
+    drawGlowText('Thank you for playing TomCTF!', SW / 2, SH / 2 + 70, 'space', 44, 'rgba(255,255,255,0.6)', 'rgba(255,255,255,0.15)', 8);
+
+    font('mono', 28);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillText('See you next time.', SW / 2, SH / 2 + 118);
+
+    // Flash
+    if (t < 0.05) {
+        ctx.globalAlpha = (1 - t / 0.05) * 0.5;
+        bg('#fff');
+    }
+
+    updateBursts();
+    scanLines(0.03);
+    vignette(0.45);
+    ctx.globalAlpha = 1;
+}
+
+/* ===================== MAIN LOOP ===================== */
+let timeline = [];
+let totalDuration = 0;
+
+function render() {
+    if (!isRunning) return;
+    requestAnimationFrame(render);
+
+    const elapsed = Date.now() - startTime;
+    progressBar.style.width = (s(elapsed / totalDuration) * 100) + '%';
+
+    updateShake();
+    setCanvasSize();
+
+    // Apply shake
+    ctx.save();
+    ctx.translate(shakeX, shakeY);
+
+    let active = null;
+    for (const frame of timeline) {
+        if (elapsed >= frame.start && elapsed < frame.start + frame.dur) {
+            active = frame;
+            break;
+        }
+    }
+
+    if (!active) {
+        // Done — final static screen
+        bg('#050003');
+        noiseOverlay(0.06);
+        ambientParticles(Date.now(), 80, '236,19,19');
+        drawGlowText('GG', SW / 2, SH / 2 - 40, 'cherry', 200, '#ec1313', 'rgba(236,19,19,0.5)', 20);
+        font('space', 34);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.fillText('Thank you for playing TomCTF!', SW / 2, SH / 2 + 55);
+        scanLines(0.02);
+        vignette(0.5);
+        ctx.restore();
+        // Keep looping for ambient particles in final screen
+        requestAnimationFrame(() => { render(); });
+        isRunning = false;
+        return;
+    }
+
+    const fel = elapsed - active.start;
+    switch (active.type) {
+        case 'splash':      renderSplash(active, fel); break;
+        case 'intro_text':  renderIntroText(active, fel); break;
+        case 'challs':      renderChalls(active, fel); break;
+        case 'unsolved':    renderUnsolved(active, fel); break;
+        case 'top_trans':   renderTopTrans(active, fel); break;
+        case 'team_reveal': renderTeamReveal(active, fel); break;
+        case 'scores':      renderScores(active, fel); break;
+        case 'replay':      renderReplay(active, fel); break;
+        case 'goodbye':     renderGoodbye(active, fel); break;
+    }
+
+    ctx.restore(); // shake
+}
+
+function startOutro() {
+    const built = buildTimeline();
+    timeline = built.tl;
+    totalDuration = built.total;
+    startTime = Date.now();
+    isRunning = true;
+    loadOverlay.classList.add('hidden');
+    generateNoiseTex();
+    render();
+}
+
+/* ---- FINAL IDLE LOOP (after outro ends) ---- */
+function idleLoop() {
+    if (isRunning) return;
+    requestAnimationFrame(idleLoop);
+    setCanvasSize();
+    bg('#050003');
+    noiseOverlay(0.06);
+    ambientParticles(Date.now(), 80, '236,19,19');
+    drawGlowText('GG', SW / 2, SH / 2 - 40, 'cherry', 200, '#ec1313', 'rgba(236,19,19,0.5)', 20);
+    font('space', 34);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillText('Thank you for playing TomCTF!', SW / 2, SH / 2 + 55);
+    scanLines(0.02);
+    vignette(0.5);
+}
+
+/* ---- AUTO-INIT — NO START BUTTON ---- */
+(async () => {
+    // 1. Check if outro is enabled
+    let outroEnabled = true;
+    try {
+        const res = await fetch('/api/outro_status');
+        const data = await res.json();
+        if (data.enabled === false) {
+            outroEnabled = false;
+        }
+    } catch (e) {
+        // API may not exist — allow loading anyway (standalone mode)
+    }
+
+    if (!outroEnabled) {
+        loadOverlay.classList.add('hidden');
+        disabledOverlay.classList.add('show');
+        return; // Stop here — page is disabled
+    }
+
+    // 2. Load data
+    const ok = await loadData();
+
+    // 3. Auto-start immediately
+    startOutro();
+})();
+</script>
+</body>
+</html>

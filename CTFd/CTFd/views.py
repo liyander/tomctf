@@ -352,6 +352,11 @@ def intro_assets(path):
     return send_from_directory(os.path.abspath(os.path.join(app.root_path, '../../intro')), path)
 
 
+@views.route("/outro_assets/<path:path>")
+def outro_assets(path):
+    return send_from_directory(os.path.abspath(os.path.join(app.root_path, '../../outro')), path)
+
+
 @views.route("/api/intro_status")
 def intro_status():
     """Public API endpoint for the intro page to fetch countdown info."""
@@ -366,6 +371,41 @@ def intro_status():
         'countdown_end': intro_countdown_end,
         'paused': intro_paused == '1'
     })
+
+
+@views.route("/api/outro_status")
+def outro_status():
+    """Public API endpoint for the outro page to check if it's enabled."""
+    from flask import jsonify
+    outro_enabled = get_config('outro_enabled') or 'disabled'
+    outro_access = get_config('outro_access') or 'authenticated'
+    outro_timer_enabled = get_config('outro_timer_enabled') or '0'
+    outro_timer_end = get_config('outro_timer_end') or ''
+    return jsonify({
+        'enabled': outro_enabled == 'enabled',
+        'access': outro_access,
+        'timer_enabled': outro_timer_enabled == '1',
+        'timer_end': outro_timer_end
+    })
+
+
+@views.route("/outro")
+def outro_page():
+    """Serve the outro page if enabled."""
+    outro_enabled = get_config('outro_enabled') or 'disabled'
+    if outro_enabled != 'enabled':
+        abort(404)
+
+    outro_access = get_config('outro_access') or 'authenticated'
+    if outro_access == 'authenticated' and not authed():
+        return redirect(url_for("auth.login", next=request.full_path))
+    elif outro_access == 'admins':
+        if not is_admin():
+            abort(403)
+
+    outro_file = get_config('outro_file') or 'outro.html'
+    outro_dir = os.path.abspath(os.path.join(app.root_path, '../../outro'))
+    return send_from_directory(outro_dir, outro_file)
 
 
 @views.route("/", defaults={"route": "index"})
@@ -411,6 +451,41 @@ def static_html(route):
             if show_intro:
                 intro_dir = os.path.abspath(os.path.join(app.root_path, '../../intro'))
                 return send_from_directory(intro_dir, intro_file)
+
+    # Check if outro should replace index page
+    if route == "index" and not request.args.get('no_outro'):
+        outro_enabled = get_config('outro_enabled') or 'disabled'
+        outro_replace_index = get_config('outro_replace_index') or '0'
+
+        # Timer-based auto-activation
+        outro_timer_enabled = get_config('outro_timer_enabled') or '0'
+        timer_triggered = False
+        if outro_enabled == 'enabled' and outro_timer_enabled == '1':
+            outro_timer_end = get_config('outro_timer_end') or ''
+            if outro_timer_end:
+                from datetime import datetime as dt
+                try:
+                    end_time = dt.fromisoformat(outro_timer_end)
+                    if dt.now() >= end_time:
+                        timer_triggered = True
+                        # Auto-enable replace index when timer fires
+                        if outro_replace_index != '1':
+                            set_config('outro_replace_index', '1')
+                            outro_replace_index = '1'
+                        # Optionally end the CTF
+                        outro_auto_end_ctf = get_config('outro_auto_end_ctf') or '0'
+                        if outro_auto_end_ctf == '1':
+                            import time as _time
+                            current_end = get_config('end')
+                            if not current_end or int(current_end) == 0 or int(current_end) > int(_time.time()):
+                                set_config('end', str(int(_time.time())))
+                except (ValueError, TypeError):
+                    pass
+
+        if outro_enabled == 'enabled' and outro_replace_index == '1':
+            outro_file = get_config('outro_file') or 'outro.html'
+            outro_dir = os.path.abspath(os.path.join(app.root_path, '../../outro'))
+            return send_from_directory(outro_dir, outro_file)
 
     page = get_page(route)
     if page is None:

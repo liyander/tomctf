@@ -1,0 +1,202 @@
+{% extends 'admin/base.html' %}
+{% block content %}
+<div class="jumbotron">
+    <div class="container">
+        <h1>Outro Page Config</h1>
+    </div>
+</div>
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            {% if success %}
+            <div class="alert alert-success alert-dismissable" role="alert">
+                Settings saved successfully!
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            {% endif %}
+            {% for error in errors %}
+            <div class="alert alert-danger alert-dismissable" role="alert">
+                <span class="sr-only">Error:</span>
+                {{ error }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            {% endfor %}
+
+            <form method="post" accept-charset="utf-8" autocomplete="off" role="form" class="form-horizontal">
+                <!-- Outro Page Enabled -->
+                <div class="form-group">
+                    <label><strong>Outro Page Status</strong></label>
+                    <select name="outro_enabled" id="outro_enabled" class="form-control" onchange="toggleFields()">
+                        <option value="disabled" {% if not outro_enabled or outro_enabled == 'disabled' %}selected{% endif %}>Disabled</option>
+                        <option value="enabled" {% if outro_enabled == 'enabled' %}selected{% endif %}>Enabled (accessible at /outro)</option>
+                    </select>
+                    <small class="form-text text-muted">When enabled, the outro page is accessible at <code>/outro</code>.</small>
+                </div>
+
+                <div id="outro-settings" style="{% if not outro_enabled or outro_enabled == 'disabled' %}display:none{% endif %}">
+                    <!-- Outro File Selection -->
+                    <div class="form-group">
+                        <label><strong>Outro File</strong></label>
+                        <select name="outro_file" class="form-control">
+                            {% for f in outro_files %}
+                            <option value="{{ f }}" {% if outro_file == f %}selected{% endif %}>{{ f }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">HTML file from the <code>outro/</code> folder to display as the outro page.</small>
+                    </div>
+
+                    <!-- Access Control -->
+                    <div class="form-group">
+                        <label><strong>Access Control</strong></label>
+                        <select name="outro_access" class="form-control">
+                            <option value="public" {% if outro_access == 'public' %}selected{% endif %}>Public (anyone can view)</option>
+                            <option value="authenticated" {% if not outro_access or outro_access == 'authenticated' %}selected{% endif %}>Authenticated users only</option>
+                            <option value="admins" {% if outro_access == 'admins' %}selected{% endif %}>Admins only</option>
+                        </select>
+                        <small class="form-text text-muted">Who can access the outro page.</small>
+                    </div>
+
+                    <!-- Replace Index -->
+                    <div class="form-group">
+                        <label><strong>Replace Index Page</strong></label>
+                        <select name="outro_replace_index" id="outro_replace_index" class="form-control">
+                            <option value="0" {% if not outro_replace_index or outro_replace_index == '0' %}selected{% endif %}>No (outro at /outro only)</option>
+                            <option value="1" {% if outro_replace_index == '1' %}selected{% endif %}>Yes (serve outro as index page)</option>
+                        </select>
+                        <small class="form-text text-muted">When enabled, the outro page replaces the index page (useful after the CTF ends). Only works when intro is disabled.</small>
+                    </div>
+
+                    <hr class="my-4">
+                    <h5 class="mb-3"><i class="fas fa-clock"></i> Timer — Auto Outro</h5>
+
+                    <!-- Timer Enabled -->
+                    <div class="form-group">
+                        <label><strong>Timer</strong></label>
+                        <select name="outro_timer_enabled" id="outro_timer_enabled" class="form-control" onchange="toggleTimerFields()">
+                            <option value="0" {% if not outro_timer_enabled or outro_timer_enabled == '0' %}selected{% endif %}>Disabled</option>
+                            <option value="1" {% if outro_timer_enabled == '1' %}selected{% endif %}>Enabled</option>
+                        </select>
+                        <small class="form-text text-muted">When enabled, the outro page will auto-activate when the timer ends.</small>
+                    </div>
+
+                    <div id="timer-settings" style="{% if not outro_timer_enabled or outro_timer_enabled == '0' %}display:none{% endif %}">
+                        <!-- Timer End Date -->
+                        <div class="form-group">
+                            <label><strong>Timer End (Date & Time)</strong></label>
+                            <input type="datetime-local" name="outro_timer_end" id="outro_timer_end" class="form-control"
+                                   value="{{ outro_timer_end }}" />
+                            <small class="form-text text-muted">When this time is reached, the outro page will automatically load as the index page.</small>
+                        </div>
+
+                        <!-- Auto End CTF -->
+                        <div class="form-group">
+                            <label><strong>Auto End CTF</strong></label>
+                            <select name="outro_auto_end_ctf" class="form-control">
+                                <option value="0" {% if not outro_auto_end_ctf or outro_auto_end_ctf == '0' %}selected{% endif %}>No</option>
+                                <option value="1" {% if outro_auto_end_ctf == '1' %}selected{% endif %}>Yes — end the CTF when timer expires</option>
+                            </select>
+                            <small class="form-text text-muted">When enabled, the CTF will be ended (no more submissions) when the timer expires. This sets the CTF end date automatically.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <input type="hidden" name="nonce" value="{{ nonce }}" />
+                <div class="col-md-12 text-center mt-3 mb-3">
+                    <button type="submit" class="btn btn-md btn-primary btn-outlined">
+                        Save Settings
+                    </button>
+                </div>
+            </form>
+
+            <!-- Current Status -->
+            <div class="card mt-3 mb-4">
+                <div class="card-header"><strong>Current Status</strong></div>
+                <div class="card-body">
+                    <table class="table table-sm table-bordered mb-0">
+                        <tr>
+                            <td><strong>Outro Page</strong></td>
+                            <td>
+                                {% if outro_enabled == 'enabled' %}
+                                    <span class="badge badge-success">Enabled</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Disabled</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if outro_enabled == 'enabled' %}
+                        <tr>
+                            <td><strong>File</strong></td>
+                            <td>{{ outro_file or 'outro.html' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Access</strong></td>
+                            <td>{{ outro_access or 'authenticated' }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Replace Index</strong></td>
+                            <td>
+                                {% if outro_replace_index == '1' %}
+                                    <span class="badge badge-warning">Yes</span>
+                                {% else %}
+                                    <span class="badge badge-info">No (/outro only)</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>URL</strong></td>
+                            <td>
+                                {% if outro_replace_index == '1' %}
+                                    <a href="/">/</a> and <a href="/outro">/outro</a>
+                                {% else %}
+                                    <a href="/outro">/outro</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Timer</strong></td>
+                            <td>
+                                {% if outro_timer_enabled == '1' %}
+                                    <span class="badge badge-warning">Enabled</span>
+                                    {% if outro_timer_end %}
+                                         — ends at {{ outro_timer_end }}
+                                    {% else %}
+                                         — <em>no end time set</em>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge badge-secondary">Disabled</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Auto End CTF</strong></td>
+                            <td>
+                                {% if outro_auto_end_ctf == '1' %}
+                                    <span class="badge badge-danger">Yes — CTF ends with timer</span>
+                                {% else %}
+                                    <span class="badge badge-info">No</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+function toggleFields() {
+    var enabled = document.getElementById('outro_enabled').value;
+    var settings = document.getElementById('outro-settings');
+    settings.style.display = (enabled === 'enabled') ? '' : 'none';
+}
+function toggleTimerFields() {
+    var timerOn = document.getElementById('outro_timer_enabled').value;
+    var settings = document.getElementById('timer-settings');
+    settings.style.display = (timerOn === '1') ? '' : 'none';
+}
+</script>
+{% endblock scripts %}

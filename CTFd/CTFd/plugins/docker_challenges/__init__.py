@@ -246,6 +246,60 @@ def define_intro_admin(app):
     app.register_blueprint(admin_intro_config)
 
 
+def define_outro_admin(app):
+    admin_outro_config = Blueprint('admin_outro_config', __name__, template_folder='templates',
+                                   static_folder='assets')
+
+    @admin_outro_config.route("/admin/outro_config", methods=["GET", "POST"])
+    @admins_only
+    def outro_config():
+        from CTFd.utils import get_config, set_config
+        errors = []
+        success = False
+
+        if request.method == "POST":
+            outro_enabled = request.form.get('outro_enabled', 'disabled')
+            outro_file = request.form.get('outro_file', 'outro.html')
+            outro_access = request.form.get('outro_access', 'authenticated')
+            outro_replace_index = request.form.get('outro_replace_index', '0')
+            outro_timer_enabled = request.form.get('outro_timer_enabled', '0')
+            outro_timer_end = request.form.get('outro_timer_end', '')
+            outro_auto_end_ctf = request.form.get('outro_auto_end_ctf', '0')
+
+            set_config('outro_enabled', outro_enabled)
+            set_config('outro_file', outro_file)
+            set_config('outro_access', outro_access)
+            set_config('outro_replace_index', outro_replace_index)
+            set_config('outro_timer_enabled', outro_timer_enabled)
+            set_config('outro_timer_end', outro_timer_end)
+            set_config('outro_auto_end_ctf', outro_auto_end_ctf)
+            success = True
+
+        # List HTML files from outro/ folder
+        outro_dir = os.path.abspath(os.path.join(app.root_path, '../../outro'))
+        outro_files = []
+        if os.path.isdir(outro_dir):
+            for f in os.listdir(outro_dir):
+                if f.endswith('.html') or f.endswith('.htm'):
+                    outro_files.append(f)
+        outro_files.sort()
+
+        return render_template('outro_config.html',
+                               outro_enabled=get_config('outro_enabled') or 'disabled',
+                               outro_file=get_config('outro_file') or 'outro.html',
+                               outro_access=get_config('outro_access') or 'authenticated',
+                               outro_replace_index=get_config('outro_replace_index') or '0',
+                               outro_timer_enabled=get_config('outro_timer_enabled') or '0',
+                               outro_timer_end=get_config('outro_timer_end') or '',
+                               outro_auto_end_ctf=get_config('outro_auto_end_ctf') or '0',
+                               outro_files=outro_files,
+                               errors=errors,
+                               success=success,
+                               nonce=session.get('nonce'))
+
+    app.register_blueprint(admin_outro_config)
+
+
 def define_docker_admin(app):
     admin_docker_config = Blueprint('admin_docker_config', __name__, template_folder='templates',
                                     static_folder='assets')
@@ -1086,7 +1140,9 @@ def load(app):
     register_plugin_assets_directory(app, base_path='/plugins/docker_challenges/assets')
     define_docker_admin(app)
     define_intro_admin(app)
-    register_admin_plugin_menu_bar('Intro Config', '/admin/intro_config')
+    register_admin_plugin_menu_bar('Intro', '/admin/intro_config')
+    define_outro_admin(app)
+    register_admin_plugin_menu_bar('Outro', '/admin/outro_config')
     define_docker_status(app)
     CTFd_API_v1.add_namespace(docker_namespace, '/docker')
     CTFd_API_v1.add_namespace(container_namespace, '/container')
