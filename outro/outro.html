@@ -706,7 +706,7 @@ function buildTimeline() {
                 return { ...c, solveCount: cs.length, topSolvers: cs.slice(0, 3).map(sv => sv.aname) };
             });
             tl.push({ type: 'challs', start: t, dur: 6000, data: grp, idx: challIdx });
-            t += 5000;
+            t += 6000;
             challIdx += grp.length;
         }
     }
