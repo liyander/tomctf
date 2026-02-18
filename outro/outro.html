@@ -705,8 +705,8 @@ function buildTimeline() {
                 const cs = solves.filter(sv => sv.cid === c.id).sort((a, b) => new Date(a.date) - new Date(b.date));
                 return { ...c, solveCount: cs.length, topSolvers: cs.slice(0, 3).map(sv => sv.aname) };
             });
-            tl.push({ type: 'challs', start: t, dur: 6000, data: grp, idx: challIdx });
-            t += 6000;
+            tl.push({ type: 'challs', start: t, dur: 4500, data: grp, idx: challIdx });
+            t += 4500;
             challIdx += grp.length;
         }
     }
