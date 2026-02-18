@@ -160,6 +160,19 @@ let startTime = 0;
 let noiseTex = new Image();
 let shakeX = 0, shakeY = 0, shakeDecay = 0;
 
+/* ---- PRE-RENDERED EFFECT CACHES ---- */
+let scanLineCanvas = null;
+let vignetteCache = {};  // keyed by strength
+let particleSeeds = [];  // pre-computed seed values for ambient particles
+for (let i = 0; i < 200; i++) {
+    particleSeeds.push({
+        sx: Math.sin(7 + i * 137.5),
+        cx: Math.cos(7 + i * 97.3),
+        sz0: Math.sin(i * 0.7),
+        al0: Math.sin(i * 1.3),
+    });
+}
+
 /* ---- SCREEN SHAKE ---- */
 function triggerShake(intensity = 15) {
     shakeDecay = intensity;
@@ -256,50 +269,57 @@ function bg(style) {
 }
 
 function noiseOverlay(alpha = 0.15) {
-    ctx.save();
     ctx.globalAlpha = alpha;
     ctx.globalCompositeOperation = 'multiply';
-    ctx.drawImage(noiseTex, 0, 0, SW, SH, -100, -100, SW + 200, SH + 200);
+    ctx.drawImage(noiseTex, 0, 0, SW, SH);
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
-    ctx.restore();
 }
 
 function drawGlowText(text, x, y, fontName, size, color, glowColor, blur = 16) {
-    ctx.save();
     font(fontName, size);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = color;
     ctx.shadowColor = glowColor || color;
-    ctx.shadowBlur = blur;
+    ctx.shadowBlur = blur * 1.5;
     ctx.fillText(text, x, y);
-    ctx.shadowBlur = blur * 2.5;
-    ctx.fillText(text, x, y);
-    ctx.shadowBlur = blur * 4;
-    ctx.globalAlpha *= 0.3;
-    ctx.fillText(text, x, y);
+    ctx.fillText(text, x, y); // double-stamp for glow
     ctx.shadowBlur = 0;
-    ctx.restore();
 }
 
-/* Scan line effect */
-function scanLines(alpha = 0.04) {
-    ctx.save();
-    ctx.globalAlpha = alpha;
+/* Scan line effect — pre-rendered to offscreen canvas */
+function buildScanLineCache() {
+    scanLineCanvas = document.createElement('canvas');
+    scanLineCanvas.width = SW;
+    scanLineCanvas.height = SH;
+    const slCtx = scanLineCanvas.getContext('2d');
+    slCtx.fillStyle = '#000';
     for (let y = 0; y < SH; y += 4) {
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, y, SW, 2);
+        slCtx.fillRect(0, y, SW, 2);
     }
-    ctx.restore();
+}
+function scanLines(alpha = 0.04) {
+    if (!scanLineCanvas || scanLineCanvas.width !== SW) buildScanLineCache();
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(scanLineCanvas, 0, 0);
+    ctx.globalAlpha = 1;
 }
 
-/* Vignette */
+/* Vignette — cached per strength */
 function vignette(strength = 0.5) {
-    const g = ctx.createRadialGradient(SW/2, SH/2, SH*0.3, SW/2, SH/2, SH*0.85);
-    g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(1, `rgba(0,0,0,${strength})`);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, SW, SH);
+    const key = `${SW}_${SH}_${(strength * 100) | 0}`;
+    if (!vignetteCache[key]) {
+        const vc = document.createElement('canvas');
+        vc.width = SW; vc.height = SH;
+        const vCtx = vc.getContext('2d');
+        const g = vCtx.createRadialGradient(SW/2, SH/2, SH*0.3, SW/2, SH/2, SH*0.85);
+        g.addColorStop(0, 'rgba(0,0,0,0)');
+        g.addColorStop(1, `rgba(0,0,0,${strength})`);
+        vCtx.fillStyle = g;
+        vCtx.fillRect(0, 0, SW, SH);
+        vignetteCache[key] = vc;
+    }
+    ctx.drawImage(vignetteCache[key], 0, 0);
 }
 
 /* Particle burst at (x,y) */
@@ -335,18 +355,23 @@ function updateBursts() {
     ctx.globalAlpha = 1;
 }
 
-/* Floating ambient particles */
+/* Floating ambient particles — optimized with pre-computed seeds */
 function ambientParticles(el, count = 100, color = '236,19,19', speed = 1) {
-    for (let i = 0; i < count; i++) {
-        const px = ((Math.sin(7 + i * 137.5 + el * 0.0004 * speed) + 1) / 2) * SW;
-        const py = ((Math.cos(7 + i * 97.3 + el * 0.00025 * speed) + 1) / 2) * SH;
-        const sz = 1.5 + Math.sin(i * 0.7 + el * 0.0015) * 3;
-        const al = 0.06 + Math.sin(i * 1.3 + el * 0.002) * 0.05;
+    const n = Math.min(count, particleSeeds.length);
+    for (let i = 0; i < n; i++) {
+        const ps = particleSeeds[i];
+        const px = ((Math.sin(ps.sx + el * 0.0004 * speed) + 1) * 0.5) * SW;
+        const py = ((Math.cos(ps.cx + el * 0.00025 * speed) + 1) * 0.5) * SH;
+        const sz = 1.5 + ps.sz0 * 3 + Math.sin(el * 0.0015 + i) * 1.5;
+        const al = 0.06 + ps.al0 * 0.04;
+        if (sz < 0.5 || al < 0.01) continue;
+        ctx.globalAlpha = Math.abs(al);
         ctx.beginPath();
-        ctx.arc(px, py, Math.max(0.5, sz), 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${color},${Math.abs(al).toFixed(3)})`;
+        ctx.arc(px, py, sz, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${color},1)`;
         ctx.fill();
     }
+    ctx.globalAlpha = 1;
 }
 
 function getMedalColor(i) {
@@ -371,6 +396,39 @@ function mulberry32(a) {
 }
 
 /* ---- DATA LOADING ---- */
+
+/* ---- CREDITS DATA (from credits page) ---- */
+const CREDITS = [
+    { type: 'heading', text: 'TOMCTF 2026' },
+    { type: 'section', text: 'MAIN TEAM' },
+    { type: 'dept', text: 'CSE (Cyber-Security) \u2013 A \u00B7 3rd Year' },
+    { type: 'person', name: 'Liyander Rishwanth L', handle: 'CyberGhost05', role: 'Lead Architect', contrib: 'Infrastructure \u2022 Website \u2022 Web Challenges \u2022 AI Exploitation' },
+    { type: 'person', name: 'Keerthi Raghavan K', handle: 'quixel200', role: 'Head Coordinator', contrib: 'Pwn \u2022 OSINT \u2022 Reverse Engineering' },
+    { type: 'person', name: 'Harish Kumar N', handle: 'minato500', role: 'Challenge Creator', contrib: 'Web Challenges' },
+    { type: 'person', name: 'Christ Michael Jeniston S', handle: 'kira07', role: 'Challenge Creator', contrib: 'Cryptography' },
+    { type: 'section', text: 'OTHER CREATORS' },
+    { type: 'dept', text: 'CSE (Cyber-Security) \u2013 A' },
+    { type: 'person', name: 'Jeeva Ranjan', handle: 'jeevs', role: 'Challenge Creator', contrib: 'OSINT' },
+    { type: 'dept', text: 'CSE (Cyber-Security) \u2013 A \u00B7 2nd Year' },
+    { type: 'person', name: 'Jesvin Bruce J', handle: 'tracehanami', role: 'Challenge Creator', contrib: 'Forensics' },
+    { type: 'person', name: 'Kadhiravan E G', handle: 'joker53', role: 'Challenge Creator', contrib: 'Misc \u2022 Forensics' },
+    { type: 'person', name: 'Devi K', handle: 'black_fairy', role: 'Challenge Creator', contrib: 'Crypto' },
+    { type: 'person', name: 'Bhavayazhinitha S V', handle: 'NithirZX0', role: 'Challenge Creator', contrib: 'Crypto' },
+    { type: 'dept', text: 'CSE (Cyber-Security) \u2013 B \u00B7 2nd Year' },
+    { type: 'person', name: 'Santhosh Kumar S', handle: 'zer0_logon', role: 'Challenge Creator', contrib: 'OSINT \u2022 Crypto' },
+    { type: 'person', name: 'Monish B', role: 'Challenge Creator', contrib: 'Forensics \u2022 Rev \u2022 Web' },
+    { type: 'person', name: 'Monica M', role: 'Challenge Creator', contrib: 'Forensics \u2022 OSINT' },
+    { type: 'person', name: 'Supriya A', role: 'Challenge Creator', contrib: 'Forensics \u2022 GeoOSINT' },
+    { type: 'section', text: 'VOLUNTEERS' },
+    { type: 'dept', text: 'CSE (Cyber-Security) \u2013 A \u00B7 1st Year' },
+    { type: 'volunteer', names: ['Janikaa S', 'Abhinesh John V'] },
+    { type: 'dept', text: 'CSE (Cyber-Security) \u2013 B \u00B7 1st Year' },
+    { type: 'volunteer', names: ['Rasiha K', 'Sree Murgan N M', 'Vishal R'] },
+    { type: 'spacer' },
+    { type: 'quote', text: '"Behind every great CTF, there\'s a team that didn\'t sleep."', attr: '\u2014 The War Room' },
+    { type: 'spacer' },
+    { type: 'final', text: '\u00A9 2026 TOMCTF' },
+];
 async function loadData() {
     statusText.textContent = 'Fetching challenges…';
     try {
@@ -459,14 +517,19 @@ function buildTimeline() {
     tl.push({ type: 'scores', start: t, dur: 7000, data: top5 });
     t += 7000;
 
-    // Fast replay
+    // Fast replay — duration scales with solve count but stays snappy
     const allSorted = [...solves].sort((a, b) => new Date(a.date) - new Date(b.date));
-    tl.push({ type: 'replay', start: t, dur: 10000, data: allSorted });
-    t += 10000;
+    const replayDur = Math.min(8000, Math.max(3500, allSorted.length * 18));
+    tl.push({ type: 'replay', start: t, dur: replayDur, data: allSorted });
+    t += replayDur;
 
     // Goodbye — epic
     tl.push({ type: 'goodbye', start: t, dur: 9000 });
     t += 9000;
+
+    // End credits scroll
+    tl.push({ type: 'credits', start: t, dur: 28000, data: CREDITS });
+    t += 28000;
 
     return { tl, total: t };
 }
@@ -484,14 +547,14 @@ function renderSplash(f, el) {
 
     bg(gradY('#0a0004', '#1a000a'));
     noiseOverlay(0.12);
-    ambientParticles(el, 120, '236,19,19', 1.5);
+    ambientParticles(el, 60, '236,19,19', 1.5);
 
     ctx.globalAlpha = tE * (1 - fadeOut);
 
-    // Distortion on title — more intense
-    const turbScale = (1 - tE) * 900;
+    // Distortion on title
+    const turbScale = (1 - tE) * 400;
     feDis.setAttribute('scale', turbScale);
-    if (turbScale > 5) ctx.filter = "url('#turb')";
+    if (turbScale > 10) ctx.filter = "url('#turb')";
 
     // Title — BIGGER
     font('stranger', 220);
@@ -507,13 +570,11 @@ function renderSplash(f, el) {
     titleGrad.addColorStop(0.6, '#ff2222'); titleGrad.addColorStop(1, '#8b0000');
     ctx.fillStyle = titleGrad;
     ctx.fillText('TOMCTF', 0, 0);
-    // Triple glow layer
-    ctx.filter = 'blur(8px)';
-    ctx.globalAlpha *= 0.6;
+    // Glow via shadow (no blur filter)
+    ctx.shadowColor = '#ec1313';
+    ctx.shadowBlur = 30;
     ctx.fillText('TOMCTF', 0, 0);
-    ctx.filter = 'blur(25px)';
-    ctx.globalAlpha *= 0.4;
-    ctx.fillText('TOMCTF', 0, 0);
+    ctx.shadowBlur = 0;
     ctx.globalCompositeOperation = 'source-over';
     ctx.letterSpacing = '0px';
     ctx.restore();
@@ -620,15 +681,12 @@ function renderChalls(f, el) {
         const cx = sx + i * (cardW + gap);
         const cy = SY + 120 + yOff;
 
-        // Card bg with glow border
+        // Card bg with border
         ctx.save();
-        ctx.shadowColor = `hsla(${hue},80%,50%,0.25)`;
-        ctx.shadowBlur = 20;
         ctx.beginPath();
         ctx.roundRect(cx, cy, cardW, cardH, 22);
         ctx.fillStyle = `hsla(${hue},30%,6%,0.92)`;
         ctx.fill();
-        ctx.shadowBlur = 0;
         ctx.strokeStyle = `hsla(${hue},60%,45%,0.5)`;
         ctx.lineWidth = 2;
         ctx.stroke();
@@ -640,10 +698,11 @@ function renderChalls(f, el) {
         const nm = c.name.length > 20 ? c.name.slice(0, 18) + '…' : c.name;
         // Glow effect on name
         ctx.save();
-        ctx.shadowColor = `hsla(${hue},80%,50%,0.4)`;
-        ctx.shadowBlur = 10;
+        ctx.shadowColor = `hsla(${hue},80%,50%,0.35)`;
+        ctx.shadowBlur = 8;
         ctx.fillStyle = '#fff';
         ctx.fillText(nm, cx + cardW / 2, cy + 60);
+        ctx.shadowBlur = 0;
         ctx.restore();
 
         // Points — BIGGER orbitron
@@ -659,16 +718,12 @@ function renderChalls(f, el) {
         ctx.fillStyle = c.solveCount > 0 ? 'rgba(52,199,89,0.9)' : 'rgba(255,59,48,0.7)';
         ctx.fillText(c.solveCount > 0 ? `${c.solveCount} solve${c.solveCount !== 1 ? 's' : ''}` : '× UNSOLVED ×', cx + cardW / 2, cy + 212);
 
-        // Divider with glow
-        ctx.save();
-        ctx.shadowColor = `hsla(${hue},50%,50%,0.2)`;
-        ctx.shadowBlur = 6;
+        // Divider
         ctx.strokeStyle = `hsla(${hue},40%,40%,0.25)`;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(cx + 50, cy + 245); ctx.lineTo(cx + cardW - 50, cy + 245);
         ctx.stroke();
-        ctx.restore();
 
         // "First Bloods" header — bigger
         font('orb', 22);
@@ -810,26 +865,22 @@ function renderTeamReveal(f, el) {
     const team = f.data;
     const rank = f.rank; // 0 = 1st, 4 = 5th
     const hueOff = [0, 40, 80, 120, 160][rank] || 0;
-    const intensity = 1 + (4 - rank) * 0.3; // 1st place = most intense
 
-    // MASSIVE initial shake — stronger for higher ranks
-    if (el < 50) triggerShake(20 + (4 - rank) * 10);
+    // Clean initial shake — gentle pulse
+    if (el < 40) triggerShake(6 + (4 - rank) * 3);
 
-    const tE = easeOutExpo(s(t * 1.8));
-    const tEx = m(tE, easeOutExpo(tE), 0.5);
+    // Smooth cubic-out for a polished feel
+    const tE = easeOutExpo(s(t * 2.2));
+    const tEx = m(tE, easeOutExpo(tE), 0.7);
 
-    // Turbulence distortion — MORE INTENSE
-    const turbScale = (1 - tE) * 1600 * intensity;
+    // Subtle turbulence — only in the first 15% then gone
+    const turbRaw = Math.max(0, 1 - t * 6);
+    const turbScale = turbRaw * turbRaw * 200;
     feTurb.setAttribute('seed', rank * 13 + 42);
     feDis.setAttribute('scale', turbScale);
 
-    const useFilter = turbScale > 5;
+    const useFilter = turbScale > 2;
     if (useFilter) ctx.filter = "url('#turb')";
-
-    // Dynamic saturation/brightness — more extreme
-    const satBoost = 100 * (1 - easeInExpo(Math.max(0, 1 - t * 2)) * 0.6);
-    const brightBoost = 100 * (1 + easeInExpo(Math.max(0, 1 - t)) * 6);
-    if (useFilter) ctx.filter += ` saturate(${satBoost}%) brightness(${brightBoost}%)`;
 
     bg(gradY(
         `hsl(${(330 + hueOff) % 360},60%,3%)`,
@@ -837,9 +888,9 @@ function renderTeamReveal(f, el) {
     ));
 
     // Noise texture
-    ctx.globalAlpha = 0.3;
+    ctx.globalAlpha = 0.2;
     ctx.globalCompositeOperation = 'multiply';
-    ctx.drawImage(noiseTex, 0, 0, SW, SH, -80, -80, SW + 160, SH + 160);
+    ctx.drawImage(noiseTex, 0, 0, SW, SH);
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
 
@@ -852,17 +903,17 @@ function renderTeamReveal(f, el) {
             `hsl(${(0 + hueOff) % 360},100%,50%)`);
     }
 
-    // Team name — MASSIVE scaling reveal
+    // Team name — smooth scale-in reveal
     ctx.save();
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     font('stranger', 220);
     const teamName = team.name || `Team ${team.account_id}`;
     const textWM = Math.min(1.6, (1920 * 0.85) / ctx.measureText(teamName).width);
-    const scl = (1 + (1 - tEx) * 15) * textWM;
+    const scl = (1 + (1 - tEx) * 3) * textWM;
 
     ctx.translate(SW / 2, SH / 2 - 30);
     ctx.scale(scl, scl);
-    ctx.letterSpacing = `${(1 - tEx) * 200}px`;
+    ctx.letterSpacing = `${(1 - tEx) * 40}px`;
 
     ctx.globalCompositeOperation = 'screen';
     const nameGrad = ctx.createLinearGradient(0, -120, 0, 120);
@@ -872,53 +923,97 @@ function renderTeamReveal(f, el) {
     ctx.fillStyle = nameGrad;
     ctx.fillText(teamName, 0, 0);
 
-    // Triple glow layer
-    ctx.filter = 'blur(8px)';
-    ctx.globalAlpha = 0.7;
+    // Glow via shadow (no blur filter)
+    ctx.shadowColor = nameGrad;
+    ctx.shadowBlur = 25;
     ctx.fillText(teamName, 0, 0);
-    ctx.filter = 'blur(25px)';
-    ctx.globalAlpha = 0.3;
-    ctx.fillText(teamName, 0, 0);
-    ctx.filter = 'none';
+    ctx.shadowBlur = 0;
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
     ctx.letterSpacing = '0px';
     ctx.restore();
 
-    // Solved challenges scattered in background
+    // Solved challenges — floating pills in background
     const placeAppear = easeOutExpo(s((t - 0.12) * 3));
-    ctx.globalAlpha = placeAppear;
-
-    offCtx.clearRect(0, 0, SW, SH);
-    offCtx.font = font('mono', 24);
-    offCtx.textAlign = 'left'; offCtx.textBaseline = 'top';
-    offCtx.fillStyle = '#fff';
-    const teamSolves = solves.filter(sv => sv.aname === teamName).map(sv => sv.cname);
+    const teamSolves = solves.filter(sv => sv.aname === teamName);
     const rng = mulberry32(1337 + rank);
+
+    // Pre-generate stable positions per solve
+    const pillPositions = teamSolves.map((sv, j) => {
+        const col = j % 4;
+        const row = Math.floor(j / 4);
+        return {
+            baseX: rng() * (SW - 320) + 40,
+            baseY: rng() * (SH - 120) + 60,
+            drift: (rng() - 0.5) * 60,
+            speed: 0.6 + rng() * 0.8,
+            phase: rng() * Math.PI * 2,
+            size: 0.7 + rng() * 0.5,
+        };
+    });
+
     for (let j = 0; j < teamSolves.length; j++) {
-        const pt = Math.max(0, (t - (0.08 + 0.35 * j / teamSolves.length)) * 3);
+        const sv = teamSolves[j];
+        const delay = 0.06 + 0.5 * j / teamSolves.length;
+        const pt = Math.max(0, (t - delay) * 2.5);
         if (!pt) continue;
-        const pte = easeOutExpo(pt);
-        const px = rng() * (SW - 200);
-        const py = rng() * (SH - 40);
-        offCtx.globalAlpha = pte * 0.7;
-        offCtx.fillText(teamSolves[j].slice(0, Math.ceil(pte * teamSolves[j].length)), px, py);
+        const pte = easeOutExpo(Math.min(pt, 1));
+        const pp = pillPositions[j];
+
+        // Float upward + gentle wave
+        const elapsed_s = el / 1000;
+        const floatY = -elapsed_s * pp.speed * 18;
+        const waveX = Math.sin(elapsed_s * 1.2 + pp.phase) * pp.drift;
+        let px = pp.baseX + waveX;
+        let py = pp.baseY + floatY % (SH + 100);
+        if (py < -60) py += SH + 120;
+
+        const pillAlpha = pte * (0.25 + (1 - Math.abs(py - SH / 2) / (SH / 2)) * 0.15);
+        ctx.globalAlpha = pillAlpha * placeAppear;
+        if (ctx.globalAlpha < 0.02) continue;
+
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.scale(pp.size, pp.size);
+
+        // Pill background — no shadow, simple glow border
+        const pillW = 280, pillH = 56;
+        const hueC = (hueOff) % 360;
+
+        ctx.beginPath();
+        ctx.roundRect(-pillW / 2, -pillH / 2, pillW, pillH, pillH / 2);
+        ctx.fillStyle = `hsla(${hueC},40%,8%,0.7)`;
+        ctx.fill();
+        ctx.strokeStyle = `hsla(${hueC},60%,45%,0.45)`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Challenge name
+        font('space', 20);
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = `hsla(${hueC},70%,70%,0.9)`;
+        const nm = sv.cname.length > 16 ? sv.cname.slice(0, 14) + '…' : sv.cname;
+        ctx.fillText(nm, -pillW / 2 + 18, -2);
+
+        // Points badge
+        font('orb', 16);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = `hsla(${hueC},90%,60%,0.8)`;
+        ctx.fillText(`+${sv.cval}`, pillW / 2 - 16, -2);
+
+        ctx.restore();
     }
-    ctx.globalCompositeOperation = 'screen';
-    ctx.globalAlpha = 0.15;
-    ctx.drawImage(offCanvas, 0, 0, SW, SH);
-    ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
 
-    // Placement badge — BIGGER, with bounce
+    // Placement badge — smooth entrance
     ctx.globalAlpha = placeAppear;
-    const badgeScale = easeOutBounce(s((t - 0.15) * 2.5));
+    const badgeScale = easeOutExpo(s((t - 0.15) * 2.8));
     ctx.save();
-    ctx.translate(SW / 2, SH * 0.7);
+    ctx.translate(SW / 2, SH * 0.72);
     ctx.scale(badgeScale, badgeScale);
     font('orb', 88);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.letterSpacing = `${(1 - placeAppear) * 150}px`;
+    ctx.letterSpacing = `${(1 - placeAppear) * 30}px`;
 
     // Glow behind badge
     ctx.shadowColor = getMedalColor(rank);
@@ -939,12 +1034,12 @@ function renderTeamReveal(f, el) {
     // Burst Particles
     updateBursts();
 
-    noiseOverlay(0.12);
-    scanLines(0.025);
+    noiseOverlay(0.06);
+    scanLines(0.018);
 
-    // FLASH on first beat — more dramatic
-    if (t < 0.06) {
-        ctx.globalAlpha = (1 - t / 0.06) * 0.8;
+    // Subtle flash on entry
+    if (t < 0.04) {
+        ctx.globalAlpha = (1 - t / 0.04) * 0.35;
         bg('#fff');
     }
 
@@ -1047,15 +1142,17 @@ function renderReplay(f, el) {
     ctx.globalAlpha = ta * (1 - fo);
     drawGlowText('SOLVE TIMELINE', SW / 2, SY + 55, 'orb', 50, 'rgba(236,19,19,0.9)', 'rgba(236,19,19,0.4)', 12);
 
-    const solveIdx = Math.floor(t * all.length);
+    // Accelerating curve — starts steady, speeds up in the middle, slows at end
+    const accel = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    const solveIdx = Math.floor(accel * all.length);
     const visible = all.slice(0, solveIdx);
-    const showCount = Math.min(14, visible.length);
+    const showCount = Math.min(18, visible.length);
     const recent = visible.slice(-showCount);
 
     for (let i = 0; i < recent.length; i++) {
         const sv = recent[i];
-        const rowY = SY + 110 + i * 62;
-        const age = 1 - (i < showCount - 4 ? 0.35 : 0);
+        const rowY = SY + 110 + i * 50;
+        const age = 1 - (i < showCount - 5 ? 0.3 : 0);
         ctx.globalAlpha = age * ta;
 
         // Pulse dot
@@ -1113,13 +1210,13 @@ function renderGoodbye(f, el) {
 
     bg(gradY('#050003', '#0a0008'));
     noiseOverlay(0.1);
-    ambientParticles(el, 150, '236,19,19', 1.3);
+    ambientParticles(el, 60, '236,19,19', 1.3);
 
     // Burst on entry
     if (el > 40 && el < 120) {
-        addBurst(SW / 2, SH / 2 - 50, 60, '#ec1313');
-        addBurst(SW / 2 - 200, SH / 2, 30, '#ff6b6b');
-        addBurst(SW / 2 + 200, SH / 2, 30, '#ff6b6b');
+        addBurst(SW / 2, SH / 2 - 50, 30, '#ec1313');
+        addBurst(SW / 2 - 200, SH / 2, 15, '#ff6b6b');
+        addBurst(SW / 2 + 200, SH / 2, 15, '#ff6b6b');
     }
 
     ctx.globalAlpha = tE * (1 - fo);
@@ -1136,13 +1233,11 @@ function renderGoodbye(f, el) {
     ggGrad.addColorStop(0, '#ec1313'); ggGrad.addColorStop(0.5, '#ff4444'); ggGrad.addColorStop(1, '#ff6b6b');
     ctx.fillStyle = ggGrad;
     ctx.fillText('GG', 0, 0);
-    ctx.filter = 'blur(12px)';
-    ctx.globalAlpha *= 0.5;
+    // Glow via shadow (no blur filter)
+    ctx.shadowColor = '#ec1313';
+    ctx.shadowBlur = 35;
     ctx.fillText('GG', 0, 0);
-    ctx.filter = 'blur(30px)';
-    ctx.globalAlpha *= 0.3;
-    ctx.fillText('GG', 0, 0);
-    ctx.filter = 'none';
+    ctx.shadowBlur = 0;
     ctx.globalCompositeOperation = 'source-over';
     ctx.restore();
 
@@ -1167,6 +1262,188 @@ function renderGoodbye(f, el) {
 }
 
 /* ===================== MAIN LOOP ===================== */
+
+/* -- END CREDITS (cinema scroll) -- */
+function renderCredits(f, el) {
+    const t = el / f.dur;
+    const items = f.data;
+
+    bg('#030002');
+    ambientParticles(el, 30, '236,19,19', 0.4);
+
+    // Measure total scroll height
+    // Each item type contributes a fixed height
+    function itemHeight(item) {
+        switch (item.type) {
+            case 'heading':   return 200;
+            case 'section':   return 130;
+            case 'dept':      return 70;
+            case 'person':    return 180;
+            case 'volunteer': return 80;
+            case 'quote':     return 160;
+            case 'spacer':    return 100;
+            case 'final':     return 120;
+            default:          return 60;
+        }
+    }
+    const totalH = items.reduce((sum, it) => sum + itemHeight(it), 0) + SH;
+
+    // Smooth scroll: start from bottom of screen, scroll up past everything
+    // Use easeInOutCubic for gentle start/stop
+    const scrollT = t < 0.03 ? easeOutExpo(t / 0.03) * 0.03
+                  : t > 0.95 ? 0.95 + easeInExpo((t - 0.95) / 0.05) * 0.05
+                  : t;
+    const scrollY = SH - scrollT * totalH;
+
+    // Fade in at start
+    const fadeIn = easeOutExpo(s(t * 6));
+    // Fade out at end
+    const fadeOut = t > 0.93 ? easeInExpo((t - 0.93) * 14.3) : 0;
+    const masterAlpha = fadeIn * (1 - fadeOut);
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    let curY = scrollY;
+
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const h = itemHeight(item);
+        const centerY = curY + h / 2;
+
+        // Skip if off-screen (with generous margin)
+        if (centerY < -200 || centerY > SH + 200) {
+            curY += h;
+            continue;
+        }
+
+        // Distance-based fade (cinema effect)
+        const distFromCenter = Math.abs(centerY - SH / 2) / (SH / 2);
+        const itemAlpha = masterAlpha * Math.max(0, 1 - distFromCenter * 0.7);
+        ctx.globalAlpha = itemAlpha;
+
+        switch (item.type) {
+            case 'heading': {
+                // Big red heading
+                font('stranger', 120);
+                ctx.fillStyle = '#ec1313';
+                ctx.shadowColor = 'rgba(236,19,19,0.5)';
+                ctx.shadowBlur = 20;
+                ctx.fillText(item.text, SW / 2, centerY - 20);
+                ctx.shadowBlur = 0;
+
+                // Decorative bar
+                ctx.fillStyle = '#ec1313';
+                ctx.fillRect(SW / 2 - 50, centerY + 50, 100, 3);
+                break;
+            }
+            case 'section': {
+                // Section title with glowing bar
+                font('orb', 38);
+                ctx.fillStyle = 'rgba(236,19,19,0.75)';
+                ctx.letterSpacing = '12px';
+                ctx.fillText(item.text, SW / 2, centerY);
+                ctx.letterSpacing = '0px';
+
+                // Under-bar
+                const barW = 60;
+                ctx.fillStyle = 'rgba(236,19,19,0.35)';
+                ctx.fillRect(SW / 2 - barW / 2, centerY + 28, barW, 2);
+                break;
+            }
+            case 'dept': {
+                // Department label — small pill
+                font('space', 18);
+                const tw = ctx.measureText(item.text).width;
+                const pw = tw + 30, ph = 32;
+                ctx.beginPath();
+                ctx.roundRect(SW / 2 - pw / 2, centerY - ph / 2, pw, ph, 6);
+                ctx.fillStyle = 'rgba(139,0,0,0.2)';
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(139,0,0,0.4)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                ctx.fillText(item.text, SW / 2, centerY);
+                break;
+            }
+            case 'person': {
+                // Name — large, glowing
+                font('space', 42);
+                ctx.fillStyle = '#fff';
+                ctx.shadowColor = 'rgba(236,19,19,0.3)';
+                ctx.shadowBlur = 10;
+                ctx.fillText(item.name, SW / 2, centerY - 50);
+                ctx.shadowBlur = 0;
+
+                // Handle
+                if (item.handle) {
+                    font('mono', 20);
+                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                    ctx.fillText(item.handle, SW / 2, centerY - 14);
+                }
+
+                // Role — red accent
+                font('orb', 20);
+                ctx.fillStyle = 'rgba(236,19,19,0.7)';
+                ctx.letterSpacing = '4px';
+                ctx.fillText(item.role.toUpperCase(), SW / 2, centerY + 22);
+                ctx.letterSpacing = '0px';
+
+                // Contributions
+                font('space', 18);
+                ctx.fillStyle = 'rgba(255,255,255,0.35)';
+                ctx.fillText(item.contrib, SW / 2, centerY + 56);
+                break;
+            }
+            case 'volunteer': {
+                font('space', 28);
+                ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                ctx.fillText(item.names.join('   \u00B7   '), SW / 2, centerY);
+                break;
+            }
+            case 'quote': {
+                font('space', 26);
+                ctx.fillStyle = 'rgba(255,255,255,0.45)';
+                ctx.font = `italic ${ctx.font}`;
+                ctx.fillText(item.text, SW / 2, centerY - 15);
+
+                font('mono', 16);
+                ctx.fillStyle = 'rgba(236,19,19,0.5)';
+                ctx.letterSpacing = '4px';
+                ctx.fillText(item.attr, SW / 2, centerY + 30);
+                ctx.letterSpacing = '0px';
+                break;
+            }
+            case 'final': {
+                font('space', 22);
+                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                ctx.letterSpacing = '6px';
+                ctx.fillText(item.text, SW / 2, centerY);
+                ctx.letterSpacing = '0px';
+                break;
+            }
+            case 'spacer':
+                break;
+        }
+        curY += h;
+    }
+
+    ctx.globalAlpha = 1;
+
+    // Side accent lines (vertical rails)
+    const railAlpha = masterAlpha * 0.08;
+    ctx.globalAlpha = railAlpha;
+    ctx.fillStyle = '#ec1313';
+    ctx.fillRect(SW / 2 - 480, 0, 1, SH);
+    ctx.fillRect(SW / 2 + 480, 0, 1, SH);
+    ctx.globalAlpha = 1;
+
+    scanLines(0.015);
+    vignette(0.55);
+    ctx.globalAlpha = 1;
+}
+
 let timeline = [];
 let totalDuration = 0;
 
@@ -1222,6 +1499,7 @@ function render() {
         case 'scores':      renderScores(active, fel); break;
         case 'replay':      renderReplay(active, fel); break;
         case 'goodbye':     renderGoodbye(active, fel); break;
+        case 'credits':     renderCredits(active, fel); break;
     }
 
     ctx.restore(); // shake
