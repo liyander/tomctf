@@ -612,7 +612,7 @@ const CREDITS = [
     { type: 'heading', text: 'TOMCTF 2026' },
     { type: 'section', text: 'MAIN TEAM' },
     { type: 'dept', text: 'CSE (Cyber-Security) \u2013 A \u00B7 3rd Year' },
-    { type: 'person', name: 'Liyander Rishwanth L', handle: 'CyberGhost05', role: 'Lead Architect', contrib: 'Infrastructure \u2022 Website \u2022 Web Challenges \u2022 AI Exploitation \u2022 OSINT' },
+    { type: 'person', name: 'Liyander Rishwanth L', handle: 'CyberGhost05', role: 'Lead Architect', contrib: 'Infrastructure \u2022 Website \u2022 Web Challenges \u2022 AI Exploitation' },
     { type: 'person', name: 'Keerthi Raghavan K', handle: 'quixel200', role: 'Head Coordinator', contrib: 'Pwn \u2022 OSINT \u2022 Reverse Engineering' },
     { type: 'person', name: 'Harish Kumar N', handle: 'minato500', role: 'Challenge Creator', contrib: 'Web Challenges \u2022 OSINT' },
     { type: 'person', name: 'Christ Michael Jeniston S', handle: 'kira07', role: 'Challenge Creator', contrib: 'Cryptography' },
@@ -926,54 +926,137 @@ function renderChalls(f, el) {
         ctx.fillStyle = 'rgba(255,255,255,0.35)';
         ctx.fillText('POINTS', cx + cardW / 2, cy + 178);
 
-        // Solve count
-        font('space', 28);
-        ctx.fillStyle = c.solveCount > 0 ? 'rgba(52,199,89,0.9)' : 'rgba(255,59,48,0.7)';
-        ctx.fillText(c.solveCount > 0 ? `${c.solveCount} solve${c.solveCount !== 1 ? 's' : ''}` : '× UNSOLVED ×', cx + cardW / 2, cy + 212);
+        // Solve count pill badge
+        const solveY = cy + 215;
+        if (c.solveCount > 0) {
+            const solveTxt = `✓ ${c.solveCount} SOLVE${c.solveCount !== 1 ? 'S' : ''}`;
+            font('space', 22);
+            const pillW = ctx.measureText(solveTxt).width + 36;
+            ctx.beginPath();
+            ctx.roundRect(cx + cardW / 2 - pillW / 2, solveY - 16, pillW, 34, 17);
+            ctx.fillStyle = 'rgba(52,199,89,0.12)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(52,199,89,0.45)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(52,199,89,0.95)';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(solveTxt, cx + cardW / 2, solveY + 1);
+        } else {
+            const uTxt = '✕ UNSOLVED';
+            font('space', 22);
+            const pillW = ctx.measureText(uTxt).width + 36;
+            ctx.beginPath();
+            ctx.roundRect(cx + cardW / 2 - pillW / 2, solveY - 16, pillW, 34, 17);
+            ctx.fillStyle = 'rgba(255,59,48,0.1)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255,59,48,0.35)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(255,59,48,0.85)';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(uTxt, cx + cardW / 2, solveY + 1);
+        }
 
-        // Divider
-        ctx.strokeStyle = `hsla(${hue},40%,40%,0.25)`;
-        ctx.lineWidth = 1.5;
+        // Divider with diamond accent
+        const divY = solveY + 36;
+        ctx.strokeStyle = `hsla(${hue},30%,35%,0.2)`;
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(cx + 50, cy + 245); ctx.lineTo(cx + cardW - 50, cy + 245);
+        ctx.moveTo(cx + 45, divY); ctx.lineTo(cx + cardW / 2 - 10, divY);
+        ctx.moveTo(cx + cardW / 2 + 10, divY); ctx.lineTo(cx + cardW - 45, divY);
         ctx.stroke();
+        // Diamond
+        ctx.save();
+        ctx.translate(cx + cardW / 2, divY);
+        ctx.rotate(Math.PI / 4);
+        ctx.fillStyle = `hsla(${hue},60%,50%,0.4)`;
+        ctx.fillRect(-4, -4, 8, 8);
+        ctx.restore();
 
-        // "First Bloods" header
-        font('orb', 22);
-        ctx.fillStyle = 'rgba(255,255,255,0.45)';
-        ctx.fillText('FIRST BLOODS', cx + cardW / 2, cy + 280);
+        // "First Bloods" header with small icon
+        const fbHeaderY = divY + 30;
+        font('orb', 18);
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.letterSpacing = '5px';
+        ctx.fillText('FIRST BLOODS', cx + cardW / 2, fbHeaderY);
+        ctx.letterSpacing = '0px';
 
-        // Top 3 solvers
+        // Top 3 solvers — styled rows
         if (c.topSolvers.length > 0) {
             for (let j = 0; j < c.topSolvers.length; j++) {
-                const sy2 = cy + 325 + j * 65;
+                const rowY = fbHeaderY + 42 + j * 62;
                 const sa = easeOutExpo(s((t - delay - 0.12 - j * 0.06) * 5));
-                ctx.globalAlpha = easeOutExpo(s((t - delay) * 4)) * sa;
+                const rowAlpha = easeOutExpo(s((t - delay) * 4)) * sa;
+                ctx.globalAlpha = rowAlpha;
 
                 const mColor = getMedalColor(j);
+
+                // Row background with subtle gradient
+                const rowH = 46, rowPad = 32;
                 ctx.beginPath();
-                ctx.arc(cx + 70, sy2, 18, 0, Math.PI * 2);
-                ctx.fillStyle = mColor;
-                ctx.globalAlpha *= 0.25;
+                ctx.roundRect(cx + rowPad, rowY - rowH / 2, cardW - rowPad * 2, rowH, 12);
+                const rowGrad = ctx.createLinearGradient(cx + rowPad, 0, cx + cardW - rowPad, 0);
+                rowGrad.addColorStop(0, `hsla(${hue},20%,12%,0.5)`);
+                rowGrad.addColorStop(1, `hsla(${hue},15%,8%,0.3)`);
+                ctx.fillStyle = rowGrad;
                 ctx.fill();
-                ctx.globalAlpha = easeOutExpo(s((t - delay) * 4)) * sa;
-                font('space', 22);
+                // Left accent stripe
+                ctx.beginPath();
+                ctx.roundRect(cx + rowPad, rowY - rowH / 2, 4, rowH, [12, 0, 0, 12]);
+                ctx.fillStyle = mColor;
+                ctx.globalAlpha = rowAlpha * 0.7;
+                ctx.fill();
+                ctx.globalAlpha = rowAlpha;
+
+                // Medal badge (rounded square)
+                const badgeX = cx + rowPad + 20, badgeSize = 30;
+                ctx.beginPath();
+                ctx.roundRect(badgeX, rowY - badgeSize / 2, badgeSize, badgeSize, 8);
+                ctx.fillStyle = mColor;
+                ctx.globalAlpha = rowAlpha * 0.15;
+                ctx.fill();
+                ctx.globalAlpha = rowAlpha;
+                ctx.strokeStyle = mColor;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                // Medal emoji
+                font('space', 16);
                 ctx.fillStyle = mColor;
                 ctx.textAlign = 'center';
-                ctx.fillText(getMedalEmoji(j), cx + 70, sy2 + 1);
+                ctx.fillText(getMedalEmoji(j), badgeX + badgeSize / 2, rowY + 1);
 
+                // Solver name
                 ctx.textAlign = 'left';
-                font('space', 28);
+                font('space', 24);
                 ctx.fillStyle = '#fff';
-                const sn = c.topSolvers[j].length > 18 ? c.topSolvers[j].slice(0, 16) + '…' : c.topSolvers[j];
-                ctx.fillText(sn, cx + 105, sy2 + 1);
+                const sn = c.topSolvers[j].length > 16 ? c.topSolvers[j].slice(0, 14) + '…' : c.topSolvers[j];
+                ctx.fillText(sn, badgeX + badgeSize + 14, rowY + 1);
+
+                // Rank chip on right
+                ctx.textAlign = 'right';
+                font('mono', 13);
+                const rankTxt = j === 0 ? '1ST' : j === 1 ? '2ND' : '3RD';
+                const rankW = ctx.measureText(rankTxt).width + 16;
+                const rankX = cx + cardW - rowPad - 14;
+                ctx.beginPath();
+                ctx.roundRect(rankX - rankW, rowY - 10, rankW, 20, 10);
+                ctx.fillStyle = mColor;
+                ctx.globalAlpha = rowAlpha * 0.12;
+                ctx.fill();
+                ctx.globalAlpha = rowAlpha;
+                ctx.fillStyle = mColor;
+                ctx.textAlign = 'center';
+                ctx.fillText(rankTxt, rankX - rankW / 2, rowY + 1);
             }
         } else {
-            ctx.globalAlpha = easeOutExpo(s((t - delay) * 4)) * 0.3;
-            font('mono', 24);
+            ctx.globalAlpha = easeOutExpo(s((t - delay) * 4)) * 0.25;
+            font('mono', 20);
             ctx.textAlign = 'center';
-            ctx.fillStyle = 'rgba(255,255,255,0.25)';
-            ctx.fillText('No solvers', cx + cardW / 2, cy + 340);
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.fillText('— no solvers —', cx + cardW / 2, fbHeaderY + 55);
         }
         ctx.textAlign = 'center';
         ctx.globalAlpha = 1;
@@ -1267,148 +1350,65 @@ function renderScores(f, el) {
     const t = s(el / f.dur);
     const data = f.data;
 
-    // Deep dark red/black CTF bg
-    bg(gradY('#0a0004', '#1a000a'));
-    noiseOverlay(0.1);
-    ambientParticles(el, 50, '236,19,19', 1.2);
+    bg(gradY('#050005', '#0a0012'));
+    noiseOverlay(0.06);
+    ambientParticles(el, 40, '100,100,255');
 
     const appear = easeOutExpo(s(t * 2.5));
     ctx.globalAlpha = appear;
-    drawGlowText('FINAL SCORES', SW / 2, SY + 80, 'stranger', 100, '#ec1313', 'rgba(236,19,19,0.7)', 25);
-
-    // Subtitle
-    font('orb', 24);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.letterSpacing = '6px';
-    ctx.fillText('TOP PERFORMERS', SW / 2, SY + 130);
-    ctx.letterSpacing = '0px';
+    drawGlowText('SCORE BREAKDOWN', SW / 2, SY + 90, 'orb', 64, '#ec1313', 'rgba(236,19,19,0.6)', 20);
 
     if (data.length > 0) {
         const maxScore = data[0].score || 1;
-        const barMaxW = 680, barH = 62, gap = 22;
-        const ssx = SW / 2 - barMaxW / 2 + 80;
-        const ssy = SY + 170;
+        const barMaxW = 750, barH = 70, gap = 32;
+        const ssx = (SW - barMaxW) / 2 - 130;
+        const ssy = SY + 180;
 
         for (let i = 0; i < data.length; i++) {
-            const delay = 0.08 + i * 0.08;
+            const delay = 0.06 + i * 0.07;
             const a = easeOutExpo(s((t - delay) * 2.5));
             const barW = (data[i].score / maxScore) * barMaxW * a;
             const y = ssy + i * (barH + gap);
-            const rankCY = y + barH / 2;
 
             ctx.globalAlpha = a;
 
-            // Rank number — big Stranger Things style for top 3
-            const rankX = ssx - 120;
-            if (i < 3) {
-                ctx.save();
-                ctx.shadowColor = getMedalColor(i);
-                ctx.shadowBlur = 15;
-                font('stranger', 54);
-                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillStyle = getMedalColor(i);
-                ctx.fillText(`${i + 1}`, rankX, rankCY);
-                ctx.shadowBlur = 0;
-                ctx.restore();
-            } else {
-                font('orb', 28);
-                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                ctx.fillText(`${i + 1}`, rankX, rankCY);
-            }
-
-            // Team name
-            font('space', 26);
+            // Team name — bigger
+            font('space', 30);
             ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-            ctx.fillStyle = i === 0 ? '#fff' : i < 3 ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.55)';
+            ctx.fillStyle = getMedalColor(i);
             const nm = (data[i].name || `Team ${data[i].account_id}`);
-            ctx.fillText(nm.length > 14 ? nm.slice(0, 12) + '…' : nm, ssx - 16, rankCY);
+            ctx.fillText(nm.length > 14 ? nm.slice(0, 12) + '…' : nm, ssx - 18, y + barH / 2);
 
-            // Bar track
-            ctx.beginPath();
-            ctx.roundRect(ssx, y, barMaxW, barH, 8);
-            ctx.fillStyle = 'rgba(236,19,19,0.04)';
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(236,19,19,0.08)';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-
-            // Bar fill — red gradient matching CTF theme
-            if (barW > 2) {
-                const g = ctx.createLinearGradient(ssx, 0, ssx + barW, 0);
-                if (i === 0) {
-                    g.addColorStop(0, '#8b0000');
-                    g.addColorStop(0.5, '#ec1313');
-                    g.addColorStop(1, '#ff4444');
-                } else if (i === 1) {
-                    g.addColorStop(0, '#6b0000');
-                    g.addColorStop(1, '#cc1111');
-                } else if (i === 2) {
-                    g.addColorStop(0, '#550000');
-                    g.addColorStop(1, '#aa1111');
-                } else {
-                    g.addColorStop(0, `rgba(236,19,19,${0.25 - i * 0.03})`);
-                    g.addColorStop(1, `rgba(236,19,19,${0.45 - i * 0.04})`);
-                }
-
-                ctx.save();
-                ctx.shadowColor = i < 3 ? '#ec1313' : 'rgba(236,19,19,0.3)';
-                ctx.shadowBlur = i === 0 ? 20 : i < 3 ? 12 : 5;
-                ctx.fillStyle = g;
-                ctx.beginPath();
-                ctx.roundRect(ssx, y, barW, barH, 8);
-                ctx.fill();
-                ctx.restore();
-
-                // Scanline texture on bar
-                ctx.save();
-                ctx.beginPath();
-                ctx.roundRect(ssx, y, barW, barH, 8);
-                ctx.clip();
-                ctx.globalAlpha = a * 0.06;
-                for (let sl = y; sl < y + barH; sl += 3) {
-                    ctx.fillStyle = '#000';
-                    ctx.fillRect(ssx, sl, barW, 1);
-                }
-                ctx.globalAlpha = a;
-                ctx.restore();
-
-                // Leading edge pulse for 1st place
-                if (i === 0) {
-                    const pulse = 0.4 + Math.sin(el * 0.005) * 0.3;
-                    ctx.save();
-                    ctx.shadowColor = '#ff4444';
-                    ctx.shadowBlur = 20;
-                    ctx.globalAlpha = a * pulse;
-                    ctx.fillStyle = '#ff6666';
-                    ctx.beginPath();
-                    ctx.roundRect(ssx + barW - 6, y + 2, 6, barH - 4, [0, 8, 8, 0]);
-                    ctx.fill();
-                    ctx.restore();
-                    ctx.globalAlpha = a;
-                }
-            }
-
-            // Score value
-            font('orb', 32);
-            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-            ctx.fillStyle = i === 0 ? '#ff4444' : i < 3 ? 'rgba(236,19,19,0.9)' : 'rgba(255,255,255,0.6)';
+            // Bar with gradient + glow
+            const g = ctx.createLinearGradient(ssx, 0, ssx + barW, 0);
+            g.addColorStop(0, `hsl(${350 - i * 12},80%,${32 - i * 4}%)`);
+            g.addColorStop(1, `hsl(${0 - i * 8},90%,${52 - i * 5}%)`);
             ctx.save();
-            if (i < 3) { ctx.shadowColor = '#ec1313'; ctx.shadowBlur = 8; }
-            ctx.fillText(`${data[i].score}`, ssx + barW + 20, rankCY);
+            ctx.shadowColor = getMedalColor(i);
+            ctx.shadowBlur = 15;
+            ctx.fillStyle = g;
+            ctx.beginPath(); ctx.roundRect(ssx, y, Math.max(1, barW), barH, 12); ctx.fill();
             ctx.restore();
 
-            // pts label
-            font('mono', 13);
-            ctx.fillStyle = 'rgba(255,255,255,0.2)';
-            const scoreTextW = (() => { font('orb', 32); return ctx.measureText(`${data[i].score}`).width; })();
-            font('mono', 13);
-            ctx.fillText('pts', ssx + barW + 24 + scoreTextW, rankCY + 2);
+            // Glow haze
+            ctx.save();
+            ctx.filter = 'blur(15px)';
+            ctx.globalAlpha = a * 0.2;
+            ctx.fillStyle = getMedalColor(i);
+            ctx.fillRect(ssx, y, barW, barH);
+            ctx.filter = 'none';
+            ctx.restore();
+
+            // Score — bigger
+            ctx.globalAlpha = a;
+            font('orb', 40);
+            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.fillText(`${data[i].score}`, ssx + barW + 22, y + barH / 2);
         }
     }
-    scanLines(0.03);
-    vignette(0.4);
+    scanLines(0.02);
+    vignette(0.35);
     ctx.globalAlpha = 1;
 }
 
