@@ -4,10 +4,18 @@ import { cumulativeSum } from "../../math";
 import dayjs from "dayjs";
 
 export function getOption(mode, places, optionMerge) {
-  // Cyberpunk red theme palette for series lines
+  // Distinct high-contrast colors for each team (easy to track)
   const seriesColors = [
-    '#ec1313', '#ff4444', '#ff6b35', '#FFD700', '#34C759',
-    '#00d4ff', '#5856D6', '#ff2d92', '#C0C0C0', '#FF9500'
+    '#FF1744', // vivid red — 1st place
+    '#2979FF', // vivid blue — 2nd
+    '#FFD600', // vivid gold — 3rd
+    '#00E676', // vivid green — 4th
+    '#FF9100', // vivid orange — 5th
+    '#D500F9', // vivid purple — 6th
+    '#00E5FF', // vivid cyan — 7th
+    '#FF4081', // vivid pink — 8th
+    '#76FF03', // vivid lime — 9th
+    '#F5F5F5', // white — 10th
   ];
 
   let option = {

@@ -690,18 +690,25 @@ function buildTimeline() {
     tl.push({ type: 'intro_text', start: t, dur: 3500 });
     t += 3500;
 
-    // Challenge groups (3 per frame) — faster pacing
-    const sorted = [...challenges].sort((a, b) => {
-        if (a.category !== b.category) return a.category.localeCompare(b.category);
-        return (b.value || 0) - (a.value || 0);
-    });
-    for (let i = 0; i < sorted.length; i += 3) {
-        const grp = sorted.slice(i, i + 3).map(c => {
-            const cs = solves.filter(sv => sv.cid === c.id).sort((a, b) => new Date(a.date) - new Date(b.date));
-            return { ...c, solveCount: cs.length, topSolvers: cs.slice(0, 3).map(sv => sv.aname) };
-        });
-        tl.push({ type: 'challs', start: t, dur: 6000, data: grp, idx: i });
-        t += 6000;
+    // Challenge groups — grouped by category, max 3 per frame, NEVER mixing categories
+    const catMap = {};
+    for (const c of challenges) {
+        (catMap[c.category] || (catMap[c.category] = [])).push(c);
+    }
+    // Sort categories alphabetically, challenges by value desc within each
+    const catNames = Object.keys(catMap).sort();
+    let challIdx = 0;
+    for (const cat of catNames) {
+        const catChalls = catMap[cat].sort((a, b) => (b.value || 0) - (a.value || 0));
+        for (let i = 0; i < catChalls.length; i += 3) {
+            const grp = catChalls.slice(i, i + 3).map(c => {
+                const cs = solves.filter(sv => sv.cid === c.id).sort((a, b) => new Date(a.date) - new Date(b.date));
+                return { ...c, solveCount: cs.length, topSolvers: cs.slice(0, 3).map(sv => sv.aname) };
+            });
+            tl.push({ type: 'challs', start: t, dur: 6000, data: grp, idx: challIdx });
+            t += 6000;
+            challIdx += grp.length;
+        }
     }
 
     // Unsolved
@@ -848,10 +855,11 @@ function renderIntroText(f, el) {
     ctx.globalAlpha = 1;
 }
 
-/* -- CHALLENGES (3 per frame) -- */
+/* -- CHALLENGES (up to 3 per frame, never mixing categories) -- */
 function renderChalls(f, el) {
     const t = s(el / f.dur);
     const grp = f.data;
+    const count = grp.length; // 1, 2, or 3
 
     // Color cycling bg
     const hue = (f.idx * 37) % 360;
@@ -870,12 +878,12 @@ function renderChalls(f, el) {
     ctx.fillText(cat.toUpperCase(), SW / 2, SY + 75);
     ctx.letterSpacing = '0px';
 
-    // Cards — bigger
+    // Cards
     const cardW = 580, cardH = 640, gap = 50;
-    const totalW = grp.length * cardW + (grp.length - 1) * gap;
+    const totalW = count * cardW + (count - 1) * gap;
     const sx = (SW - totalW) / 2;
 
-    for (let i = 0; i < grp.length; i++) {
+    for (let i = 0; i < count; i++) {
         const c = grp[i];
         const delay = i * 0.08;
         const a = easeOutBack(s((t - delay) * 4));
@@ -917,7 +925,7 @@ function renderChalls(f, el) {
         ctx.fillStyle = 'rgba(255,255,255,0.35)';
         ctx.fillText('POINTS', cx + cardW / 2, cy + 178);
 
-        // Solve count — bigger
+        // Solve count
         font('space', 28);
         ctx.fillStyle = c.solveCount > 0 ? 'rgba(52,199,89,0.9)' : 'rgba(255,59,48,0.7)';
         ctx.fillText(c.solveCount > 0 ? `${c.solveCount} solve${c.solveCount !== 1 ? 's' : ''}` : '× UNSOLVED ×', cx + cardW / 2, cy + 212);
@@ -929,12 +937,12 @@ function renderChalls(f, el) {
         ctx.moveTo(cx + 50, cy + 245); ctx.lineTo(cx + cardW - 50, cy + 245);
         ctx.stroke();
 
-        // "First Bloods" header — bigger
+        // "First Bloods" header
         font('orb', 22);
         ctx.fillStyle = 'rgba(255,255,255,0.45)';
         ctx.fillText('FIRST BLOODS', cx + cardW / 2, cy + 280);
 
-        // Top 3 solvers — bigger
+        // Top 3 solvers
         if (c.topSolvers.length > 0) {
             for (let j = 0; j < c.topSolvers.length; j++) {
                 const sy2 = cy + 325 + j * 65;
