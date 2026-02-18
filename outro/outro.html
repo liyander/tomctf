@@ -42,6 +42,197 @@ canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1
     font-family: 'Space Mono', monospace;
     letter-spacing: 0.05em;
 }
+/* Click-gate — dramatic CTF entry screen */
+#clickGate {
+    position: fixed; inset: 0; z-index: 250;
+    background: #030008;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    cursor: pointer;
+    transition: opacity 1s ease;
+    overflow: hidden;
+}
+#clickGate.hidden { opacity: 0; pointer-events: none; }
+
+/* Animated background grid */
+#clickGate::before {
+    content: '';
+    position: absolute; inset: -50%;
+    background:
+        linear-gradient(rgba(236,19,19,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(236,19,19,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: grid-scroll 20s linear infinite;
+}
+@keyframes grid-scroll {
+    to { transform: translate(60px, 60px); }
+}
+
+/* Scan line effect */
+#clickGate::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.15) 2px,
+        rgba(0,0,0,0.15) 4px
+    );
+    pointer-events: none;
+}
+
+#clickGate .gate-content {
+    position: relative; z-index: 2;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 2.5rem;
+}
+
+/* Title */
+#clickGate .gate-title {
+    font-family: 'Stranger Things', sans-serif;
+    font-size: clamp(2.8rem, 7vw, 5.5rem);
+    color: #ec1313;
+    text-shadow:
+        0 0 20px rgba(236,19,19,0.6),
+        0 0 60px rgba(236,19,19,0.3),
+        0 0 120px rgba(236,19,19,0.15);
+    letter-spacing: 0.12em;
+    animation: title-flicker 4s ease-in-out infinite;
+    position: relative;
+}
+#clickGate .gate-title::after {
+    content: 'TOMCTF';
+    position: absolute; left: 3px; top: 2px;
+    color: rgba(0,200,255,0.15);
+    text-shadow: none;
+    animation: chromatic-drift 3s ease-in-out infinite alternate;
+}
+@keyframes title-flicker {
+    0%,92%,100% { opacity: 1; }
+    93% { opacity: 0.7; }
+    94% { opacity: 1; }
+    96% { opacity: 0.85; }
+    97% { opacity: 1; }
+}
+@keyframes chromatic-drift {
+    0% { transform: translate(-2px, 1px); }
+    100% { transform: translate(3px, -1px); }
+}
+
+/* Subtitle */
+#clickGate .gate-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.25);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+}
+
+/* Hexagonal launch button */
+#clickGate .gate-btn {
+    position: relative;
+    width: 140px; height: 140px;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.3s ease;
+}
+#clickGate:hover .gate-btn { transform: scale(1.08); }
+#clickGate .gate-btn .hex {
+    position: absolute; inset: 0;
+    clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+    background: rgba(236,19,19,0.08);
+    border: none;
+}
+#clickGate .gate-btn .hex-border {
+    position: absolute; inset: -2px;
+    clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+    background: linear-gradient(135deg, rgba(236,19,19,0.6), rgba(236,19,19,0.1));
+    animation: hex-rotate 6s linear infinite;
+}
+#clickGate .gate-btn .hex-inner {
+    position: absolute; inset: 2px;
+    clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+    background: #030008;
+}
+@keyframes hex-rotate {
+    0% { filter: hue-rotate(0deg); }
+    100% { filter: hue-rotate(360deg); }
+}
+/* Ring pulse around hex */
+#clickGate .gate-btn::before {
+    content: '';
+    position: absolute;
+    width: 160px; height: 160px;
+    clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+    border: 1px solid rgba(236,19,19,0.3);
+    animation: hex-pulse 2s ease-out infinite;
+}
+#clickGate .gate-btn::after {
+    content: '';
+    position: absolute;
+    width: 180px; height: 180px;
+    clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+    border: 1px solid rgba(236,19,19,0.15);
+    animation: hex-pulse 2s ease-out 0.6s infinite;
+}
+@keyframes hex-pulse {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.5); opacity: 0; }
+}
+/* Play triangle inside hex */
+#clickGate .gate-btn .play-tri {
+    position: relative; z-index: 5;
+    width: 0; height: 0;
+    border-style: solid;
+    border-width: 22px 0 22px 38px;
+    border-color: transparent transparent transparent #ec1313;
+    margin-left: 8px;
+    filter: drop-shadow(0 0 12px rgba(236,19,19,0.6));
+    transition: filter 0.3s ease;
+}
+#clickGate:hover .gate-btn .play-tri {
+    filter: drop-shadow(0 0 24px rgba(236,19,19,0.9));
+}
+
+/* Bottom terminal text */
+#clickGate .gate-terminal {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    color: rgba(236,19,19,0.4);
+    letter-spacing: 0.08em;
+}
+#clickGate .gate-terminal .cursor-blink {
+    animation: blink 1s step-end infinite;
+}
+@keyframes blink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
+
+/* Corner decorations */
+#clickGate .corner {
+    position: absolute;
+    width: 40px; height: 40px;
+    border-color: rgba(236,19,19,0.2);
+    border-style: solid;
+    border-width: 0;
+}
+#clickGate .corner.tl { top: 24px; left: 24px; border-top-width: 2px; border-left-width: 2px; }
+#clickGate .corner.tr { top: 24px; right: 24px; border-top-width: 2px; border-right-width: 2px; }
+#clickGate .corner.bl { bottom: 24px; left: 24px; border-bottom-width: 2px; border-left-width: 2px; }
+#clickGate .corner.br { bottom: 24px; right: 24px; border-bottom-width: 2px; border-right-width: 2px; }
+
+/* Floating particles */
+#clickGate .particle {
+    position: absolute;
+    width: 2px; height: 2px;
+    background: #ec1313;
+    border-radius: 50%;
+    opacity: 0;
+    animation: float-up 4s ease-in infinite;
+}
+@keyframes float-up {
+    0% { transform: translateY(0) scale(1); opacity: 0; }
+    10% { opacity: 0.6; }
+    90% { opacity: 0.1; }
+    100% { transform: translateY(-300px) scale(0.3); opacity: 0; }
+}
 
 /* Disabled overlay */
 #disabledOverlay {
@@ -125,6 +316,36 @@ canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1
     <div class="status" id="statusText">Initializing…</div>
 </div>
 
+<!-- Background music -->
+<audio id="bgMusicEl" preload="auto" loop src="/outro_assets/outro.mp3"></audio>
+
+<!-- Click gate — dramatic CTF entry screen -->
+<div id="clickGate" style="display:none">
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+    <div class="particle" style="left:15%;bottom:10%;animation-delay:0s"></div>
+    <div class="particle" style="left:30%;bottom:5%;animation-delay:0.7s"></div>
+    <div class="particle" style="left:50%;bottom:8%;animation-delay:1.4s"></div>
+    <div class="particle" style="left:65%;bottom:12%;animation-delay:2.1s"></div>
+    <div class="particle" style="left:80%;bottom:6%;animation-delay:2.8s"></div>
+    <div class="particle" style="left:25%;bottom:15%;animation-delay:3.5s"></div>
+    <div class="particle" style="left:70%;bottom:3%;animation-delay:1s"></div>
+    <div class="particle" style="left:45%;bottom:18%;animation-delay:2.4s"></div>
+    <div class="gate-content">
+        <div class="gate-title">TOMCTF</div>
+        <div class="gate-sub">CLOSING CEREMONY</div>
+        <div class="gate-btn">
+            <div class="hex-border"></div>
+            <div class="hex-inner"></div>
+            <div class="hex"></div>
+            <div class="play-tri"></div>
+        </div>
+        <div class="gate-terminal">&gt; READY TO DEPLOY // CLICK TO INITIATE<span class="cursor-blink">_</span></div>
+    </div>
+</div>
+
 <!-- Disabled page (shown if outro is disabled) -->
 <div id="disabledOverlay">
     <h2>NOT YET</h2>
@@ -158,12 +379,10 @@ let teams = [];
 let isRunning = false;
 let startTime = 0;
 let noiseTex = new Image();
-let shakeX = 0, shakeY = 0, shakeDecay = 0;
 
 /* ---- BACKGROUND MUSIC ---- */
-const bgMusic = new Audio('/outro_assets/outro.mp3');
-bgMusic.loop = true;
-bgMusic.volume = 0;
+const bgMusic = document.getElementById('bgMusicEl');
+const clickGate = document.getElementById('clickGate');
 
 /* ---- PRE-RENDERED EFFECT CACHES ---- */
 let scanLineCanvas = null;
@@ -176,20 +395,6 @@ for (let i = 0; i < 200; i++) {
         sz0: Math.sin(i * 0.7),
         al0: Math.sin(i * 1.3),
     });
-}
-
-/* ---- SCREEN SHAKE ---- */
-function triggerShake(intensity = 15) {
-    shakeDecay = intensity;
-}
-function updateShake() {
-    if (shakeDecay > 0.5) {
-        shakeX = (Math.random() - 0.5) * shakeDecay * 2;
-        shakeY = (Math.random() - 0.5) * shakeDecay * 2;
-        shakeDecay *= 0.88;
-    } else {
-        shakeX = 0; shakeY = 0; shakeDecay = 0;
-    }
 }
 
 /* ---- SIZING ---- */
@@ -533,7 +738,7 @@ function buildTimeline() {
     t += 9000;
 
     // End credits scroll
-    tl.push({ type: 'credits', start: t, dur: 28000, data: CREDITS });
+    tl.push({ type: 'credits', start: t, dur: 32000, data: CREDITS });
     t += 28000;
 
     return { tl, total: t };
@@ -546,9 +751,6 @@ function renderSplash(f, el) {
     const t = s(el / f.dur);
     const tE = easeOutExpo(s(t * 2));
     const fadeOut = t > 0.8 ? easeInExpo((t - 0.8) * 5) : 0;
-
-    // Initial BANG shake
-    if (el < 50) triggerShake(30);
 
     bg(gradY('#0a0004', '#1a000a'));
     noiseOverlay(0.12);
@@ -656,9 +858,6 @@ function renderChalls(f, el) {
     bg(gradY(`hsl(${hue},40%,4%)`, `hsl(${(hue + 30) % 360},50%,9%)`));
     noiseOverlay(0.08);
     ambientParticles(el, 40, '255,255,255', 0.5);
-
-    // Shake on entry
-    if (el < 40) triggerShake(8);
 
     // Category label — bigger
     const cat = grp[0]?.category || 'Challenges';
@@ -781,8 +980,6 @@ function renderUnsolved(f, el) {
     const t = s(el / f.dur);
     const items = f.data;
 
-    if (el < 40) triggerShake(10);
-
     bg(gradY('#0a0000', '#1a0005'));
     noiseOverlay(0.12);
 
@@ -870,9 +1067,6 @@ function renderTeamReveal(f, el) {
     const team = f.data;
     const rank = f.rank; // 0 = 1st, 4 = 5th
     const hueOff = [0, 40, 80, 120, 160][rank] || 0;
-
-    // Clean initial shake — gentle pulse
-    if (el < 40) triggerShake(6 + (4 - rank) * 3);
 
     // Smooth cubic-out for a polished feel
     const tE = easeOutExpo(s(t * 2.2));
@@ -1064,8 +1258,6 @@ function renderScores(f, el) {
     const t = s(el / f.dur);
     const data = f.data;
 
-    if (el < 40) triggerShake(10);
-
     bg(gradY('#050005', '#0a0012'));
     noiseOverlay(0.06);
     ambientParticles(el, 40, '100,100,255');
@@ -1210,9 +1402,6 @@ function renderGoodbye(f, el) {
     const tE = easeOutExpo(s(t * 1.5));
     const fo = t > 0.8 ? easeInExpo((t - 0.8) * 5) : 0;
 
-    // Shake on entry
-    if (el < 50) triggerShake(25);
-
     bg(gradY('#050003', '#0a0008'));
     noiseOverlay(0.1);
     ambientParticles(el, 60, '236,19,19', 1.3);
@@ -1247,12 +1436,10 @@ function renderGoodbye(f, el) {
     ctx.restore();
 
     ctx.globalAlpha = tE * (1 - fo);
-    drawGlowText('Thank you for playing TomCTF!', SW / 2, SH / 2 + 70, 'space', 44, 'rgba(255,255,255,0.6)', 'rgba(255,255,255,0.15)', 8);
 
     font('mono', 28);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    ctx.fillText('See you next time.', SW / 2, SH / 2 + 118);
 
     // Flash
     if (t < 0.05) {
@@ -1287,7 +1474,7 @@ function renderCredits(f, el) {
             case 'volunteer': return 80;
             case 'quote':     return 160;
             case 'spacer':    return 100;
-            case 'final':     return 120;
+            case 'final':     return 400;
             default:          return 60;
         }
     }
@@ -1421,11 +1608,65 @@ function renderCredits(f, el) {
                 break;
             }
             case 'final': {
-                font('space', 22);
-                ctx.fillStyle = 'rgba(255,255,255,0.2)';
-                ctx.letterSpacing = '6px';
-                ctx.fillText(item.text, SW / 2, centerY);
+                // Calculate how far this item has scrolled toward center
+                const normPos = 1 - s(Math.abs(centerY - SH / 2) / (SH * 0.5));
+                const expandT = s(easeOutExpo(s((normPos - 0.3) / 0.7)));
+
+                // Copyright text
+                const copyrightScale = 1 + expandT * 1.8; // 1x -> 2.8x
+                ctx.save();
+                ctx.translate(SW / 2, centerY - 50 * expandT);
+                ctx.scale(copyrightScale, copyrightScale);
+                font('stranger', 32);
+                ctx.fillStyle = `rgba(236,19,19,${0.2 + expandT * 0.8})`;
+                ctx.shadowColor = `rgba(236,19,19,${expandT * 0.6})`;
+                ctx.shadowBlur = expandT * 30;
+                ctx.letterSpacing = `${6 + expandT * 8}px`;
+                ctx.fillText(item.text, 0, 0);
+                ctx.shadowBlur = 0;
                 ctx.letterSpacing = '0px';
+                ctx.restore();
+
+                // Expanding red bar
+                const barW = expandT * 300;
+                ctx.fillStyle = `rgba(236,19,19,${expandT * 0.5})`;
+                ctx.fillRect(SW / 2 - barW / 2, centerY + 10, barW, 2);
+
+                // "See you next time" — fades in after expansion
+                const seeT = s((expandT - 0.5) * 2);
+                if (seeT > 0) {
+                    const seeAlpha = easeOutExpo(seeT);
+                    const seeOffset = (1 - seeAlpha) * 30;
+                    ctx.save();
+                    ctx.globalAlpha = itemAlpha * seeAlpha;
+                    ctx.translate(SW / 2, centerY + 60 + seeOffset);
+
+                    // Main text
+                    font('cherry', 72);
+                    ctx.fillStyle = '#fff';
+                    ctx.shadowColor = 'rgba(236,19,19,0.5)';
+                    ctx.shadowBlur = 20;
+                    ctx.fillText('See You Next Time', 0, 0);
+                    ctx.shadowBlur = 0;
+
+                    // Decorative dots
+                    const dotSpread = seeAlpha * 120;
+                    ctx.fillStyle = 'rgba(236,19,19,0.6)';
+                    ctx.beginPath();
+                    ctx.arc(-dotSpread, 50, 3, 0, Math.PI * 2);
+                    ctx.arc(0, 50, 3, 0, Math.PI * 2);
+                    ctx.arc(dotSpread, 50, 3, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Small prompt
+                    font('mono', 16);
+                    ctx.fillStyle = `rgba(255,255,255,${seeAlpha * 0.25})`;
+                    ctx.letterSpacing = '4px';
+                    ctx.fillText('UNTIL WE HACK AGAIN', 0, 90);
+                    ctx.letterSpacing = '0px';
+
+                    ctx.restore();
+                }
                 break;
             }
             case 'spacer':
@@ -1459,12 +1700,9 @@ function render() {
     const elapsed = Date.now() - startTime;
     progressBar.style.width = (s(elapsed / totalDuration) * 100) + '%';
 
-    updateShake();
     setCanvasSize();
 
-    // Apply shake
     ctx.save();
-    ctx.translate(shakeX, shakeY);
 
     let active = null;
     for (const frame of timeline) {
@@ -1486,10 +1724,6 @@ function render() {
         noiseOverlay(0.06);
         ambientParticles(Date.now(), 80, '236,19,19');
         drawGlowText('GG', SW / 2, SH / 2 - 40, 'cherry', 200, '#ec1313', 'rgba(236,19,19,0.5)', 20);
-        font('space', 34);
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'rgba(255,255,255,0.35)';
-        ctx.fillText('Thank you for playing TomCTF!', SW / 2, SH / 2 + 55);
         scanLines(0.02);
         vignette(0.5);
         ctx.restore();
@@ -1513,7 +1747,7 @@ function render() {
         case 'credits':     renderCredits(active, fel); break;
     }
 
-    ctx.restore(); // shake
+    ctx.restore();
 }
 
 function startOutro() {
@@ -1525,27 +1759,10 @@ function startOutro() {
     loadOverlay.classList.add('hidden');
     generateNoiseTex();
 
-    // Start background music with fade-in
+    // Start background music (called from user click event)
+    bgMusic.volume = 0.8;
     bgMusic.currentTime = 0;
-    bgMusic.volume = 0;
-    bgMusic.play().catch(() => {
-        // Autoplay blocked — start on first user interaction
-        const resumeAudio = () => {
-            bgMusic.play().catch(() => {});
-            document.removeEventListener('click', resumeAudio);
-            document.removeEventListener('keydown', resumeAudio);
-        };
-        document.addEventListener('click', resumeAudio, { once: true });
-        document.addEventListener('keydown', resumeAudio, { once: true });
-    });
-    // Fade in over 3 seconds
-    const fadeInInterval = setInterval(() => {
-        if (bgMusic.volume < 0.8) {
-            bgMusic.volume = Math.min(0.8, bgMusic.volume + 0.02);
-        } else {
-            clearInterval(fadeInInterval);
-        }
-    }, 60);
+    bgMusic.play();
 
     render();
 }
@@ -1559,10 +1776,6 @@ function idleLoop() {
     noiseOverlay(0.06);
     ambientParticles(Date.now(), 80, '236,19,19');
     drawGlowText('GG', SW / 2, SH / 2 - 40, 'cherry', 200, '#ec1313', 'rgba(236,19,19,0.5)', 20);
-    font('space', 34);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.fillText('Thank you for playing TomCTF!', SW / 2, SH / 2 + 55);
     scanLines(0.02);
     vignette(0.5);
 }
@@ -1587,11 +1800,26 @@ function idleLoop() {
         return; // Stop here — page is disabled
     }
 
-    // 2. Load data
-    const ok = await loadData();
+    // 2. Load data + preload audio in parallel
+    const audioReady = new Promise(resolve => {
+        if (bgMusic.readyState >= 4) { resolve(); return; }
+        bgMusic.addEventListener('canplaythrough', resolve, { once: true });
+        bgMusic.addEventListener('error', () => resolve(), { once: true });
+        setTimeout(resolve, 8000);
+    });
+    bgMusic.load();
+    statusText.textContent = 'Loading…';
+    const [ok] = await Promise.all([loadData(), audioReady]);
 
-    // 3. Auto-start immediately
-    startOutro();
+    // 3. Hide loading spinner, show click gate
+    loadOverlay.classList.add('hidden');
+    clickGate.style.display = '';
+
+    // 4. Wait for user click (required by browsers for audio playback)
+    clickGate.addEventListener('click', () => {
+        clickGate.classList.add('hidden');
+        startOutro();
+    }, { once: true });
 })();
 </script>
 </body>
