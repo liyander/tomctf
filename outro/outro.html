@@ -160,6 +160,11 @@ let startTime = 0;
 let noiseTex = new Image();
 let shakeX = 0, shakeY = 0, shakeDecay = 0;
 
+/* ---- BACKGROUND MUSIC ---- */
+const bgMusic = new Audio('/outro_assets/outro.mp3');
+bgMusic.loop = true;
+bgMusic.volume = 0;
+
 /* ---- PRE-RENDERED EFFECT CACHES ---- */
 let scanLineCanvas = null;
 let vignetteCache = {};  // keyed by strength
@@ -1470,7 +1475,13 @@ function render() {
     }
 
     if (!active) {
-        // Done — final static screen
+        // Done — fade out music and show final static screen
+        if (bgMusic.volume > 0.01) {
+            bgMusic.volume = Math.max(0, bgMusic.volume - 0.008);
+        } else if (!bgMusic.paused) {
+            bgMusic.pause();
+        }
+        // Final static screen
         bg('#050003');
         noiseOverlay(0.06);
         ambientParticles(Date.now(), 80, '236,19,19');
@@ -1513,6 +1524,29 @@ function startOutro() {
     isRunning = true;
     loadOverlay.classList.add('hidden');
     generateNoiseTex();
+
+    // Start background music with fade-in
+    bgMusic.currentTime = 0;
+    bgMusic.volume = 0;
+    bgMusic.play().catch(() => {
+        // Autoplay blocked — start on first user interaction
+        const resumeAudio = () => {
+            bgMusic.play().catch(() => {});
+            document.removeEventListener('click', resumeAudio);
+            document.removeEventListener('keydown', resumeAudio);
+        };
+        document.addEventListener('click', resumeAudio, { once: true });
+        document.addEventListener('keydown', resumeAudio, { once: true });
+    });
+    // Fade in over 3 seconds
+    const fadeInInterval = setInterval(() => {
+        if (bgMusic.volume < 0.8) {
+            bgMusic.volume = Math.min(0.8, bgMusic.volume + 0.02);
+        } else {
+            clearInterval(fadeInInterval);
+        }
+    }, 60);
+
     render();
 }
 
