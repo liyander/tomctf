@@ -612,7 +612,7 @@ const CREDITS = [
     { type: 'heading', text: 'TOMCTF 2026' },
     { type: 'section', text: 'MAIN TEAM' },
     { type: 'dept', text: 'CSE (Cyber-Security) \u2013 A \u00B7 3rd Year' },
-    { type: 'person', name: 'Liyander Rishwanth L', handle: 'CyberGhost05', role: 'Lead Architect', contrib: 'Infrastructure \u2022 Website \u2022 Web Challenges \u2022 AI Exploitation' },
+    { type: 'person', name: 'Liyander Rishwanth L', handle: 'CyberGhost05', role: 'Lead Architect', contrib: 'Infrastructure \u2022 Website \u2022 Web Challenges \u2022 AI Exploitation \u2022 OSINT' },
     { type: 'person', name: 'Keerthi Raghavan K', handle: 'quixel200', role: 'Head Coordinator', contrib: 'Pwn \u2022 OSINT \u2022 Reverse Engineering' },
     { type: 'person', name: 'Harish Kumar N', handle: 'minato500', role: 'Challenge Creator', contrib: 'Web Challenges \u2022 OSINT' },
     { type: 'person', name: 'Christ Michael Jeniston S', handle: 'kira07', role: 'Challenge Creator', contrib: 'Cryptography' },
@@ -1277,9 +1277,9 @@ function renderScores(f, el) {
 
     if (data.length > 0) {
         const maxScore = data[0].score || 1;
-        const barMaxW = 750, barH = 70, gap = 32;
-        const ssx = (SW - barMaxW) / 2 - 130;
-        const ssy = SY + 180;
+        const barMaxW = 720, barH = 68, gap = 28;
+        const ssx = (SW - barMaxW) / 2 - 100;
+        const ssy = SY + 175;
 
         for (let i = 0; i < data.length; i++) {
             const delay = 0.06 + i * 0.07;
@@ -1289,39 +1289,83 @@ function renderScores(f, el) {
 
             ctx.globalAlpha = a;
 
-            // Team name — bigger
-            font('space', 30);
-            ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-            ctx.fillStyle = getMedalColor(i);
-            const nm = (data[i].name || `Team ${data[i].account_id}`);
-            ctx.fillText(nm.length > 14 ? nm.slice(0, 12) + '…' : nm, ssx - 18, y + barH / 2);
-
-            // Bar with gradient + glow
-            const g = ctx.createLinearGradient(ssx, 0, ssx + barW, 0);
-            g.addColorStop(0, `hsl(${350 - i * 12},80%,${32 - i * 4}%)`);
-            g.addColorStop(1, `hsl(${0 - i * 8},90%,${52 - i * 5}%)`);
-            ctx.save();
-            ctx.shadowColor = getMedalColor(i);
-            ctx.shadowBlur = 15;
-            ctx.fillStyle = g;
-            ctx.beginPath(); ctx.roundRect(ssx, y, Math.max(1, barW), barH, 12); ctx.fill();
-            ctx.restore();
-
-            // Glow haze
-            ctx.save();
-            ctx.filter = 'blur(15px)';
-            ctx.globalAlpha = a * 0.2;
-            ctx.fillStyle = getMedalColor(i);
-            ctx.fillRect(ssx, y, barW, barH);
-            ctx.filter = 'none';
-            ctx.restore();
-
-            // Score — bigger
+            // Rank badge
+            const rankX = ssx - 155;
+            const rankCY = y + barH / 2;
+            ctx.beginPath();
+            ctx.roundRect(rankX - 24, rankCY - 22, 48, 44, 10);
+            ctx.fillStyle = i < 3 ? getMedalColor(i) : 'rgba(255,255,255,0.08)';
+            ctx.globalAlpha = a * (i < 3 ? 0.18 : 0.5);
+            ctx.fill();
             ctx.globalAlpha = a;
-            font('orb', 40);
+            ctx.strokeStyle = i < 3 ? getMedalColor(i) : 'rgba(255,255,255,0.15)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            font('orb', 26);
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = i < 3 ? getMedalColor(i) : 'rgba(255,255,255,0.5)';
+            ctx.fillText(`${i + 1}`, rankX, rankCY);
+
+            // Team name
+            font('space', 28);
+            ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = i < 3 ? getMedalColor(i) : 'rgba(255,255,255,0.7)';
+            const nm = (data[i].name || `Team ${data[i].account_id}`);
+            ctx.fillText(nm.length > 14 ? nm.slice(0, 12) + '…' : nm, ssx - 18, rankCY);
+
+            // Bar track (subtle background track)
+            ctx.beginPath();
+            ctx.roundRect(ssx, y, barMaxW, barH, 12);
+            ctx.fillStyle = 'rgba(255,255,255,0.03)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Bar fill with gradient + glow
+            if (barW > 2) {
+                const g = ctx.createLinearGradient(ssx, 0, ssx + barW, 0);
+                g.addColorStop(0, `hsl(${350 - i * 12},80%,${32 - i * 4}%)`);
+                g.addColorStop(1, `hsl(${0 - i * 8},90%,${52 - i * 5}%)`);
+                ctx.save();
+                ctx.shadowColor = getMedalColor(i);
+                ctx.shadowBlur = 12;
+                ctx.fillStyle = g;
+                ctx.beginPath(); ctx.roundRect(ssx, y, Math.max(1, barW), barH, 12); ctx.fill();
+                ctx.restore();
+
+                // Inner highlight stripe
+                ctx.save();
+                ctx.beginPath();
+                ctx.roundRect(ssx, y, barW, barH, 12);
+                ctx.clip();
+                const hlGrad = ctx.createLinearGradient(ssx, y, ssx, y + barH);
+                hlGrad.addColorStop(0, 'rgba(255,255,255,0.12)');
+                hlGrad.addColorStop(0.5, 'rgba(255,255,255,0)');
+                hlGrad.addColorStop(1, 'rgba(0,0,0,0.15)');
+                ctx.fillStyle = hlGrad;
+                ctx.fillRect(ssx, y, barW, barH);
+                ctx.restore();
+            }
+
+            // Score value with background pill
+            ctx.globalAlpha = a;
+            const scoreStr = `${data[i].score}`;
+            font('orb', 34);
+            const scoreW = ctx.measureText(scoreStr).width + 28;
+            const pillX = ssx + barW + 16;
+            ctx.beginPath();
+            ctx.roundRect(pillX, rankCY - 20, scoreW, 40, 8);
+            ctx.fillStyle = 'rgba(255,255,255,0.05)';
+            ctx.fill();
             ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
             ctx.fillStyle = '#fff';
-            ctx.fillText(`${data[i].score}`, ssx + barW + 22, y + barH / 2);
+            ctx.fillText(scoreStr, pillX + 14, rankCY);
+
+            // "pts" micro label
+            font('mono', 14);
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.fillText('pts', pillX + scoreW + 4, rankCY + 2);
         }
     }
     scanLines(0.02);
