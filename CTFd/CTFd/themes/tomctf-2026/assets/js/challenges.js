@@ -239,8 +239,11 @@ Alpine.data("Challenge", () => ({
       this.attempts += 1;
     }
 
-    // Dispatch load-challenges event to call loadChallenges in the ChallengeBoard
-    this.$dispatch("load-challenges");
+    // Refresh the ChallengeBoard challenges list after submission
+    window.dispatchEvent(new CustomEvent("load-challenges"));
+    if (typeof window.__refreshChallenges === "function") {
+      window.__refreshChallenges();
+    }
   },
 
   async submitRating() {
@@ -266,6 +269,11 @@ Alpine.data("ChallengeBoard", () => ({
   async init() {
     this.challenges = await CTFd.pages.challenges.getChallenges();
     this.loaded = true;
+
+    // Expose a global function so the Challenge component can directly refresh data
+    window.__refreshChallenges = async () => {
+      this.challenges = await CTFd.pages.challenges.getChallenges();
+    };
 
     // Refresh challenges whenever the challenge modal closes (e.g. after a solve)
     const modalEl = document.getElementById("challenge-window");
