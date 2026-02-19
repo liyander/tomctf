@@ -373,20 +373,58 @@ def intro_status():
     })
 
 
-@views.route("/api/outro_status")
-def outro_status():
-    """Public API endpoint for the outro page to check if it's enabled."""
-    from flask import jsonify
+def _check_outro_timer():
+    """
+    Evaluate the outro timer. If the timer has expired:
+      - Set outro_replace_index to '1' (so index page shows outro)
+      - If auto_end_ctf is enabled, end the CTF by setting the 'end' config
+    Returns a dict with the current outro state.
+    """
+    from datetime import datetime as dt
+    import time as _time
+
     outro_enabled = get_config('outro_enabled') or 'disabled'
     outro_access = get_config('outro_access') or 'authenticated'
     outro_timer_enabled = get_config('outro_timer_enabled') or '0'
     outro_timer_end = get_config('outro_timer_end') or ''
-    return jsonify({
+    outro_replace_index = get_config('outro_replace_index') or '0'
+    outro_auto_end_ctf = get_config('outro_auto_end_ctf') or '0'
+    timer_triggered = False
+
+    if outro_enabled == 'enabled' and outro_timer_enabled == '1' and outro_timer_end:
+        try:
+            end_time = dt.fromisoformat(outro_timer_end)
+            if dt.now() >= end_time:
+                timer_triggered = True
+                # Auto-enable replace index when timer fires
+                if outro_replace_index != '1':
+                    set_config('outro_replace_index', '1')
+                    outro_replace_index = '1'
+                # Optionally end the CTF
+                if outro_auto_end_ctf == '1':
+                    current_end = get_config('end')
+                    if not current_end or int(current_end) == 0 or int(current_end) > int(_time.time()):
+                        set_config('end', str(int(_time.time())))
+        except (ValueError, TypeError):
+            pass
+
+    return {
         'enabled': outro_enabled == 'enabled',
         'access': outro_access,
         'timer_enabled': outro_timer_enabled == '1',
-        'timer_end': outro_timer_end
-    })
+        'timer_end': outro_timer_end,
+        'timer_triggered': timer_triggered,
+        'replace_index': outro_replace_index == '1',
+        'redirect_to_outro': outro_enabled == 'enabled' and (timer_triggered or outro_replace_index == '1'),
+    }
+
+
+@views.route("/api/outro_status")
+def outro_status():
+    """Public API endpoint for the outro page to check status and trigger timer logic."""
+    from flask import jsonify
+    status = _check_outro_timer()
+    return jsonify(status)
 
 
 @views.route("/outro")
@@ -454,35 +492,8 @@ def static_html(route):
 
     # Check if outro should replace index page
     if route == "index" and not request.args.get('no_outro'):
-        outro_enabled = get_config('outro_enabled') or 'disabled'
-        outro_replace_index = get_config('outro_replace_index') or '0'
-
-        # Timer-based auto-activation
-        outro_timer_enabled = get_config('outro_timer_enabled') or '0'
-        timer_triggered = False
-        if outro_enabled == 'enabled' and outro_timer_enabled == '1':
-            outro_timer_end = get_config('outro_timer_end') or ''
-            if outro_timer_end:
-                from datetime import datetime as dt
-                try:
-                    end_time = dt.fromisoformat(outro_timer_end)
-                    if dt.now() >= end_time:
-                        timer_triggered = True
-                        # Auto-enable replace index when timer fires
-                        if outro_replace_index != '1':
-                            set_config('outro_replace_index', '1')
-                            outro_replace_index = '1'
-                        # Optionally end the CTF
-                        outro_auto_end_ctf = get_config('outro_auto_end_ctf') or '0'
-                        if outro_auto_end_ctf == '1':
-                            import time as _time
-                            current_end = get_config('end')
-                            if not current_end or int(current_end) == 0 or int(current_end) > int(_time.time()):
-                                set_config('end', str(int(_time.time())))
-                except (ValueError, TypeError):
-                    pass
-
-        if outro_enabled == 'enabled' and outro_replace_index == '1':
+        outro_state = _check_outro_timer()
+        if outro_state['enabled'] and outro_state['replace_index']:
             outro_file = get_config('outro_file') or 'outro.html'
             outro_dir = os.path.abspath(os.path.join(app.root_path, '../../outro'))
             return send_from_directory(outro_dir, outro_file)

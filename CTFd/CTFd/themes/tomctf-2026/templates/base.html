@@ -290,6 +290,46 @@ if(document.fonts&&document.fonts.load){document.fonts.load('1em "Stranger Thing
 })();
 </script>
 
+<script>
+/* ============================================================
+   AUTO-REDIRECT TO OUTRO — Polls /api/outro_status every 10s.
+   When the outro timer fires (or replace_index is set),
+   non-admin users are redirected to /outro automatically.
+   ============================================================ */
+(function(){
+"use strict";
+// Don't run on the outro page itself, or on admin pages
+if(window.location.pathname==='/outro' || window.location.pathname.startsWith('/admin')){return;}
+// Don't redirect if user is an admin (userId of admins can be checked, but
+// the simplest check: if we're on an admin page or init says admin)
+var POLL_INTERVAL=10000; // 10 seconds
+var _stopped=false;
+
+function checkOutroRedirect(){
+  if(_stopped)return;
+  fetch('/api/outro_status',{cache:'no-store'})
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if(data.redirect_to_outro===true){
+        _stopped=true;
+        // Check access: if 'authenticated', user must be logged in
+        // If 'admins', skip redirect for non-admins (they can't access)
+        if(data.access==='admins'){return;} // only admins can view, don't redirect regular users
+        if(data.access==='authenticated' && !(window.init && window.init.userId)){return;} // not logged in
+        window.location.href='/outro';
+      }
+    })
+    .catch(function(){}) // silently ignore errors
+    .finally(function(){
+      if(!_stopped){setTimeout(checkOutroRedirect,POLL_INTERVAL);}
+    });
+}
+
+// Start polling after a short delay
+setTimeout(checkOutroRedirect,3000);
+})();
+</script>
+
 {{ Configs.theme_footer }}
 </body>
 </html>
