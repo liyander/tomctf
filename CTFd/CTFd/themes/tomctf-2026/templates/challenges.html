@@ -223,7 +223,7 @@
                       <h4 class="mb-1 fw-bold" style="font-family: 'Space Grotesk', sans-serif; color: #fff;" x-text="category"></h4>
                       <small style="color: rgba(255,255,255,0.4); font-family: 'Space Grotesk', sans-serif;">
                         <span x-text="getSortedChallenges(category).length"></span> {% trans %}challenges{% endtrans %}
-                        <span x-text="getSortedChallenges(category).filter(c => c.solved_by_me).length"></span> {% trans %}solved{% endtrans %}
+                        · <span x-text="getSortedChallenges(category).filter(c => c.solved_by_me).length"></span> {% trans %}solved{% endtrans %}
                       </small>
                     </div>
                   </div>
