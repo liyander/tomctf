@@ -427,6 +427,110 @@ def outro_status():
     return jsonify(status)
 
 
+@views.route("/api/outro_data")
+def outro_data():
+    """
+    Dedicated endpoint that returns challenges, solves, and scoreboard data
+    for the outro page. This bypasses @during_ctf_time_only so that
+    non-admin users can still see data after the CTF has ended.
+    """
+    from flask import jsonify
+    from CTFd.models import Challenges as ChallengesModel
+    from CTFd.utils.challenges import get_solves_for_challenge_id
+    from CTFd.utils.modes import generate_account_url, get_mode_as_word, TEAMS_MODE
+    from CTFd.utils.scores import get_standings, get_user_standings
+    from collections import defaultdict
+    from sqlalchemy import select
+
+    # Only serve data when outro is enabled
+    outro_enabled = str(get_config('outro_enabled') or 'disabled')
+    if outro_enabled != 'enabled':
+        abort(403)
+
+    # Respect outro access control
+    outro_access = str(get_config('outro_access') or 'authenticated')
+    if outro_access == 'authenticated' and not authed():
+        abort(403)
+    elif outro_access == 'admins' and not is_admin():
+        abort(403)
+
+    # --- Challenges ---
+    challs = ChallengesModel.query.filter(
+        ChallengesModel.state != 'hidden',
+        ChallengesModel.state != 'locked',
+    ).order_by(ChallengesModel.value, ChallengesModel.id).all()
+
+    challenges_list = []
+    for c in challs:
+        challenges_list.append({
+            'id': c.id,
+            'name': c.name,
+            'value': c.value,
+            'category': c.category,
+            'type': c.type,
+        })
+
+    # --- Solves per challenge ---
+    solves_map = {}
+    for c in challs:
+        solves_map[c.id] = get_solves_for_challenge_id(c.id)
+
+    # --- Scoreboard ---
+    standings = get_standings()
+    mode = get_config("user_mode")
+    account_type = get_mode_as_word()
+
+    scoreboard = []
+    if mode == TEAMS_MODE:
+        r = db.session.execute(
+            select(
+                [
+                    Users.id,
+                    Users.name,
+                    Users.oauth_id,
+                    Users.team_id,
+                    Users.hidden,
+                    Users.banned,
+                ]
+            ).where(Users.team_id.isnot(None))
+        )
+        users_list = r.fetchall()
+        membership = defaultdict(dict)
+        for u in users_list:
+            if u.hidden is False and u.banned is False:
+                membership[u.team_id][u.id] = {
+                    "id": u.id,
+                    "oauth_id": u.oauth_id,
+                    "name": u.name,
+                    "score": 0,
+                }
+        user_standings = get_user_standings()
+        for u in user_standings:
+            if u.team_id in membership and u.user_id in membership[u.team_id]:
+                membership[u.team_id][u.user_id]["score"] = int(u.score)
+
+    for i, x in enumerate(standings):
+        entry = {
+            "pos": i + 1,
+            "account_id": x.account_id,
+            "account_url": generate_account_url(account_id=x.account_id),
+            "account_type": account_type,
+            "oauth_id": x.oauth_id,
+            "name": x.name,
+            "score": int(x.score),
+        }
+        if mode == TEAMS_MODE:
+            entry["members"] = list(membership.get(x.account_id, {}).values())
+        scoreboard.append(entry)
+
+    return jsonify({
+        'success': True,
+        'challenges': challenges_list,
+        'solves': solves_map,
+        'scoreboard': scoreboard,
+    })
+
+
 @views.route("/outro")
 def outro_page():
     """Serve the outro page if enabled."""

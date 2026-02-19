@@ -643,30 +643,49 @@ const CREDITS = [
 async function loadData() {
     statusText.textContent = 'Fetching challenges…';
     try {
-        let challResp = await fetch('/api/v1/challenges?view=admin', { credentials: 'same-origin' });
-        if (!challResp.ok) challResp = await fetch('/api/v1/challenges', { credentials: 'same-origin' });
-        challenges = (await challResp.json()).data || [];
-
-        statusText.textContent = `Loading solves (${challenges.length} challenges)…`;
-        solves = [];
-        for (const c of challenges) {
-            try {
-                const sr = await fetch(`/api/v1/challenges/${c.id}/solves`, { credentials: 'same-origin' });
-                const sd = await sr.json();
-                if (sd.data) {
-                    for (const sv of sd.data) {
-                        solves.push({
-                            cid: c.id, cname: c.name, ccat: c.category, cval: c.value,
-                            aid: sv.account_id, aname: sv.name, date: sv.date,
-                        });
-                    }
+        // Use dedicated outro endpoint that works even after CTF ends
+        let outroResp = await fetch('/api/outro_data', { credentials: 'same-origin' });
+        if (outroResp.ok) {
+            const outroData = await outroResp.json();
+            challenges = outroData.challenges || [];
+            solves = [];
+            for (const c of challenges) {
+                const chSolves = outroData.solves[c.id] || [];
+                for (const sv of chSolves) {
+                    solves.push({
+                        cid: c.id, cname: c.name, ccat: c.category, cval: c.value,
+                        aid: sv.account_id, aname: sv.name, date: sv.date,
+                    });
                 }
-            } catch (e) { console.warn(`Solve fetch fail: ${c.name}`, e); }
-        }
+            }
+            teams = outroData.scoreboard || [];
+        } else {
+            // Fallback to individual API calls (works for admins)
+            let challResp = await fetch('/api/v1/challenges?view=admin', { credentials: 'same-origin' });
+            if (!challResp.ok) challResp = await fetch('/api/v1/challenges', { credentials: 'same-origin' });
+            challenges = (await challResp.json()).data || [];
 
-        statusText.textContent = 'Fetching scoreboard…';
-        const stResp = await fetch('/api/v1/scoreboard', { credentials: 'same-origin' });
-        teams = (await stResp.json()).data || [];
+            statusText.textContent = `Loading solves (${challenges.length} challenges)…`;
+            solves = [];
+            for (const c of challenges) {
+                try {
+                    const sr = await fetch(`/api/v1/challenges/${c.id}/solves`, { credentials: 'same-origin' });
+                    const sd = await sr.json();
+                    if (sd.data) {
+                        for (const sv of sd.data) {
+                            solves.push({
+                                cid: c.id, cname: c.name, ccat: c.category, cval: c.value,
+                                aid: sv.account_id, aname: sv.name, date: sv.date,
+                            });
+                        }
+                    }
+                } catch (e) { console.warn(`Solve fetch fail: ${c.name}`, e); }
+            }
+
+            statusText.textContent = 'Fetching scoreboard…';
+            const stResp = await fetch('/api/v1/scoreboard', { credentials: 'same-origin' });
+            teams = (await stResp.json()).data || [];
+        }
 
         statusText.textContent = 'Launching…';
         return true;
