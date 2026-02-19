@@ -267,6 +267,14 @@ Alpine.data("ChallengeBoard", () => ({
     this.challenges = await CTFd.pages.challenges.getChallenges();
     this.loaded = true;
 
+    // Refresh challenges whenever the challenge modal closes (e.g. after a solve)
+    const modalEl = document.getElementById("challenge-window");
+    if (modalEl) {
+      modalEl.addEventListener("hidden.bs.modal", async () => {
+        this.challenges = await CTFd.pages.challenges.getChallenges();
+      });
+    }
+
     if (window.location.hash) {
       let chalHash = decodeURIComponent(window.location.hash.substring(1));
       let idx = chalHash.lastIndexOf("-");
