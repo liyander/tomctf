@@ -270,17 +270,30 @@ Alpine.data("ChallengeBoard", () => ({
     this.challenges = await CTFd.pages.challenges.getChallenges();
     this.loaded = true;
 
-    // Expose a global function so the Challenge component can directly refresh data
-    window.__refreshChallenges = async () => {
-      this.challenges = await CTFd.pages.challenges.getChallenges();
+    // Cache-busting reload: fetch with no-cache to bypass browser cache
+    const reloadChallenges = async () => {
+      const resp = await CTFd.fetch("/api/v1/challenges", {
+        method: "GET",
+        headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" },
+      });
+      const data = await resp.json();
+      if (data.success && data.data) {
+        this.challenges = data.data;
+      }
     };
 
-    // Refresh challenges whenever the challenge modal closes (e.g. after a solve)
+    // Expose globally so the Challenge component can call it directly
+    window.__refreshChallenges = reloadChallenges;
+
+    // Watch Alpine store for challenge data changes (triggers on modal open/submit)
+    this.$watch("$store.challenge.data", async () => {
+      await reloadChallenges();
+    });
+
+    // Also refresh when the challenge modal closes
     const modalEl = document.getElementById("challenge-window");
     if (modalEl) {
-      modalEl.addEventListener("hidden.bs.modal", async () => {
-        this.challenges = await CTFd.pages.challenges.getChallenges();
-      });
+      modalEl.addEventListener("hidden.bs.modal", () => reloadChallenges());
     }
 
     if (window.location.hash) {
@@ -343,7 +356,19 @@ Alpine.data("ChallengeBoard", () => ({
   },
 
   async loadChallenges() {
-    this.challenges = await CTFd.pages.challenges.getChallenges();
+    // Use cache-busting fetch to ensure fresh data after solves
+    try {
+      const resp = await CTFd.fetch("/api/v1/challenges", {
+        method: "GET",
+        headers: { "Cache-Control": "no-cache", "Pragma": "no-cache" },
+      });
+      const data = await resp.json();
+      if (data.success && data.data) {
+        this.challenges = data.data;
+      }
+    } catch (e) {
+      this.challenges = await CTFd.pages.challenges.getChallenges();
+    }
   },
 
   async loadChallenge(challengeId) {
