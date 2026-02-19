@@ -383,12 +383,12 @@ def _check_outro_timer():
     from datetime import datetime as dt
     import time as _time
 
-    outro_enabled = get_config('outro_enabled') or 'disabled'
-    outro_access = get_config('outro_access') or 'authenticated'
-    outro_timer_enabled = get_config('outro_timer_enabled') or '0'
-    outro_timer_end = get_config('outro_timer_end') or ''
-    outro_replace_index = get_config('outro_replace_index') or '0'
-    outro_auto_end_ctf = get_config('outro_auto_end_ctf') or '0'
+    outro_enabled = str(get_config('outro_enabled') or 'disabled')
+    outro_access = str(get_config('outro_access') or 'authenticated')
+    outro_timer_enabled = str(get_config('outro_timer_enabled') or '0')
+    outro_timer_end = str(get_config('outro_timer_end') or '')
+    outro_replace_index = str(get_config('outro_replace_index') or '0')
+    outro_auto_end_ctf = str(get_config('outro_auto_end_ctf') or '0')
     timer_triggered = False
 
     if outro_enabled == 'enabled' and outro_timer_enabled == '1' and outro_timer_end:
@@ -430,11 +430,11 @@ def outro_status():
 @views.route("/outro")
 def outro_page():
     """Serve the outro page if enabled."""
-    outro_enabled = get_config('outro_enabled') or 'disabled'
+    outro_enabled = str(get_config('outro_enabled') or 'disabled')
     if outro_enabled != 'enabled':
         abort(404)
 
-    outro_access = get_config('outro_access') or 'authenticated'
+    outro_access = str(get_config('outro_access') or 'authenticated')
     if outro_access == 'authenticated' and not authed():
         return redirect(url_for("auth.login", next=request.full_path))
     elif outro_access == 'admins':

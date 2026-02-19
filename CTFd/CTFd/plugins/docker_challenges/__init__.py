@@ -273,6 +273,7 @@ def define_outro_admin(app):
             set_config('outro_timer_enabled', outro_timer_enabled)
             set_config('outro_timer_end', outro_timer_end)
             set_config('outro_auto_end_ctf', outro_auto_end_ctf)
+
             success = True
 
         # List HTML files from outro/ folder
@@ -285,13 +286,13 @@ def define_outro_admin(app):
         outro_files.sort()
 
         return render_template('outro_config.html',
-                               outro_enabled=get_config('outro_enabled') or 'disabled',
-                               outro_file=get_config('outro_file') or 'outro.html',
-                               outro_access=get_config('outro_access') or 'authenticated',
-                               outro_replace_index=get_config('outro_replace_index') or '0',
-                               outro_timer_enabled=get_config('outro_timer_enabled') or '0',
-                               outro_timer_end=get_config('outro_timer_end') or '',
-                               outro_auto_end_ctf=get_config('outro_auto_end_ctf') or '0',
+                               outro_enabled=str(get_config('outro_enabled') or 'disabled'),
+                               outro_file=str(get_config('outro_file') or 'outro.html'),
+                               outro_access=str(get_config('outro_access') or 'authenticated'),
+                               outro_replace_index=str(get_config('outro_replace_index') or '0'),
+                               outro_timer_enabled=str(get_config('outro_timer_enabled') or '0'),
+                               outro_timer_end=str(get_config('outro_timer_end') or ''),
+                               outro_auto_end_ctf=str(get_config('outro_auto_end_ctf') or '0'),
                                outro_files=outro_files,
                                errors=errors,
                                success=success,
