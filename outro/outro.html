@@ -630,11 +630,13 @@ const CREDITS = [
     { type: 'person', name: 'Monica M', role: 'Challenge Creator', contrib: 'Forensics \u2022 OSINT' },
     { type: 'person', name: 'Supriya A', role: 'Challenge Creator', contrib: 'Forensics \u2022 GeoOSINT' },
     { type: 'person', name: 'Shreelinganathan', role: 'Promotion', contrib: 'Promotion \u2022 Emotional Support' },
-    { type: 'section', text: 'VOLUNTEERS' },
     { type: 'dept', text: 'CSE (Cyber-Security) \u2013 A \u00B7 1st Year' },
-    { type: 'volunteer', names: ['Janikaa S', 'Abhinesh John V'] },
+    { type: 'person', name: 'Janikaa S', role: 'Volunteer' },
+    { type: 'person', name: 'Abhinesh John V', role: 'Volunteer' },
     { type: 'dept', text: 'CSE (Cyber-Security) \u2013 B \u00B7 1st Year' },
-    { type: 'volunteer', names: ['Rasiha K', 'Sree Murgan N M', 'Vishal R'] },
+    { type: 'person', name: 'Rasiha K', role: 'Volunteer' },
+    { type: 'person', name: 'Sree Murgan N M', role: 'Volunteer' },
+    { type: 'person', name: 'Vishal R', role: 'Volunteer' },
     { type: 'spacer' },
     { type: 'quote', text: '"Behind every great CTF, there\'s a team that didn\'t sleep."', attr: '\u2014 The War Room' },
     { type: 'spacer' },
@@ -1694,9 +1696,11 @@ function renderCredits(f, el) {
                 ctx.letterSpacing = '0px';
 
                 // Contributions
-                font('space', 18);
-                ctx.fillStyle = 'rgba(255,255,255,0.35)';
-                ctx.fillText(item.contrib, SW / 2, centerY + 56);
+                if (item.contrib) {
+                    font('space', 18);
+                    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+                    ctx.fillText(item.contrib, SW / 2, centerY + 56);
+                }
                 break;
             }
             case 'volunteer': {
