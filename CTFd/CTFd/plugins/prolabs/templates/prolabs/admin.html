@@ -1,0 +1,401 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<style>
+  .prolabs-admin .lab-card {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  }
+
+  .prolabs-admin .machine-table {
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+
+  .prolabs-admin .machine-table thead th {
+    background: #f8fafc;
+    color: #2f3742;
+    font-size: 0.95rem;
+    vertical-align: middle;
+    border-color: #d8dee8;
+  }
+
+  .prolabs-admin .machine-table td {
+    vertical-align: middle;
+    background: #ffffff;
+    border-color: #d8dee8;
+  }
+
+  .prolabs-admin .machine-table .form-control,
+  .prolabs-admin .machine-table .form-select {
+    border-radius: 0.35rem;
+    border-color: #c8d1de;
+    color: #1f2937;
+  }
+
+  .prolabs-admin .remove-machine-row {
+    min-width: 2.1rem;
+    font-weight: 700;
+  }
+</style>
+
+<div class="prolabs-admin">
+<div class="jumbotron">
+  <div class="container">
+    <h1>Pro Red Team Labs</h1>
+    <p>Manage list entries shown on the public Pro Red Team Labs pages.</p>
+    {% if request.args.get('saved') %}
+      <div class="alert alert-success mt-3">Pro labs updated successfully.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="container pb-5">
+  <form method="POST" id="prolabs-form">
+    <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+
+    <div class="mb-3">
+      <button type="button" class="btn btn-outline-primary" id="add-lab">Add Lab</button>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+
+    <div id="labs-wrapper" class="d-flex flex-column" style="gap: 1rem;">
+      {% for lab in labs %}
+      <div class="card lab-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>Lab {{ loop.index }}</strong>
+          <button type="button" class="btn btn-sm btn-outline-danger remove-lab">Remove</button>
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group col-md-4">
+              <label>Slug</label>
+              <input class="form-control" name="slug[]" value="{{ lab.slug }}" placeholder="mythical">
+            </div>
+            <div class="form-group col-md-4">
+              <label>Title</label>
+              <input class="form-control" name="title[]" value="{{ lab.title }}" required>
+            </div>
+            <div class="form-group col-md-4">
+              <label>Category</label>
+              <input class="form-control" name="category[]" value="{{ lab.category }}" placeholder="Pro Labs">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-md-2">
+              <label>Difficulty</label>
+              <input class="form-control" name="difficulty[]" value="{{ lab.difficulty }}" placeholder="Advanced">
+            </div>
+            <div class="form-group col-md-2">
+              <label>Required Level (Min Score)</label>
+              <input type="number" min="0" step="1" class="form-control" name="required_level[]" value="{{ lab.required_level|default(0) }}" placeholder="0">
+            </div>
+            <div class="form-group col-md-2">
+              <label>Entry IP</label>
+              <input class="form-control" name="entry_ip[]" value="{{ lab.entry_ip }}" placeholder="10.10.10.10">
+            </div>
+            <div class="form-group col-md-2">
+              <label>Creator</label>
+              <input class="form-control" name="creator[]" value="{{ lab.creator }}" placeholder="xct">
+            </div>
+            <div class="form-group col-md-2">
+              <label>Free Lab</label>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" name="is_free[]" value="{{ loop.index0 }}" {% if lab.is_free %}checked{% endif %}>
+                <label class="form-check-label">Free Access</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label>Cover Image URL</label>
+              <input class="form-control" name="cover_image[]" value="{{ lab.cover_image }}" placeholder="https://...">
+            </div>
+            <div class="form-group col-md-6">
+              <label>Logo Image URL</label>
+              <input class="form-control" name="logo_image[]" value="{{ lab.logo_image }}" placeholder="https://...">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Introduction <small class="text-muted">(supports markdown)</small></label>
+            <textarea class="form-control markdown" rows="4" name="introduction[]" placeholder="Lab intro (Markdown supported)">{{ lab.introduction }}</textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Pro Lab Info <small class="text-muted">(supports markdown)</small></label>
+            <textarea class="form-control markdown" rows="4" name="pro_lab_info[]" placeholder="Additional Pro Lab information">{{ lab.pro_lab_info }}</textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Changelog <small class="text-muted">(supports markdown)</small></label>
+            <textarea class="form-control markdown" rows="6" name="changelog[]" placeholder="Changes made to this Pro Lab">{{ lab.changelog }}</textarea>
+          </div>
+
+          <hr>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0">Machines and Flags</h5>
+            <button type="button" class="btn btn-sm btn-outline-primary add-machine-row">Add Machine</button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered mb-0 machine-table">
+              <thead>
+                <tr>
+                  <th style="min-width: 180px;">Machine Name</th>
+                  <th style="min-width: 120px;">OS</th>
+                  <th style="min-width: 220px;">User Flag</th>
+                  <th style="min-width: 120px;">User Points</th>
+                  <th style="min-width: 220px;">Admin Flag</th>
+                  <th style="min-width: 120px;">Admin Points</th>
+                  <th style="width: 70px;">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for machine in lab.machines %}
+                <tr class="machine-row">
+                  <td><input type="text" class="form-control form-control-sm machine-name" value="{{ machine.name }}" placeholder="MYTHICAL-DC01"></td>
+                  <td>
+                    <select class="form-select form-select-sm machine-os">
+                      <option value="Windows" {% if machine.os == 'Windows' %}selected{% endif %}>Windows</option>
+                      <option value="Linux" {% if machine.os == 'Linux' %}selected{% endif %}>Linux</option>
+                      <option value="FreeBSD" {% if machine.os == 'FreeBSD' %}selected{% endif %}>FreeBSD</option>
+                    </select>
+                  </td>
+                  <td><input type="text" class="form-control form-control-sm machine-user-flag" value="{{ machine.flags.user.value }}" placeholder="HTB{...}"></td>
+                  <td><input type="number" min="0" step="1" class="form-control form-control-sm machine-user-points" value="{{ machine.flags.user.points|default(0) }}" placeholder="0"></td>
+                  <td><input type="text" class="form-control form-control-sm machine-admin-flag" value="{{ machine.flags.admin.value }}" placeholder="HTB{...}"></td>
+                  <td><input type="number" min="0" step="1" class="form-control form-control-sm machine-admin-points" value="{{ machine.flags.admin.points|default(0) }}" placeholder="0"></td>
+                  <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-machine-row">X</button></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <input type="hidden" class="machines-json" name="machines[]" value='{{ lab.machines | tojson }}'>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </form>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (() => {
+    const wrapper = document.getElementById("labs-wrapper");
+    const addButton = document.getElementById("add-lab");
+    const form = document.getElementById("prolabs-form");
+
+    const machineRowTemplate = () => `
+      <tr class="machine-row">
+        <td><input type="text" class="form-control form-control-sm machine-name" placeholder="MYTHICAL-DC01"></td>
+        <td>
+          <select class="form-select form-select-sm machine-os">
+            <option value="Windows">Windows</option>
+            <option value="Linux" selected>Linux</option>
+            <option value="FreeBSD">FreeBSD</option>
+          </select>
+        </td>
+        <td><input type="text" class="form-control form-control-sm machine-user-flag" placeholder="HTB{...}"></td>
+        <td><input type="number" min="0" step="1" class="form-control form-control-sm machine-user-points" placeholder="0"></td>
+        <td><input type="text" class="form-control form-control-sm machine-admin-flag" placeholder="HTB{...}"></td>
+        <td><input type="number" min="0" step="1" class="form-control form-control-sm machine-admin-points" placeholder="0"></td>
+        <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-machine-row">X</button></td>
+      </tr>
+    `;
+
+    const createLabCard = () => {
+      const card = document.createElement("div");
+      card.className = "card lab-card";
+      card.innerHTML = `
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>New Lab</strong>
+          <button type="button" class="btn btn-sm btn-outline-danger remove-lab">Remove</button>
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group col-md-4">
+              <label>Slug</label>
+              <input class="form-control" name="slug[]" placeholder="mythical">
+            </div>
+            <div class="form-group col-md-4">
+              <label>Title</label>
+              <input class="form-control" name="title[]" required>
+            </div>
+            <div class="form-group col-md-4">
+              <label>Category</label>
+              <input class="form-control" name="category[]" placeholder="Pro Labs">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-md-2">
+              <label>Difficulty</label>
+              <input class="form-control" name="difficulty[]" placeholder="Advanced">
+            </div>
+            <div class="form-group col-md-2">
+              <label>Required Level (Min Score)</label>
+              <input type="number" min="0" step="1" class="form-control" name="required_level[]" placeholder="0">
+            </div>
+            <div class="form-group col-md-2">
+              <label>Entry IP</label>
+              <input class="form-control" name="entry_ip[]" placeholder="10.10.10.10">
+            </div>
+            <div class="form-group col-md-2">
+              <label>Creator</label>
+              <input class="form-control" name="creator[]" placeholder="xct">
+            </div>
+            <div class="form-group col-md-2">
+              <label>Free Lab</label>
+              <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" name="is_free[]" value="0">
+                <label class="form-check-label">Free Access</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label>Cover Image URL</label>
+              <input class="form-control" name="cover_image[]" placeholder="https://...">
+            </div>
+            <div class="form-group col-md-6">
+              <label>Logo Image URL</label>
+              <input class="form-control" name="logo_image[]" placeholder="https://...">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Introduction <small class="text-muted">(supports markdown)</small></label>
+            <textarea class="form-control" rows="3" name="introduction[]"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Pro Lab Info</label>
+            <textarea class="form-control markdown" rows="3" name="pro_lab_info[]"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Changelog</label>
+            <textarea class="form-control markdown" rows="5" name="changelog[]"></textarea>
+          </div>
+
+          <hr>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0">Machines and Flags</h5>
+            <button type="button" class="btn btn-sm btn-outline-primary add-machine-row">Add Machine</button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered mb-0 machine-table">
+              <thead>
+                <tr>
+                  <th style="min-width: 180px; min-height: 45px; vertical-align: middle;">Machine Name</th>
+                  <th style="min-width: 120px; min-height: 45px; vertical-align: middle;">OS</th>
+                  <th style="min-width: 220px; min-height: 45px; vertical-align: middle;">User Flag</th>
+                  <th style="min-width: 120px; min-height: 45px; vertical-align: middle;">User Points</th>
+                  <th style="min-width: 220px; min-height: 45px; vertical-align: middle;">Admin Flag</th>
+                  <th style="min-width: 120px; min-height: 45px; vertical-align: middle;">Admin Points</th>
+                  <th style="width: 70px; min-height: 45px; vertical-align: middle;">Action</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <input type="hidden" class="machines-json" name="machines[]" value="[]">
+        </div>
+      `;
+      card.querySelector(".machine-table tbody").insertAdjacentHTML("beforeend", machineRowTemplate());
+      return card;
+    };
+
+    const serializeMachines = (labCard) => {
+      const rows = Array.from(labCard.querySelectorAll(".machine-row"));
+      const machines = rows
+        .map((row) => {
+          const name = (row.querySelector(".machine-name")?.value || "").trim();
+          const os = (row.querySelector(".machine-os")?.value || "").trim() || "Linux";
+          const userFlag = (row.querySelector(".machine-user-flag")?.value || "").trim();
+          const userPoints = Number.parseInt((row.querySelector(".machine-user-points")?.value || "0").trim(), 10);
+          const adminFlag = (row.querySelector(".machine-admin-flag")?.value || "").trim();
+          const adminPoints = Number.parseInt((row.querySelector(".machine-admin-points")?.value || "0").trim(), 10);
+          if (!name) return null;
+          return {
+            name,
+            os,
+            flags: {
+              user: {
+                value: userFlag,
+                points: Number.isFinite(userPoints) && userPoints >= 0 ? userPoints : 0,
+              },
+              admin: {
+                value: adminFlag,
+                points: Number.isFinite(adminPoints) && adminPoints >= 0 ? adminPoints : 0,
+              },
+            },
+          };
+        })
+        .filter(Boolean);
+
+      const input = labCard.querySelector(".machines-json");
+      if (input) input.value = JSON.stringify(machines);
+    };
+
+    const serializeAll = () => {
+      wrapper.querySelectorAll(".lab-card").forEach((card) => serializeMachines(card));
+    };
+
+    const refreshCheckboxIndices = () => {
+      const checkboxes = wrapper.querySelectorAll('input[name="is_free[]"]');
+      checkboxes.forEach((checkbox, index) => {
+        checkbox.value = String(index);
+      });
+    };
+
+    addButton.addEventListener("click", () => {
+      const card = createLabCard();
+      wrapper.appendChild(card);
+      refreshCheckboxIndices();
+    });
+
+    wrapper.addEventListener("click", (event) => {
+      if (event.target.classList.contains("remove-lab")) {
+        event.target.closest(".card").remove();
+        refreshCheckboxIndices();
+      }
+
+      if (event.target.classList.contains("add-machine-row")) {
+        const card = event.target.closest(".lab-card");
+        const tbody = card.querySelector(".machine-table tbody");
+        tbody.insertAdjacentHTML("beforeend", machineRowTemplate());
+      }
+
+      if (event.target.classList.contains("remove-machine-row")) {
+        const row = event.target.closest(".machine-row");
+        const tbody = row?.closest("tbody");
+        if (row && tbody) {
+          row.remove();
+          if (!tbody.querySelector(".machine-row")) {
+            tbody.insertAdjacentHTML("beforeend", machineRowTemplate());
+          }
+        }
+      }
+    });
+
+    form.addEventListener("submit", () => {
+      serializeAll();
+      refreshCheckboxIndices();
+    });
+
+    serializeAll();
+    refreshCheckboxIndices();
+  })();
+</script>
+{% endblock %}

@@ -286,6 +286,10 @@
             <span class="stat-value">{{ account.get_score(admin=True) }}</span>
             <span class="stat-label">{% trans %}Points{% endtrans %}</span>
           </div>
+          <div class="profile-stat-card">
+            <span class="stat-value">{{ get_level_name_for_score(account.get_score(admin=True)) }}</span>
+            <span class="stat-label">Level</span>
+          </div>
         {% endif %}
       </div>
 

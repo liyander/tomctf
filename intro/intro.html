@@ -363,6 +363,7 @@
 
 		#volumeControl {
 			-webkit-appearance: none;
+			appearance: none;
 			border-radius: 16px;
 			background: #FFF;
 			padding: 1px;
@@ -584,7 +585,19 @@
 		// ARCHIVE WS PLAYBACK
 		let wsLog = [];
 		let wsLogIdx = 0;
-		fetch("/intro_assets/intro_ws_replay.jsonl").then(r => r.text()).then(r => wsLog = r.split("\n").map(e => JSON.parse(e)));
+		fetch("/intro_assets/intro_ws_replay.jsonl")
+			.then(r => r.text())
+			.then(r => {
+				wsLog = r
+					.split("\n")
+					.map(e => e.trim())
+					.filter(Boolean)
+					.map(e => JSON.parse(e));
+			})
+			.catch((err) => {
+				console.error("Failed to load intro websocket replay", err);
+				wsLog = [];
+			});
 
 		function replay_ws() {
 			if (!wsLog.length) return;
@@ -594,8 +607,9 @@
 				const e = wsLog[wsLogIdx];
 				wsLogIdx++;
 				if (e.data.startsWith("uwu")) {
-					if (wsLog[wsLogIdx]["time"] < currentWsTime - ((TARGET_TIME - Date.now() < 1000 * 60 * 10) ? 8000 : 1000)) continue;
-					newDcMsg(e.data.slice(4), currentWsTime - wsLog[wsLogIdx]["time"]);
+					const nextEvent = wsLog[wsLogIdx] ?? e;
+					if (nextEvent["time"] < currentWsTime - ((TARGET_TIME - Date.now() < 1000 * 60 * 10) ? 8000 : 1000)) continue;
+					newDcMsg(e.data.slice(4), currentWsTime - nextEvent["time"]);
 				} else {
 					const [_w1, site_ver, _w2, current_time, mvm] = e.data.split(" ");
 					if (mvm !== "mvm") {

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="w-full px-4 sm:px-6 lg:px-10 py-6 lg:py-8 space-y-6">
+  <div class="rounded-2xl border border-white/10 overflow-hidden bg-card-dark">
+    <div class="min-h-[220px] lg:min-h-[280px] p-6 lg:p-8 flex flex-col justify-between" style="background: linear-gradient(to bottom, rgba(10,10,10,0.35), rgba(10,10,10,0.95)), url('{{ lab.cover_image }}') center/cover no-repeat;">
+      <a href="{{ url_for('prolabs.prolab_listing') }}" class="inline-flex items-center gap-2 w-fit px-4 py-2 rounded-md border border-white/10 bg-black/30 hover:bg-black/50 transition-colors">
+        <span aria-hidden="true">&larr;</span>
+        <span class="font-semibold">Back</span>
+      </a>
+
+      <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
+        <div class="flex items-center gap-4">
+          {% if lab.logo_image %}
+            <img src="{{ lab.logo_image }}" alt="{{ lab.title }}" class="w-20 h-20 rounded-full border border-white/20 object-cover">
+          {% endif %}
+          <div>
+            <div class="flex items-center gap-3">
+              <h1 class="text-4xl normal-case tracking-normal">{{ lab.title }}</h1>
+              {% if lab.is_free %}
+                <span class="px-2 py-1 rounded bg-primary text-white text-xs font-semibold uppercase tracking-widest">Free</span>
+              {% endif %}
+            </div>
+            <p class="text-stone-300 text-xl">{{ lab.difficulty }}</p>
+          </div>
+        </div>
+
+        <div class="text-right text-stone-200">
+          <div class="text-3xl font-bold">{{ lab.rating }} <span class="text-yellow-400">★</span></div>
+          <div class="text-sm text-stone-400">Pro Lab Rating ({{ lab.rating_count }})</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="border-b border-white/10">
+    <nav class="flex items-center gap-8 overflow-x-auto pb-3 text-sm uppercase tracking-widest">
+      <span class="text-white border-b-2 border-primary pb-2">Play Pro Lab</span>
+      <span class="text-stone-400">Pro Lab Info</span>
+      <span class="text-stone-400">Reviews</span>
+      <span class="text-stone-400">Changelog</span>
+    </nav>
+  </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+    <div class="xl:col-span-2 space-y-5">
+      <div class="rounded-xl border border-white/10 bg-card-dark p-4 flex items-center justify-between">
+        <p class="text-lg font-semibold">Select a server to interact with {{ lab.title }}</p>
+        <span class="text-xl text-stone-500">&rarr;</span>
+      </div>
+
+      <div class="rounded-xl border border-white/10 bg-card-dark overflow-hidden">
+        <div class="p-5 border-b border-white/10">
+          <h3 class="text-3xl normal-case tracking-normal">Entry Point</h3>
+          <div class="mt-3 inline-flex items-center gap-3 px-4 py-2 rounded-lg bg-black/30 border border-white/10">
+            <span class="w-3 h-3 rounded-full bg-primary"></span>
+            <span class="text-4xl font-semibold tracking-wide">{{ lab.entry_ip or 'N/A' }}</span>
+          </div>
+        </div>
+        <div class="p-5 space-y-4 text-stone-300">
+          <h4 class="text-2xl normal-case tracking-normal text-white">Introduction</h4>
+          <p>{{ lab.introduction }}</p>
+          {% if lab.topics %}
+            <p class="font-semibold text-white">This Red Team Operator lab will expose players to:</p>
+            <ul class="list-disc pl-6 space-y-1">
+              {% for topic in lab.topics %}
+                <li>{{ topic }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-white/10 bg-card-dark p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h4 class="text-2xl normal-case tracking-normal">Flags</h4>
+          <span class="text-stone-300 font-semibold">{{ lab.flags|length }} / {{ lab.flags|length }}</span>
+        </div>
+        <div class="space-y-2">
+          {% for flag in lab.flags %}
+            <div class="rounded-lg border border-white/10 p-4 flex items-center justify-between {% if flag.status == 'Completed' %}bg-primary/10{% endif %}">
+              <span>{{ flag.name }}</span>
+              <span class="{% if flag.status == 'Completed' %}text-primary{% else %}text-stone-400{% endif %}">{{ flag.status }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-white/10 bg-card-dark p-5 text-center text-stone-400">
+        Created by <span class="text-white font-semibold">{{ lab.creator }}</span>
+      </div>
+    </div>
+
+    <aside class="space-y-5">
+      <div class="rounded-xl border border-white/10 bg-card-dark p-4 flex gap-3">
+        <input type="text" placeholder="Input Flag Hash" class="flex-1 bg-black/30 border border-white/10 rounded-md px-3 py-2 text-stone-200">
+        <button class="px-4 py-2 rounded-md bg-primary hover:bg-primary-hover text-white font-semibold">Submit Flag</button>
+      </div>
+
+      <div class="rounded-xl border border-white/10 bg-card-dark p-5 flex items-center justify-between">
+        <div>
+          <h5 class="text-2xl normal-case tracking-normal">Request Lab Reset</h5>
+          <p class="text-stone-400">Resets the lab to its initial state</p>
+        </div>
+        <button class="w-11 h-11 rounded-md border border-white/10 bg-black/30">↻</button>
+      </div>
+
+      <div class="rounded-xl border border-white/10 bg-card-dark p-5 space-y-4">
+        <h5 class="text-2xl normal-case tracking-normal">{{ lab.title }} Certification</h5>
+        <div class="h-2 rounded-full bg-black/30 overflow-hidden">
+          <div class="h-full bg-primary prolab-progress-bar" data-progress="{{ lab.progress }}"></div>
+        </div>
+        <div class="text-right text-stone-400 text-sm">{{ '%.2f'|format(lab.progress) }}%</div>
+      </div>
+
+      <div class="rounded-xl border border-white/10 bg-card-dark p-5 space-y-3">
+        <h5 class="text-2xl normal-case tracking-normal">{{ lab.title }} Badges</h5>
+        {% for badge in lab.badges %}
+          <div class="rounded-lg border border-white/10 p-4">
+            <div class="font-semibold text-white">{{ badge.name }}</div>
+            <div class="text-stone-400">{{ badge.description }}</div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="rounded-xl border border-white/10 bg-card-dark p-5 space-y-3">
+        <h5 class="text-2xl normal-case tracking-normal">Machines</h5>
+        {% for machine in lab.machines %}
+          <div class="flex items-center justify-between border-b border-white/10 pb-3 last:border-0 last:pb-0">
+            <span class="text-stone-300">{{ machine.name }}</span>
+            <span class="text-stone-400">{{ machine.os }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    </aside>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script>
+    (() => {
+      const bar = document.querySelector(".prolab-progress-bar");
+      if (!bar) return;
+      const raw = Number(bar.dataset.progress || 0);
+      const progress = Math.max(0, Math.min(raw, 100));
+      bar.style.width = `${progress}%`;
+    })();
+  </script>
+{% endblock %}

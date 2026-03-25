@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="container-fluid px-3 px-lg-4 py-3 py-lg-4 prolab-detail-page">
+  <style>
+    .prolab-detail-page {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .prolab-detail-page .prolab-card {
+      background: rgba(26, 10, 10, 0.85);
+      border: 1px solid rgba(139, 0, 0, 0.28) !important;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(10px);
+    }
+
+    .prolab-detail-page .prolab-muted {
+      color: rgba(255, 255, 255, 0.58) !important;
+    }
+
+    .prolab-detail-page .prolab-subtle-border {
+      border-color: rgba(139, 0, 0, 0.22) !important;
+    }
+
+    .prolab-detail-page .prolab-nav-tabs .nav-link {
+      border: 1px solid rgba(139, 0, 0, 0.25);
+      color: rgba(255, 255, 255, 0.72);
+      margin-right: 0.5rem;
+      border-radius: 0.6rem 0.6rem 0 0;
+      background: rgba(26, 10, 10, 0.5);
+    }
+
+    .prolab-detail-page .prolab-nav-tabs .nav-link.active {
+      background: rgba(139, 0, 0, 0.2);
+      color: #fff;
+      border-color: rgba(236, 19, 19, 0.4);
+    }
+
+    .prolab-detail-page .machine-chip {
+      font-size: 0.75rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: rgba(255, 255, 255, 0.85);
+      padding: 0.18rem 0.55rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: rgba(10, 10, 10, 0.45);
+    }
+
+    .prolab-detail-page .flag-item {
+      border: 1px solid rgba(139, 0, 0, 0.22);
+      border-radius: 0.7rem;
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+      background: rgba(12, 12, 16, 0.55);
+    }
+
+    .prolab-detail-page .flag-trigger {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: #fff;
+      text-align: left;
+      padding: 0.95rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.8rem;
+    }
+
+    .prolab-detail-page .flag-trigger:hover {
+      background: rgba(236, 19, 19, 0.12);
+    }
+
+    .prolab-detail-page .flag-form-shell {
+      display: none;
+      border-top: 1px solid rgba(139, 0, 0, 0.22);
+      padding: 0.8rem 1rem 1rem;
+      background: rgba(16, 8, 8, 0.5);
+    }
+
+    .prolab-detail-page .flag-item.open .flag-form-shell {
+      display: block;
+    }
+
+    .prolab-detail-page .intro-markdown p,
+    .prolab-detail-page .intro-markdown li,
+    .prolab-detail-page .intro-markdown blockquote {
+      color: rgba(255, 255, 255, 0.78);
+    }
+
+    .prolab-detail-page .intro-markdown code {
+      color: #ffb4b4;
+      background: rgba(139, 0, 0, 0.18);
+      border-radius: 0.2rem;
+      padding: 0.08rem 0.32rem;
+    }
+
+    .prolab-detail-page .intro-markdown pre {
+      background: rgba(10, 10, 10, 0.7);
+      border: 1px solid rgba(139, 0, 0, 0.25);
+      border-radius: 0.45rem;
+      padding: 0.8rem;
+    }
+  </style>
+
+  <div class="rounded-4 overflow-hidden border border-secondary border-opacity-25 mb-4" style="background: linear-gradient(to bottom, rgba(9,9,13,0.35), rgba(9,9,13,0.96)), url('{{ lab.cover_image }}') center/cover no-repeat; min-height: 260px;">
+    <div class="p-4 p-lg-5 d-flex flex-column h-100" style="min-height: 260px;">
+      <div>
+        <a href="{{ url_for('prolabs.prolab_listing') }}" class="btn btn-dark border border-secondary border-opacity-50 mb-4">
+          <i class="fas fa-arrow-left me-1"></i> Back
+        </a>
+      </div>
+
+      <div class="mt-auto d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-end">
+        <div class="d-flex align-items-center gap-3">
+          {% if lab.logo_image %}
+          <img src="{{ lab.logo_image }}" alt="{{ lab.title }} logo" style="width: 92px; height: 92px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.3);">
+          {% endif %}
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+              <h1 class="mb-0 text-white">{{ lab.title }}</h1>
+              {% if lab.is_free %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle">FREE</span>
+              {% endif %}
+            </div>
+            <div class="text-secondary fs-5">{{ lab.difficulty }}</div>
+          </div>
+        </div>
+
+        
+      </div>
+    </div>
+  </div>
+
+  <ul class="nav nav-tabs mb-4 prolab-nav-tabs border-0" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="play-tab" data-bs-toggle="tab" data-bs-target="#play-pane" type="button" role="tab" aria-controls="play-pane" aria-selected="true">Play Pro Lab</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="info-tab" data-bs-toggle="tab" data-bs-target="#info-pane" type="button" role="tab" aria-controls="info-pane" aria-selected="false">Pro Lab Info</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="changelog-tab" data-bs-toggle="tab" data-bs-target="#changelog-pane" type="button" role="tab" aria-controls="changelog-pane" aria-selected="false">Changelog</button>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+    <div class="tab-pane fade show active" id="play-pane" role="tabpanel" aria-labelledby="play-tab">
+      <div class="row g-4">
+    <div class="col-xl-8">
+      <div class="card prolab-card rounded-4 mb-3 shadow-sm">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <div class="fw-semibold">Select a server to interact with {{ lab.title }}</div>
+          <i class="fas fa-arrow-right text-danger"></i>
+        </div>
+      </div>
+
+      <div class="card prolab-card rounded-4 mb-3 shadow-sm">
+        <div class="card-body border-bottom prolab-subtle-border">
+          <h4 class="mb-2">Entry Point</h4>
+          <div class="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 border prolab-subtle-border" style="background: rgba(10,10,10,0.45);">
+            <span style="width: 10px; height: 10px; border-radius: 50%; background: #7fff00;"></span>
+            <span class="fs-3 fw-bold text-white">{{ lab.entry_ip or 'N/A' }}</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <h4 class="mb-3">Introduction</h4>
+          <div class="intro-markdown">{{ lab.introduction_html | safe }}</div>
+          {% if lab.topics %}
+            <p class="mb-2"><strong>This Red Team Operator lab will expose players to:</strong></p>
+            <ul class="mb-0">
+              {% for topic in lab.topics %}
+                <li class="mb-1 prolab-muted">{{ topic }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card prolab-card rounded-4 mb-3 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0">Flags</h4>
+            <span class="text-danger">{{ lab.flags|length }} / {{ lab.flags|length }}</span>
+          </div>
+
+          {% for flag in lab.flags %}
+            <div class="flag-item" data-flag-id="{{ flag.id or loop.index }}">
+              <button type="button" class="flag-trigger" data-flag-toggle>
+                <div>
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <strong>{{ flag.name }}</strong>
+                    {% if flag.machine %}
+                      <span class="machine-chip">{{ flag.machine }}</span>
+                    {% endif %}
+                    {% if flag.role %}
+                      <span class="machine-chip">{{ flag.role }}</span>
+                    {% endif %}
+                    {% if flag.points %}
+                      <span class="machine-chip">{{ flag.points }} pts</span>
+                    {% endif %}
+                  </div>
+                  <small class="text-secondary d-block mt-1">Click to submit this specific flag</small>
+                </div>
+                <span class="fw-semibold {% if flag.status == 'Completed' %}text-success{% else %}text-secondary{% endif %}" data-flag-status>{{ flag.status }}</span>
+              </button>
+
+              <div class="flag-form-shell">
+                <form class="flag-submit-form" data-flag-form>
+                  <div class="input-group">
+                    <input type="text" class="form-control" autocomplete="off" placeholder="Submit value for {{ flag.name }}">
+                    <div class="input-group-append">
+                      <button class="btn btn-primary" type="submit">Submit</button>
+                    </div>
+                  </div>
+                  <small class="text-secondary mt-2 d-block" data-flag-feedback></small>
+                </form>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="card prolab-card rounded-4 shadow-sm">
+        <div class="card-body text-center prolab-muted">
+          Created by <span class="text-white fw-semibold">{{ lab.creator }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-4">
+      <div class="card prolab-card rounded-4 mb-3 shadow-sm">
+        <div class="card-body d-flex justify-content-between align-items-center">
+          <div>
+            <h5 class="mb-1">Request Lab Reset</h5>
+            <div class="text-danger">Resets the lab to its initial state</div>
+          </div>
+          <button class="btn btn-dark prolab-subtle-border"><i class="fas fa-undo"></i></button>
+        </div>
+      </div>
+
+      <div class="card prolab-card rounded-4 mb-3 shadow-sm">
+        <div class="card-body">
+          <h5 class="mb-3">{{ lab.title }} Certification</h5>
+          <div class="progress mb-2" style="height: 10px;">
+            <div class="progress-bar bg-success prolab-progress-bar" role="progressbar" data-progress="{{ lab.progress }}" aria-valuenow="{{ lab.progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          <div class="text-end text-danger">{{ '%.2f'|format(lab.progress) }}%</div>
+        </div>
+      </div>
+
+      <div class="card prolab-card rounded-4 mb-3 shadow-sm">
+        <div class="card-body">
+          <h5 class="mb-3">{{ lab.title }} Badges</h5>
+          {% for badge in lab.badges %}
+            <div class="p-3 rounded-3 border prolab-subtle-border mb-2">
+              <div class="fw-semibold">{{ badge.name }}</div>
+              <div class="prolab-muted">{{ badge.description }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="card prolab-card rounded-4 shadow-sm">
+        <div class="card-body">
+          <h5 class="mb-3">Machines</h5>
+          {% for machine in lab.machines %}
+            <div class="py-2 border-bottom prolab-subtle-border {% if loop.last %}border-0{% endif %}">
+              <div class="d-flex justify-content-between align-items-center">
+                <span class="text-danger">{{ machine.name }}</span>
+                <span>{{ machine.os }}</span>
+              </div>
+              <div class="mt-2 d-flex flex-wrap gap-2">
+                <span class="machine-chip">User Flag</span>
+                <span class="machine-chip">Admin Flag</span>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="info-pane" role="tabpanel" aria-labelledby="info-tab">
+      <div class="card prolab-card rounded-4 mb-3 shadow-sm">
+        <div class="card-body">
+          
+          <div class="intro-markdown">{{ lab.pro_lab_info_html | safe }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="changelog-pane" role="tabpanel" aria-labelledby="changelog-tab">
+      <div class="card prolab-card rounded-4 mb-3 shadow-sm">
+        <div class="card-body">
+          
+          <div class="intro-markdown">{{ lab.changelog_html | safe }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script>
+    (() => {
+      const bar = document.querySelector(".prolab-progress-bar");
+      if (bar) {
+        const raw = Number(bar.dataset.progress || 0);
+        const progress = Math.max(0, Math.min(raw, 100));
+        bar.style.width = `${progress}%`;
+      }
+
+      const flagItems = Array.from(document.querySelectorAll(".flag-item"));
+      const submitUrl = "{{ url_for('prolabs.prolab_submit_flag', slug=lab.slug) }}";
+
+      const submitRequest = (payload) => {
+        if (window.CTFd && typeof window.CTFd.fetch === "function") {
+          return window.CTFd.fetch(submitUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+        }
+
+        return fetch(submitUrl, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+            "CSRF-Token": window.init?.csrfNonce || "",
+          },
+          body: JSON.stringify(payload),
+        });
+      };
+
+      flagItems.forEach((item) => {
+        const toggle = item.querySelector("[data-flag-toggle]");
+        const form = item.querySelector("[data-flag-form]");
+        const input = form?.querySelector("input");
+        const feedback = form?.querySelector("[data-flag-feedback]");
+        const statusEl = item.querySelector("[data-flag-status]");
+        const flagId = item.dataset.flagId;
+
+        if (toggle) {
+          toggle.addEventListener("click", () => {
+            const isOpen = item.classList.contains("open");
+            flagItems.forEach((other) => other.classList.remove("open"));
+            if (!isOpen) {
+              item.classList.add("open");
+              if (input) input.focus();
+            }
+          });
+        }
+
+        if (form) {
+          form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const value = (input?.value || "").trim();
+            const submitBtn = form.querySelector("button[type='submit']");
+
+            if (!value) {
+              if (feedback) feedback.textContent = "Please enter a flag value before submitting.";
+              return;
+            }
+
+            try {
+              if (submitBtn) submitBtn.disabled = true;
+
+              const response = await submitRequest({
+                flag_id: flagId,
+                submission: value,
+              });
+
+              const rawBody = await response.text();
+              let payload = null;
+              try {
+                payload = rawBody ? JSON.parse(rawBody) : null;
+              } catch (parseError) {
+                payload = null;
+              }
+
+              const status = payload?.data?.status || (response.ok ? "incorrect" : "error");
+              const message =
+                payload?.data?.message ||
+                payload?.errors?.message ||
+                (response.ok
+                  ? "Submission processed."
+                  : `Submission failed (${response.status}). Please try again.`);
+
+              if (feedback) feedback.textContent = message;
+
+              if (statusEl && (status === "correct" || status === "already_solved")) {
+                statusEl.textContent = "Completed";
+                statusEl.classList.remove("text-secondary");
+                statusEl.classList.add("text-success");
+              } else if (statusEl && status === "incorrect") {
+                statusEl.textContent = "Pending";
+                statusEl.classList.remove("text-success");
+                statusEl.classList.add("text-secondary");
+              }
+
+              if (status === "correct" || status === "already_solved") {
+                item.classList.remove("open");
+                if (input) input.value = "";
+              }
+            } catch (error) {
+              if (feedback) feedback.textContent = "Submission failed. Please try again.";
+            } finally {
+              if (submitBtn) submitBtn.disabled = false;
+            }
+          });
+        }
+      });
+
+      document.addEventListener("click", (event) => {
+        if (!event.target.closest(".flag-item")) {
+          flagItems.forEach((item) => item.classList.remove("open"));
+        }
+      });
+    })();
+  </script>
+{% endblock %}

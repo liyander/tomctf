@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="container py-4 py-lg-5">
+  <div class="p-4 p-lg-5 rounded-4 glass-effect border border-secondary border-opacity-25 mb-4">
+    <div class="row g-4 align-items-center">
+      <div class="col-lg-8">
+        <div class="text-uppercase text-primary fw-semibold small mb-2">Pro Red Team Labs</div>
+        <h1 class="display-5 fw-bold mb-3">Go Beyond Simulated. Go Real.</h1>
+        <p class="text-secondary mb-0" style="max-width: 760px;">
+          Premium training labs designed to provide accurate adversary simulation against challenging enterprise technologies.
+        </p>
+      </div>
+      <div class="col-lg-4">
+        <div class="card bg-dark border-secondary border-opacity-25 rounded-4">
+          <div class="card-body p-4">
+            <h5 class="mb-2">Pro Labs</h5>
+            <p class="text-secondary small mb-0">Choose a lab below to open full details, objectives, machines, and flags.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    {% for lab in labs %}
+      <div class="col-md-6 col-xl-4">
+        {% if lab.is_locked %}
+        <div class="text-decoration-none">
+        {% else %}
+        <a href="{{ url_for('prolabs.prolab_detail', slug=lab.slug) }}" class="text-decoration-none">
+        {% endif %}
+          <div class="card h-100 bg-dark border-secondary border-opacity-25 rounded-4 overflow-hidden shadow-sm">
+            <div style="height: 210px; position: relative;">
+              {% if lab.cover_image %}
+                <img src="{{ lab.cover_image }}" alt="{{ lab.title }}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.72;">
+              {% else %}
+                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #2e1f25, #11131a);"></div>
+              {% endif %}
+              <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(9,9,13,0.95),rgba(9,9,13,0.2));"></div>
+              {% if lab.is_locked %}
+              <div style="position:absolute;inset:0;background:rgba(7,7,10,0.62);display:flex;align-items:center;justify-content:center;">
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2">
+                  <i class="fas fa-lock me-1"></i> Requires {{ lab.required_level|int }}+ pts
+                </span>
+              </div>
+              {% endif %}
+              {% if lab.logo_image %}
+              <img src="{{ lab.logo_image }}" alt="{{ lab.title }} logo" style="position:absolute;left:1.2rem;bottom:1rem;width:78px;height:78px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);object-fit:cover;">
+              {% endif %}
+            </div>
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="text-uppercase small text-secondary fw-semibold">{{ lab.category }}</span>
+                {% if lab.is_free %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle">FREE</span>
+                {% endif %}
+              </div>
+              <h4 class="mb-1 text-white">{{ lab.title }}</h4>
+              <p class="text-secondary mb-0">{{ lab.difficulty }}</p>
+              {% if lab.required_level|int > 0 %}
+                <p class="text-secondary small mt-2 mb-0">Minimum score: <span class="text-light">{{ lab.required_level|int }}+ pts</span></p>
+              {% endif %}
+            </div>
+          </div>
+        {% if lab.is_locked %}
+        </div>
+        {% else %}
+        </a>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

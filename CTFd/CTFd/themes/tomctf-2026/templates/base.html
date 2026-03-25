@@ -42,10 +42,10 @@
 
   {{ Configs.theme_header }}
 </head>
-<body>
-{% include "components/navbar.html" %}
+<body class="with-sidebar">
+{% include "components/sidebar.html" %}
 
-<main role="main">
+<main role="main" class="tom-main-content">
   {% block content %}
   {% endblock %}
 </main>

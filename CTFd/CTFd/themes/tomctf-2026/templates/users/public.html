@@ -281,10 +281,14 @@
             <span class="stat-label">{% trans %}Place{% endtrans %}</span>
           </div>
         {% endif %}
-        {% if account.place %}
+        {% if account %}
           <div class="profile-stat-card">
             <span class="stat-value">{{ account.score }}</span>
             <span class="stat-label">{% trans %}Points{% endtrans %}</span>
+          </div>
+          <div class="profile-stat-card">
+            <span class="stat-value">{{ get_level_name_for_score(account.score) }}</span>
+            <span class="stat-label">Level</span>
           </div>
         {% endif %}
       </div>

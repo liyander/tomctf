@@ -1,0 +1,458 @@
+<style>
+  body.with-sidebar {
+    padding-top: 0 !important;
+  }
+
+  .tom-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 1040;
+    backdrop-filter: blur(12px);
+    background: linear-gradient(180deg, rgba(12, 12, 16, 0.95) 0%, rgba(9, 9, 13, 0.95) 100%);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    overflow-y: auto;
+    transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1), transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: width, transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  .tom-sidebar .nav-link {
+    color: rgba(230, 230, 230, 0.82);
+    border: 1px solid transparent;
+    border-radius: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 0.35rem;
+    padding: 0.6rem 0.8rem;
+  }
+
+  .tom-sidebar-toggle {
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    color: rgba(230, 230, 230, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.75rem;
+    font-weight: 600;
+    padding: 0.62rem 0.8rem;
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .tom-sidebar-toggle:hover {
+    color: #fff;
+    border-color: rgba(227, 35, 35, 0.3);
+    background: rgba(227, 35, 35, 0.1);
+  }
+
+  .tom-sidebar-toggle .chevron {
+    transition: transform 0.2s ease;
+  }
+
+  .tom-sidebar-toggle.expanded .chevron {
+    transform: rotate(90deg);
+  }
+
+  .tom-sidebar-panel {
+    padding-left: 0.4rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .tom-sidebar-panel.collapsed {
+    display: none;
+  }
+
+  .tom-sidebar .nav-link:hover,
+  .tom-sidebar .nav-link.active {
+    color: #ffffff;
+    background: rgba(227, 35, 35, 0.14);
+    border-color: rgba(227, 35, 35, 0.32);
+  }
+
+  .tom-auth-actions .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+  }
+
+  .tom-auth-actions .btn i {
+    width: 1rem;
+    text-align: center;
+  }
+
+  .tom-main-content {
+    margin-left: 280px;
+    min-height: 100vh;
+    transition: margin-left 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: margin-left;
+  }
+
+  .tom-mobile-topbar {
+    display: none;
+  }
+
+  .tom-sidebar-desktop-toggle {
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 0.75rem;
+    background: transparent;
+    color: rgba(230, 230, 230, 0.9);
+    font-weight: 600;
+    padding: 0.45rem 0.65rem;
+    margin-bottom: 0.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .tom-sidebar-desktop-toggle:hover {
+    color: #fff;
+    border-color: rgba(227, 35, 35, 0.35);
+    background: rgba(227, 35, 35, 0.1);
+  }
+
+  .tom-brand-logo {
+    height: 34px;
+    width: 34px;
+    object-fit: cover;
+    border-radius: 0.35rem;
+  }
+
+  .brand-icon-only {
+    display: none;
+  }
+
+  body.tom-sidebar-collapsed .tom-sidebar {
+    width: 88px;
+  }
+
+  body.tom-sidebar-collapsed .tom-main-content {
+    margin-left: 88px;
+  }
+
+  body.tom-sidebar-collapsed .tom-sidebar .brand-label,
+  body.tom-sidebar-collapsed .tom-sidebar .desktop-toggle-text,
+  body.tom-sidebar-collapsed .tom-sidebar .tom-sidebar-toggle,
+  body.tom-sidebar-collapsed .tom-sidebar .label,
+  body.tom-sidebar-collapsed .tom-sidebar .chevron {
+    display: none !important;
+  }
+
+  body.tom-sidebar-collapsed .tom-sidebar .tom-brand-link {
+    justify-content: center;
+  }
+
+  body.tom-sidebar-collapsed .tom-sidebar .tom-brand-logo {
+    margin-right: 0 !important;
+  }
+
+  body.tom-sidebar-collapsed .tom-sidebar .tom-sidebar-panel {
+    display: block !important;
+    padding-left: 0;
+  }
+
+  body.tom-sidebar-collapsed .tom-sidebar .nav-link {
+    display: flex;
+    justify-content: center;
+    padding-left: 0.45rem;
+    padding-right: 0.45rem;
+  }
+
+  body.tom-sidebar-collapsed .tom-sidebar .nav-link i {
+    margin-right: 0 !important;
+  }
+
+  body.tom-sidebar-collapsed .tom-sidebar .tom-auth-actions .btn {
+    padding-left: 0.45rem;
+    padding-right: 0.45rem;
+  }
+
+  body.tom-sidebar-collapsed .tom-sidebar .tom-auth-actions .btn .btn-label {
+    display: none;
+  }
+
+  @media (max-width: 991.98px) {
+    body.tom-sidebar-open {
+      overflow: hidden;
+    }
+
+    body.with-sidebar {
+      padding-top: 60px !important;
+    }
+
+    .tom-mobile-topbar {
+      display: flex;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1045;
+      height: 60px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1rem;
+      backdrop-filter: blur(10px);
+      background: rgba(12, 12, 16, 0.92);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .tom-sidebar {
+      transform: translateX(-100%);
+      transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+      z-index: 1050;
+      width: 280px;
+    }
+
+    .tom-sidebar.show {
+      transform: translateX(0);
+    }
+
+    .tom-main-content {
+      margin-left: 0;
+    }
+
+    body.tom-sidebar-collapsed .tom-main-content {
+      margin-left: 0;
+    }
+
+    .tom-sidebar-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1049;
+      background: rgba(0, 0, 0, 0.6);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .tom-sidebar-backdrop.show {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .tom-sidebar-desktop-toggle {
+      display: none !important;
+    }
+  }
+</style>
+
+<div class="tom-mobile-topbar">
+  <a href="{{ url_for('views.static_html', route='/') }}" class="text-white fw-bold d-flex align-items-center" style="font-size: 1.05rem;">
+    <img class="tom-brand-logo me-2" src="https://i.postimg.cc/y89H6qQc/png-clipart-white-grey-and-black-illustration-penrose-triangle-right-triangle-edge-triangle-angle-tr.png" alt="TomCTF logo">
+    {{ Configs.ctf_name }}
+  </a>
+  <button type="button" class="btn btn-sm btn-outline-light" id="tomSidebarToggle">Menu</button>
+</div>
+
+<div class="tom-sidebar-backdrop" id="tomSidebarBackdrop"></div>
+
+<aside class="tom-sidebar" id="tomSidebar">
+  <div class="p-3 border-bottom border-secondary border-opacity-25">
+    <a href="{{ url_for('views.static_html', route='/') }}" class="d-flex align-items-center text-white tom-brand-link">
+      <img class="tom-brand-logo me-2" src="https://i.postimg.cc/y89H6qQc/png-clipart-white-grey-and-black-illustration-penrose-triangle-right-triangle-edge-triangle-angle-tr.png" alt="{{ Configs.ctf_name }} logo">
+      <span class="fw-bold brand-label">{{ Configs.ctf_name }}</span>
+    </a>
+  </div>
+
+  <div class="p-3">
+    <button type="button" class="tom-sidebar-desktop-toggle" id="tomSidebarCollapseToggle">
+      <span class="desktop-toggle-text">Collapse Sidebar</span>
+      <i class="fas fa-angle-double-left" id="tomSidebarCollapseIcon"></i>
+    </button>
+
+    <nav class="nav flex-column">
+      <button type="button" class="tom-sidebar-toggle" data-target="competition-panel">
+        <span><i class="fas fa-terminal me-2"></i><span class="label">Competition</span></span>
+        <i class="fas fa-chevron-right chevron"></i>
+      </button>
+      <div id="competition-panel" class="tom-sidebar-panel">
+        <a class="nav-link {% if request.path.startswith('/challenges') %}active{% endif %}" href="{{ url_for('challenges.listing') }}"><i class="fas fa-flag me-2"></i><span class="label">Challenges</span></a>
+
+        {% if Configs.account_visibility != 'admins' and Configs.score_visibility != 'admins' %}
+        <a class="nav-link {% if request.path.startswith('/scoreboard') %}active{% endif %}" href="{{ url_for('scoreboard.listing') }}"><i class="fas fa-trophy me-2"></i><span class="label">Scoreboard</span></a>
+        {% endif %}
+
+        <a class="nav-link {% if request.path.startswith('/pro-red-team-labs') %}active{% endif %}" href="{{ url_for('prolabs.prolab_listing') }}"><i class="fas fa-user-secret me-2"></i><span class="label">Pro Red Team Labs</span></a>
+      </div>
+
+      <button type="button" class="tom-sidebar-toggle" data-target="community-panel">
+        <span><i class="fas fa-users me-2"></i><span class="label">Community</span></span>
+        <i class="fas fa-chevron-right chevron"></i>
+      </button>
+      <div id="community-panel" class="tom-sidebar-panel">
+        {% if Configs.account_visibility != 'admins' %}
+        <a class="nav-link {% if request.path.startswith('/users') %}active{% endif %}" href="{{ url_for('users.listing') }}"><i class="fas fa-user-friends me-2"></i><span class="label">Users</span></a>
+        {% if Configs.user_mode == 'teams' %}
+        <a class="nav-link {% if request.path.startswith('/teams') %}active{% endif %}" href="{{ url_for('teams.listing') }}"><i class="fas fa-users me-2"></i><span class="label">Teams</span></a>
+        {% endif %}
+        {% endif %}
+
+        <a class="nav-link {% if request.path.startswith('/credits') %}active{% endif %}" href="{{ url_for('views.credits_page') }}"><i class="fas fa-heart me-2"></i><span class="label">Credits</span></a>
+
+        {% for page in Plugins.user_menu_pages %}
+        <a class="nav-link" href="{{ page.route }}" {% if page.link_target %}target="{{ page.link_target }}"{% endif %}><i class="fas fa-circle me-2" style="font-size: 0.45rem;"></i><span class="label">{{ page.title }}</span></a>
+        {% endfor %}
+      </div>
+    </nav>
+
+    <hr class="border-secondary border-opacity-25 my-3">
+
+    <div class="d-grid gap-2 tom-auth-actions">
+      {% if authed() %}
+        <a href="{{ url_for('users.private') }}" class="btn btn-outline-light btn-sm">
+          <i class="fas fa-user"></i>
+          <span class="btn-label">Profile</span>
+        </a>
+        {% if is_admin() %}
+          <a href="{{ url_for('admin.view') }}" class="btn btn-outline-warning btn-sm">
+            <i class="fas fa-user-shield"></i>
+            <span class="btn-label">Admin</span>
+          </a>
+        {% endif %}
+        <a href="{{ url_for('auth.logout') }}" class="btn btn-primary btn-sm">
+          <i class="fas fa-sign-out-alt"></i>
+          <span class="btn-label">Logout</span>
+        </a>
+      {% else %}
+        {% if registration_visible() %}
+          <a href="{{ url_for('auth.register') }}" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-user-plus"></i>
+            <span class="btn-label">Register</span>
+          </a>
+        {% endif %}
+        <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-sm">
+          <i class="fas fa-sign-in-alt"></i>
+          <span class="btn-label">Login</span>
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</aside>
+
+<script>
+  (() => {
+    const toggle = document.getElementById("tomSidebarToggle");
+    const sidebar = document.getElementById("tomSidebar");
+    const backdrop = document.getElementById("tomSidebarBackdrop");
+    const desktopCollapseToggle = document.getElementById("tomSidebarCollapseToggle");
+    const desktopCollapseIcon = document.getElementById("tomSidebarCollapseIcon");
+    const collapseStorageKey = "tom-sidebar-collapsed";
+
+    if (!sidebar) return;
+
+    const openSidebar = () => {
+      if (!sidebar || !backdrop) return;
+      sidebar.classList.add("show");
+      backdrop.classList.add("show");
+      document.body.classList.add("tom-sidebar-open");
+    };
+
+    const closeSidebar = () => {
+      if (!sidebar || !backdrop) return;
+      sidebar.classList.remove("show");
+      backdrop.classList.remove("show");
+      document.body.classList.remove("tom-sidebar-open");
+    };
+
+    const applyDesktopCollapsedState = (collapsed) => {
+      document.body.classList.toggle("tom-sidebar-collapsed", collapsed);
+      if (desktopCollapseIcon) {
+        desktopCollapseIcon.className = collapsed ? "fas fa-angle-double-right" : "fas fa-angle-double-left";
+      }
+      if (desktopCollapseToggle) {
+        const textEl = desktopCollapseToggle.querySelector(".desktop-toggle-text");
+        if (textEl) {
+          textEl.textContent = collapsed ? "Expand Sidebar" : "Collapse Sidebar";
+        }
+      }
+    };
+
+    if (toggle && backdrop) {
+      toggle.addEventListener("click", () => {
+        if (sidebar.classList.contains("show")) {
+          closeSidebar();
+        } else {
+          openSidebar();
+        }
+      });
+      backdrop.addEventListener("click", closeSidebar);
+    }
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && sidebar.classList.contains("show")) {
+        closeSidebar();
+      }
+    });
+
+    sidebar.querySelectorAll("a.nav-link").forEach((link) => {
+      link.addEventListener("click", () => {
+        if (window.innerWidth < 992 && sidebar.classList.contains("show")) {
+          closeSidebar();
+        }
+      });
+    });
+
+    const storedCollapsed = localStorage.getItem(collapseStorageKey) === "1";
+    if (window.innerWidth >= 992) {
+      applyDesktopCollapsedState(storedCollapsed);
+    }
+
+    if (desktopCollapseToggle) {
+      desktopCollapseToggle.addEventListener("click", () => {
+        const collapsed = !document.body.classList.contains("tom-sidebar-collapsed");
+        applyDesktopCollapsedState(collapsed);
+        localStorage.setItem(collapseStorageKey, collapsed ? "1" : "0");
+      });
+    }
+
+    const toggleButtons = Array.from(document.querySelectorAll(".tom-sidebar-toggle"));
+    const openPanel = (button, panel) => {
+      button.classList.add("expanded");
+      panel.classList.remove("collapsed");
+    };
+    const closePanel = (button, panel) => {
+      button.classList.remove("expanded");
+      panel.classList.add("collapsed");
+    };
+
+    toggleButtons.forEach((button) => {
+      const panelId = button.getAttribute("data-target");
+      const panel = document.getElementById(panelId);
+      if (!panel) return;
+
+      const hasActiveLink = panel.querySelector(".nav-link.active");
+      if (hasActiveLink || panelId === "competition-panel") {
+        openPanel(button, panel);
+      } else {
+        closePanel(button, panel);
+      }
+
+      button.addEventListener("click", () => {
+        const isCollapsed = panel.classList.contains("collapsed");
+        if (isCollapsed) {
+          openPanel(button, panel);
+        } else {
+          closePanel(button, panel);
+        }
+      });
+    });
+
+    window.addEventListener("resize", () => {
+      if (window.innerWidth >= 992) {
+        closeSidebar();
+        const shouldBeCollapsed = localStorage.getItem(collapseStorageKey) === "1";
+        applyDesktopCollapsedState(shouldBeCollapsed);
+      } else {
+        applyDesktopCollapsedState(false);
+      }
+    });
+  })();
+</script>

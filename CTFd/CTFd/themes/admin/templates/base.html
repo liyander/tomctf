@@ -5,7 +5,8 @@
 	<title>Admin Panel</title>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link rel="shortcut icon" href="{{ url_for('views.themes', theme='admin', path='img/favicon.ico') }}" type="image/x-icon">
+	<link rel="shortcut icon" href="{{ url_for('views.themes', theme='admin', path='img/favicon.ico') }}"
+		type="image/x-icon">
 	<link rel="icon" href="{{ url_for('views.themes', theme='admin', path='img/favicon.ico') }}" type="image/x-icon">
 	{{ Assets.css("assets/css/main.scss", theme="admin") }}
 	{{ Assets.css("assets/css/fonts.scss", theme="admin") }}
@@ -19,7 +20,7 @@
 			'userId': {{ Session.id }},
 			'userName': {{ User.name | tojson }},
 			'userEmail': {{ User.email | tojson }},
-			'teamId': {{ Team.id | tojson }}, 
+			'teamId': {{ Team.id | tojson }},
 			'teamName': {{ Team.name | tojson }},
 			'start': {{ Configs.start | tojson }},
 			'end': {{ Configs.end | tojson }}
@@ -27,139 +28,331 @@
 	</script>
 	{% block stylesheets %} {% endblock %}
 	{% for stylesheet in get_registered_admin_stylesheets() %}
-		{% if stylesheet.startswith('http') %}
-			<link rel="stylesheet" type="text/css" href="{{ stylesheet }}">
-		{% elif request.script_root %}
-			<link rel="stylesheet" type="text/css" href="{{ request.script_root }}/{{ stylesheet }}">
-		{% else %}
-			<link rel="stylesheet" type="text/css" href="{{ stylesheet }}">
-		{% endif %}
+	{% if stylesheet.startswith('http') %}
+	<link rel="stylesheet" type="text/css" href="{{ stylesheet }}">
+	{% elif request.script_root %}
+	<link rel="stylesheet" type="text/css" href="{{ request.script_root }}/{{ stylesheet }}">
+	{% else %}
+	<link rel="stylesheet" type="text/css" href="{{ stylesheet }}">
+	{% endif %}
 	{% endfor %}
 </head>
 
 <body>
-	<nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
-		<div class="container">
-			<a href="{{ url_for('views.static_html', route='/') }}" class="navbar-brand">CTFd</a>
-			<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#base-navbars"
-					aria-controls="base-navbars" aria-expanded="false" aria-label="Toggle navigation">
-				<span class="navbar-toggler-icon"></span>
-			</button>
-			<div class="collapse navbar-collapse" id="base-navbars">
-				<ul class="navbar-nav mr-auto">
-					<li class="nav-item"><a class="nav-link" href="{{ url_for('admin.statistics') }}">Statistics</a></li>
-					<li class="nav-item"><a class="nav-link" href="{{ url_for('admin.notifications') }}">Notifications</a>
-					</li>
-					<li class="nav-item dropdown">
-						<a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="true">Pages</a>
-						<div class="dropdown-menu">
-							<a class="dropdown-item" href="{{ url_for('admin.pages_listing') }}">All Pages</a>
-							<a class="dropdown-item" href="{{ url_for('admin.pages_new') }}">New Page</a>
-						</div>
-					</li>
-					<li class="nav-item"><a class="nav-link" href="{{ url_for('admin.users_listing') }}">Users</a></li>
+	<style>
+		body {
+			margin: 0;
+			overflow-x: hidden;
+		}
+
+		.admin-layout {
+			display: flex;
+			min-height: 100vh;
+			width: 100%;
+			max-width: 100%;
+			overflow-x: hidden;
+		}
+
+		.admin-sidebar {
+			flex: 0 0 260px;
+			width: 260px;
+			min-width: 0;
+			overflow: hidden;
+			transition: width 0.2s ease, flex-basis 0.2s ease;
+		}
+
+		.admin-layout.sidebar-hidden .admin-sidebar {
+			flex-basis: 0;
+			width: 0;
+			border-right: 0 !important;
+		}
+
+		.admin-content-shell {
+			flex: 1 1 0;
+			width: 0;
+			min-width: 0;
+			display: flex;
+			flex-direction: column;
+			overflow-x: hidden;
+		}
+
+		.admin-content-shell>.bg-dark,
+		.admin-content-shell>main,
+		.admin-content-shell>footer {
+			width: 100%;
+			min-width: 0;
+		}
+
+		.admin-content-shell>main {
+			flex: 1 1 auto;
+			overflow-x: hidden;
+		}
+
+		.admin-content-shell .container,
+		.admin-content-shell .container-fluid {
+			max-width: 100% !important;
+		}
+
+		.admin-side-toggle {
+			width: 100%;
+			text-align: left;
+			background: transparent;
+			color: #f8f9fa;
+			border: 1px solid rgba(255, 255, 255, 0.15);
+			border-radius: 0.5rem;
+			padding: 0.5rem 0.75rem;
+			margin: 0.25rem 0;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			font-weight: 600;
+		}
+
+		.admin-side-toggle .chev {
+			transition: transform 0.2s ease;
+		}
+
+		.admin-side-toggle.expanded .chev {
+			transform: rotate(90deg);
+		}
+
+		.admin-side-panel {
+			padding-left: 0.35rem;
+		}
+
+		.admin-side-panel.collapsed {
+			display: none;
+		}
+
+		@media (max-width: 991.98px) {
+			.admin-layout .admin-sidebar {
+				flex-basis: 0;
+				width: 0;
+				border-right: 0 !important;
+			}
+
+			.admin-layout:not(.sidebar-open) .admin-sidebar {
+				display: none;
+			}
+
+			.admin-layout.sidebar-open .admin-sidebar {
+				display: block;
+				position: fixed;
+				left: 0;
+				top: 0;
+				bottom: 0;
+				width: 260px;
+				z-index: 1050;
+				border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+			}
+
+			.admin-layout.sidebar-open::after {
+				content: "";
+				position: fixed;
+				inset: 0;
+				background: rgba(0, 0, 0, 0.45);
+				z-index: 1049;
+			}
+		}
+	</style>
+	<div id="adminLayout" class="d-flex min-vh-100 admin-layout">
+		<aside class="bg-dark text-light border-right admin-sidebar"
+			style="min-height: 100vh; position: sticky; top: 0;">
+			<div class="p-3 border-bottom">
+				<a href="{{ url_for('views.static_html', route='/') }}" class="navbar-brand text-light mb-0">CTFd
+					Admin</a>
+			</div>
+			<nav class="nav flex-column p-2">
+				<button type="button" class="admin-side-toggle" data-target="admin-core-panel">
+					<span>Core</span>
+					<span class="chev">&#9654;</span>
+				</button>
+				<div id="admin-core-panel" class="admin-side-panel">
+					<a class="nav-link text-light" href="{{ url_for('admin.statistics') }}">Statistics</a>
+					<a class="nav-link text-light" href="{{ url_for('admin.notifications') }}">Notifications</a>
+					<a class="nav-link text-light" href="{{ url_for('admin.pages_listing') }}">Pages</a>
+					<a class="nav-link text-light" href="{{ url_for('admin.users_listing') }}">Users</a>
 					{% if get_config('user_mode') == 'teams' %}
-					<li class="nav-item"><a class="nav-link" href="{{ url_for('admin.teams_listing') }}">Teams</a></li>
+					<a class="nav-link text-light" href="{{ url_for('admin.teams_listing') }}">Teams</a>
 					{% endif %}
-					<li class="nav-item"><a class="nav-link" href="{{ url_for('admin.scoreboard_listing') }}">Scoreboard</a></li>
-					<li class="nav-item"><a class="nav-link" href="{{ url_for('admin.challenges_listing') }}">Challenges</a></li>
-					<li class="nav-item dropdown">
-						<a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" role="button"
-						   aria-haspopup="true" aria-expanded="true">Submissions</a>
-						<div class="dropdown-menu">
-							<a class="dropdown-item" href="{{ url_for('admin.submissions_listing') }}">All Submissions</a>
-							<a class="dropdown-item" href="{{ url_for('admin.submissions_listing', submission_type='correct') }}">Correct Submissions</a>
-							<a class="dropdown-item" href="{{ url_for('admin.submissions_listing', submission_type='incorrect') }}">Incorrect Submissions</a>
-						</div>
-					</li>
-					<li class="nav-item"><a class="nav-link" href="{{ url_for('admin.config') }}">Config</a></li>
-
-					{% set plugin_menu = get_admin_plugin_menu_bar() %}
-					{% set plugins = get_menubar_plugins() %}
-					{% if plugin_menu or plugins %}
-						<li class="nav-item">
-							<a class="nav-link d-none d-md-block d-lg-block">|</a>
-						</li>
-
-						{% for menu in plugin_menu %}
-							{% if request.script_root %}
-								{% set route = '/' + request.script_root + '/' + menu.route %}
-							{% else %}
-								{% set route = menu.route %}
-							{% endif %}
-							<li class="nav-item">
-								<a class="nav-link" href="{{ route }}" {% if menu.link_target %}target="{{ menu.link_target }}"{% endif %}>
-									{{ menu.title }}
-								</a>
-							</li>
-						{% endfor %}
-
-						{% if plugins %}
-						<li class="nav-item dropdown">
-							<a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Plugins <span class="caret"></span></a>
-							<ul class="dropdown-menu">
-									{% for plugin in plugins %}
-											<a class="dropdown-item" href="{{ request.script_root }}{{ plugin.route }}">{{ plugin.name }}</a>
-									{% endfor %}
-							</ul>
-						</li>
-						{% endif %}
-					{% endif %}
-				</ul>
-				<ul class="nav navbar-nav navbar-right">
-					<li class="nav-item">
-						<a class="nav-link" href="https://docs.ctfd.io/" target="_blank">
-							<i class="far fa-question-circle"></i>
-						</a>
-					</li>
-				</ul>
-			</div>
-		</div>
-	</nav>
-
-	<main role="main">
-		{% if get_config('version_latest') %}
-		<div class="container-fluid bg-warning text-center py-3">
-			<div class="row">
-				<div class="col-md-12">
-					<a class="btn btn-warning" href="{{ get_config('version_latest') }}">
-						A new CTFd version is available!
-					</a>
+					<a class="nav-link text-light" href="{{ url_for('admin.scoreboard_listing') }}">Scoreboard</a>
+					<a class="nav-link text-light" href="{{ url_for('admin.challenges_listing') }}">Challenges</a>
+					<a class="nav-link text-light" href="{{ url_for('admin.submissions_listing') }}">Submissions</a>
+					<a class="nav-link text-light" href="{{ url_for('admin.config') }}">Config</a>
 				</div>
-			</div>
-		</div>
-		{% endif %}
-		{% block content %}
-		{% endblock %}
-	</main>
 
-	<footer class="footer pt-2">
-		<div class="container text-center">
-			<a href="https://ctfd.io" class="text-secondary">
-				<small class="text-muted">
-					Powered by CTFd
-				</small>
-			</a>
-			<span>
-				<small class="text-muted"><br> Version {{ get_config('ctf_version') }}</small>
-			</span>
+				{% set plugin_menu = get_admin_plugin_menu_bar() %}
+				{% set plugins = get_menubar_plugins() %}
+				{% if plugin_menu or plugins %}
+				<button type="button" class="admin-side-toggle" data-target="admin-plugin-panel">
+					<span>Plugins</span>
+					<span class="chev">&#9654;</span>
+				</button>
+				<div id="admin-plugin-panel" class="admin-side-panel collapsed">
+					{% for menu in plugin_menu %}
+					{% if request.script_root %}
+					{% set route = '/' + request.script_root + '/' + menu.route %}
+					{% else %}
+					{% set route = menu.route %}
+					{% endif %}
+					<a class="nav-link text-light" href="{{ route }}" {% if menu.link_target
+						%}target="{{ menu.link_target }}" {% endif %}>{{ menu.title }}</a>
+					{% endfor %}
+
+					{% for plugin in plugins %}
+					<a class="nav-link text-light" href="{{ request.script_root }}{{ plugin.route }}">{{ plugin.name
+						}}</a>
+					{% endfor %}
+				</div>
+				{% endif %}
+			</nav>
+		</aside>
+
+		<div class="flex-grow-1 admin-content-shell">
+			<div class="bg-dark border-bottom d-flex justify-content-end p-2">
+				<button id="adminSidebarVisibilityToggle" type="button" class="btn btn-sm btn-outline-light mr-2" aria-label="Toggle sidebar">
+					<i class="fas fa-bars"></i>
+					<span id="adminSidebarToggleLabel">Hide Sidebar</span>
+				</button>
+				<a class="btn btn-sm btn-outline-light" href="https://docs.ctfd.io/" target="_blank" rel="noopener">
+					<i class="far fa-question-circle"></i> Docs
+				</a>
+			</div>
+
+			<main role="main">
+				{% if get_config('version_latest') %}
+				<div class="container-fluid bg-warning text-center py-3">
+					<div class="row">
+						<div class="col-md-12">
+							<a class="btn btn-warning" href="{{ get_config('version_latest') }}">
+								A new CTFd version is available!
+							</a>
+						</div>
+					</div>
+				</div>
+				{% endif %}
+				{% block content %}
+				{% endblock %}
+			</main>
+
+			<footer class="footer pt-2">
+				<div class="container text-center">
+					<a href="https://ctfd.io" class="text-secondary">
+						<small class="text-muted">
+							Powered by CTFd
+						</small>
+					</a>
+					<span>
+						<small class="text-muted"><br> Version {{ get_config('ctf_version') }}</small>
+					</span>
+				</div>
+			</footer>
 		</div>
-	</footer>
+	</div>
 
 	{% block entrypoint %}
-		{{ Assets.js("assets/js/pages/main.js", theme="admin") }}
+	{{ Assets.js("assets/js/pages/main.js", theme="admin") }}
 	{% endblock %}
 
 	{% block scripts %} {% endblock %}
 
+	<script>
+		(() => {
+			const layout = document.getElementById('adminLayout');
+			const sidebarToggle = document.getElementById('adminSidebarVisibilityToggle');
+			const sidebarToggleLabel = document.getElementById('adminSidebarToggleLabel');
+			const sidebarStorageKey = 'ctfd-admin-sidebar-hidden';
+			const buttons = Array.from(document.querySelectorAll('.admin-side-toggle'));
+
+			const applySidebarState = (hidden) => {
+				if (!layout) return;
+				layout.classList.toggle('sidebar-hidden', hidden);
+				if (sidebarToggleLabel) {
+					sidebarToggleLabel.textContent = hidden ? 'Show Sidebar' : 'Hide Sidebar';
+				}
+			};
+
+			if (layout && window.innerWidth >= 992) {
+				const hidden = localStorage.getItem(sidebarStorageKey) === '1';
+				applySidebarState(hidden);
+			}
+
+			if (sidebarToggle) {
+				sidebarToggle.addEventListener('click', () => {
+					if (!layout) return;
+					if (window.innerWidth < 992) {
+						layout.classList.toggle('sidebar-open');
+						return;
+					}
+
+					const hidden = !layout.classList.contains('sidebar-hidden');
+					applySidebarState(hidden);
+					localStorage.setItem(sidebarStorageKey, hidden ? '1' : '0');
+				});
+			}
+
+			document.addEventListener('keydown', (event) => {
+				if (event.key === 'Escape' && layout && layout.classList.contains('sidebar-open')) {
+					layout.classList.remove('sidebar-open');
+				}
+			});
+
+			window.addEventListener('resize', () => {
+				if (!layout) return;
+				if (window.innerWidth >= 992) {
+					layout.classList.remove('sidebar-open');
+					const hidden = localStorage.getItem(sidebarStorageKey) === '1';
+					applySidebarState(hidden);
+				} else {
+					layout.classList.remove('sidebar-hidden');
+					if (sidebarToggleLabel) {
+						sidebarToggleLabel.textContent = 'Menu';
+					}
+				}
+			});
+
+			const openPanel = (button, panel) => {
+				button.classList.add('expanded');
+				panel.classList.remove('collapsed');
+			};
+			const closePanel = (button, panel) => {
+				button.classList.remove('expanded');
+				panel.classList.add('collapsed');
+			};
+
+			buttons.forEach((button) => {
+				const panel = document.getElementById(button.getAttribute('data-target'));
+				if (!panel) return;
+
+				const panelStorageKey = `ctfd-admin-panel-${panel.id}-expanded`;
+				const isExpanded = localStorage.getItem(panelStorageKey) === '1';
+
+				// Apply stored state on load
+				if (isExpanded) {
+					openPanel(button, panel);
+				}
+
+				button.addEventListener('click', () => {
+					if (panel.classList.contains('collapsed')) {
+						openPanel(button, panel);
+						localStorage.setItem(panelStorageKey, '1');
+					} else {
+						closePanel(button, panel);
+						localStorage.setItem(panelStorageKey, '0');
+					}
+				});
+			});
+		})();
+	</script>
+
 	{% for script in get_registered_admin_scripts() %}
-		{% if script.startswith('http') %}
-			<script defer src="{{ script }}"></script>
-		{% elif request.script_root %}
-			<script defer src="{{ request.script_root }}/{{ script }}"></script>
-		{% else %}
-			<script defer src="{{ script }}"></script>
-		{% endif %}
+	{% if script.startswith('http') %}
+	<script defer src="{{ script }}"></script>
+	{% elif request.script_root %}
+	<script defer src="{{ request.script_root }}/{{ script }}"></script>
+	{% else %}
+	<script defer src="{{ script }}"></script>
+	{% endif %}
 	{% endfor %}
 </body>
 

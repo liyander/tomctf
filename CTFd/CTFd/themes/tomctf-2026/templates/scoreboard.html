@@ -23,6 +23,7 @@
                 <div class="podium-avatar silver">🥈</div>
                 <div class="podium-name" x-text="topThree[1]?.name || '---'">---</div>
                 <div class="podium-score" x-text="topThree[1]?.score ? topThree[1].score + ' pts' : ''"></div>
+                <div class="podium-level" x-text="topThree[1]?.score !== undefined ? levelNameForScore(topThree[1].score) : ''"></div>
                 <div class="podium-bar bar-2"></div>
               </div>
               <!-- 1st Place -->
@@ -31,6 +32,7 @@
                 <div class="podium-avatar gold">🥇</div>
                 <div class="podium-name" x-text="topThree[0]?.name || '---'">---</div>
                 <div class="podium-score" x-text="topThree[0]?.score ? topThree[0].score + ' pts' : ''"></div>
+                <div class="podium-level" x-text="topThree[0]?.score !== undefined ? levelNameForScore(topThree[0].score) : ''"></div>
                 <div class="podium-bar bar-1"></div>
               </div>
               <!-- 3rd Place -->
@@ -38,6 +40,7 @@
                 <div class="podium-avatar bronze">🥉</div>
                 <div class="podium-name" x-text="topThree[2]?.name || '---'">---</div>
                 <div class="podium-score" x-text="topThree[2]?.score ? topThree[2].score + ' pts' : ''"></div>
+                <div class="podium-level" x-text="topThree[2]?.score !== undefined ? levelNameForScore(topThree[2].score) : ''"></div>
                 <div class="podium-bar bar-3"></div>
               </div>
             </div>
@@ -129,6 +132,10 @@
                         <i class="fas fa-star me-1"></i>
                         {% trans %}Score{% endtrans %}
                       </th>
+                      <th class="sticky-col col-level" rowspan="2">
+                        <i class="fas fa-layer-group me-1"></i>
+                        Level
+                      </th>
                       <!-- Category group headers -->
                       <template x-for="category in Object.keys(challengesByCategory).sort()" :key="category">
                         <th class="text-center category-header" :colspan="challengesByCategory[category].length" :style="getCategoryHeaderStyle(category)">
@@ -164,6 +171,9 @@
                         <!-- Score -->
                         <td class="sticky-col col-score text-center">
                           <span class="score-val" x-text="standing.score"></span>
+                        </td>
+                        <td class="sticky-col col-level text-center">
+                          <span class="level-chip" x-text="levelNameForScore(standing.score)"></span>
                         </td>
                         <!-- Challenge completion -->
                         <template x-for="challenge in sortedChallenges" :key="challenge.id">
@@ -317,6 +327,11 @@
       font-size: 0.65rem;
       color: #ec1313;
       font-weight: 700;
+      font-family: 'Space Grotesk', monospace;
+    }
+    .podium-level {
+      font-size: 0.62rem;
+      color: rgba(255, 255, 255, 0.72);
       font-family: 'Space Grotesk', monospace;
     }
     .podium-bar {
@@ -505,6 +520,7 @@
     .col-rank { left: 0; width: 55px; min-width: 55px; max-width: 55px; }
     .col-name { left: 55px; width: 180px; min-width: 180px; max-width: 180px; }
     .col-score { left: 235px; width: 90px; min-width: 90px; max-width: 90px; }
+    .col-level { left: 325px; width: 130px; min-width: 130px; max-width: 130px; }
     .sticky-col::after {
       content: '';
       position: absolute;
@@ -594,6 +610,17 @@
       font-weight: 700;
       font-size: 0.88rem;
       color: #ec1313;
+    }
+    .level-chip {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      border: 1px solid rgba(236, 19, 19, 0.3);
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.9);
+      background: rgba(236, 19, 19, 0.1);
+      font-family: 'Space Grotesk', monospace;
     }
 
     /* Solve Dots */
@@ -689,7 +716,21 @@
       .bar-3 { height: 30px; }
     }
   </style>
+  <script id="level-rules-json" type="application/json">{{ prolab_level_rules | default([], true) | tojson }}</script>
   <script>
+    const levelRulesNode = document.getElementById('level-rules-json');
+    window.LEVEL_RULES = JSON.parse(levelRulesNode?.textContent || '[]');
+    window.levelNameForScore = (score) => {
+      const normalized = Number.isFinite(Number(score)) ? Number(score) : 0;
+      let current = window.LEVEL_RULES[0]?.name || "Recruit";
+      window.LEVEL_RULES.forEach((rule) => {
+        if (normalized >= Number(rule.min_score || 0)) {
+          current = rule.name;
+        }
+      });
+      return current;
+    };
+
     // TopRankings Alpine component for real-time top 3 display
     document.addEventListener('alpine:init', () => {
       Alpine.data('TopRankings', () => ({

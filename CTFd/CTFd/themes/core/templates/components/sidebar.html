@@ -1,0 +1,130 @@
+<aside class="hidden lg:flex fixed inset-y-0 left-0 w-72 bg-black border-r border-white/10 z-40">
+  <div class="w-full flex flex-col">
+    <div class="h-20 px-6 flex items-center border-b border-white/10">
+      <a href="{{ url_for('views.static_html', route='/') }}" class="flex items-center gap-3 group">
+        <span class="material-symbols-outlined text-primary text-3xl">architecture</span>
+        <span class="font-display text-xl font-bold tracking-wide uppercase">
+          {% if Configs.ctf_logo %}
+            <img src="{{ url_for('views.files', path=Configs.ctf_logo) }}" alt="{{ Configs.ctf_name }}" class="h-8">
+          {% else %}
+            {{ Configs.ctf_name }}
+          {% endif %}
+        </span>
+      </a>
+    </div>
+
+    <nav class="flex-1 overflow-y-auto px-4 py-5 space-y-1">
+      <a href="{{ url_for('challenges.listing') }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-colors {% if request.path.startswith('/challenges') %}bg-primary/20 text-white border border-primary/30{% else %}text-gray-400 hover:text-white hover:bg-white/5{% endif %}">Challenges</a>
+
+      {% if Configs.account_visibility != 'admins' and Configs.score_visibility != 'admins' %}
+      <a href="{{ url_for('scoreboard.listing') }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-colors {% if request.path.startswith('/scoreboard') %}bg-primary/20 text-white border border-primary/30{% else %}text-gray-400 hover:text-white hover:bg-white/5{% endif %}">Scoreboard</a>
+      {% endif %}
+
+      <a href="/rules" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-colors {% if request.path.startswith('/rules') %}bg-primary/20 text-white border border-primary/30{% else %}text-gray-400 hover:text-white hover:bg-white/5{% endif %}">The Rules</a>
+
+      <a href="{{ url_for('prolabs.prolab_listing') }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-colors {% if request.path.startswith('/pro-red-team-labs') %}bg-primary/20 text-white border border-primary/30{% else %}text-gray-400 hover:text-white hover:bg-white/5{% endif %}">Pro Red Team Labs</a>
+
+      {% if Configs.account_visibility != 'admins' %}
+      <a href="{{ url_for('users.listing') }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-colors {% if request.path.startswith('/users') %}bg-primary/20 text-white border border-primary/30{% else %}text-gray-400 hover:text-white hover:bg-white/5{% endif %}">Users</a>
+
+      {% if Configs.user_mode == 'teams' %}
+      <a href="{{ url_for('teams.listing') }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-colors {% if request.path.startswith('/teams') %}bg-primary/20 text-white border border-primary/30{% else %}text-gray-400 hover:text-white hover:bg-white/5{% endif %}">Teams</a>
+      {% endif %}
+      {% endif %}
+
+      {% for page in Plugins.user_menu_pages %}
+      <a href="{{ page.route }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest text-gray-400 hover:text-white hover:bg-white/5 transition-colors">{{ page.title }}</a>
+      {% endfor %}
+    </nav>
+
+    <div class="px-4 py-4 border-t border-white/10 space-y-2">
+      {% if authed() %}
+        <a href="{{ url_for('users.private') }}" class="block w-full text-center bg-primary hover:bg-primary-hover text-white text-xs font-bold uppercase py-2.5 px-4 rounded tracking-widest transition-colors">Profile</a>
+        {% if is_admin() %}
+          <a href="{{ url_for('admin.view') }}" class="block w-full text-center border border-white/20 hover:border-white/40 text-white text-xs font-bold uppercase py-2.5 px-4 rounded tracking-widest transition-colors">Admin</a>
+        {% endif %}
+        <a href="{{ url_for('auth.logout') }}" class="block w-full text-center border border-white/20 hover:border-white/40 text-white text-xs font-bold uppercase py-2.5 px-4 rounded tracking-widest transition-colors">Logout</a>
+      {% else %}
+        <a href="{{ url_for('auth.register') }}" class="block w-full text-center bg-primary hover:bg-primary-hover text-white text-xs font-bold uppercase py-2.5 px-4 rounded tracking-widest transition-colors">Register</a>
+        <a href="{{ url_for('auth.login') }}" class="block w-full text-center border border-white/20 hover:border-white/40 text-white text-xs font-bold uppercase py-2.5 px-4 rounded tracking-widest transition-colors">Login</a>
+      {% endif %}
+    </div>
+  </div>
+</aside>
+
+<div class="lg:hidden sticky top-0 z-40 border-b border-white/10 bg-black/95 backdrop-blur px-4 py-3 flex items-center justify-between">
+  <a href="{{ url_for('views.static_html', route='/') }}" class="flex items-center gap-2">
+    <span class="material-symbols-outlined text-primary text-2xl">architecture</span>
+    <span class="font-display text-base font-bold uppercase tracking-wide">{{ Configs.ctf_name }}</span>
+  </a>
+  <button type="button" id="sidebarToggle" class="border border-white/20 rounded px-3 py-1 text-sm font-bold uppercase tracking-tighter text-white">Menu</button>
+</div>
+
+<div id="mobileSidebarBackdrop" class="lg:hidden fixed inset-0 bg-black/60 z-40 hidden opacity-0 transition-opacity duration-300"></div>
+
+<aside id="mobileSidebar" class="lg:hidden fixed top-0 left-0 h-full w-72 bg-black border-r border-white/10 z-50 -translate-x-full transition-transform duration-300 flex flex-col">
+  <div class="h-20 px-6 flex items-center justify-between border-b border-white/10 flex-shrink-0">
+    <span class="font-display text-lg font-bold uppercase tracking-wide">Navigation</span>
+    <button type="button" id="sidebarClose" class="text-stone-300 p-2">✕</button>
+  </div>
+  
+  <nav class="flex-1 px-4 py-5 space-y-1 overflow-y-auto">
+    <a href="{{ url_for('challenges.listing') }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest text-gray-300 hover:text-white hover:bg-white/5">Challenges</a>
+    {% if Configs.account_visibility != 'admins' and Configs.score_visibility != 'admins' %}
+    <a href="{{ url_for('scoreboard.listing') }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest text-gray-300 hover:text-white hover:bg-white/5">Scoreboard</a>
+    {% endif %}
+    <a href="/rules" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest text-gray-300 hover:text-white hover:bg-white/5">The Rules</a>
+    <a href="{{ url_for('prolabs.prolab_listing') }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest text-gray-300 hover:text-white hover:bg-white/5">Pro Red Team Labs</a>
+    
+    {% if Configs.account_visibility != 'admins' %}
+    <a href="{{ url_for('users.listing') }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest text-gray-300 hover:text-white hover:bg-white/5">Users</a>
+    {% if Configs.user_mode == 'teams' %}
+    <a href="{{ url_for('teams.listing') }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest text-gray-300 hover:text-white hover:bg-white/5">Teams</a>
+    {% endif %}
+    {% endif %}
+
+    {% for page in Plugins.user_menu_pages %}
+    <a href="{{ page.route }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest text-gray-400 hover:text-white hover:bg-white/5">{{ page.title }}</a>
+    {% endfor %}
+  </nav>
+
+  <div class="px-4 py-4 border-t border-white/10 space-y-2 flex-shrink-0 bg-black">
+    {% if authed() %}
+      <a href="{{ url_for('users.private') }}" class="block w-full text-center bg-primary text-white text-xs font-bold uppercase py-2.5 px-4 rounded tracking-widest">Profile</a>
+      {% if is_admin() %}
+        <a href="{{ url_for('admin.view') }}" class="block w-full text-center border border-white/20 text-white text-xs font-bold uppercase py-2.5 px-4 rounded tracking-widest">Admin</a>
+      {% endif %}
+      <a href="{{ url_for('auth.logout') }}" class="block w-full text-center border border-white/20 text-white text-xs font-bold uppercase py-2.5 px-4 rounded tracking-widest">Logout</a>
+    {% else %}
+      <a href="{{ url_for('auth.register') }}" class="block w-full text-center bg-primary text-white text-xs font-bold uppercase py-2.5 px-4 rounded tracking-widest">Register</a>
+      <a href="{{ url_for('auth.login') }}" class="block w-full text-center border border-white/20 text-white text-xs font-bold uppercase py-2.5 px-4 rounded tracking-widest">Login</a>
+    {% endif %}
+  </div>
+</aside>
+
+<script>
+  (() => {
+    const sidebar = document.getElementById("mobileSidebar");
+    const backdrop = document.getElementById("mobileSidebarBackdrop");
+    const openBtn = document.getElementById("sidebarToggle");
+    const closeBtn = document.getElementById("sidebarClose");
+
+    if (!sidebar || !backdrop || !openBtn || !closeBtn) return;
+
+    const openSidebar = () => {
+      sidebar.classList.remove("-translate-x-full");
+      backdrop.classList.remove("hidden");
+      setTimeout(() => backdrop.classList.add("opacity-100"), 10);
+    };
+
+    const closeSidebar = () => {
+      sidebar.classList.add("-translate-x-full");
+      backdrop.classList.remove("opacity-100");
+      setTimeout(() => backdrop.classList.add("hidden"), 300);
+    };
+
+    openBtn.addEventListener("click", openSidebar);
+    closeBtn.addEventListener("click", closeSidebar);
+    backdrop.addEventListener("click", closeSidebar);
+  })();
+</script>

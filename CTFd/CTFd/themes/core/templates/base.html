@@ -180,18 +180,19 @@
   </script>
   {{ Configs.theme_header }}
 </head>
-<body class="bg-background-dark text-stone-300 min-h-screen flex flex-col font-display selection:bg-primary/30 selection:text-white overflow-x-hidden">
+<body class="bg-background-dark text-stone-300 min-h-screen font-display selection:bg-primary/30 selection:text-white overflow-x-hidden">
 
-{% include "components/navbar.html" %}
+{% include "components/sidebar.html" %}
 
+<div class="min-h-screen flex flex-col lg:pl-72">
 {% block header_strip %}{% endblock %}
 
-<main class="flex-grow w-full flex flex-col pt-20 relative" role="main">
-  <!-- Global background texture if desired, slightly visible -->
-  <div class="fixed inset-0 pointer-events-none opacity-[0.03] z-[-1]" style="background-image: url('https://www.transparenttextures.com/patterns/dark-matter.png');"></div>
+<main class="flex-grow w-full flex flex-col relative" role="main">
+    <!-- Global background texture if desired, slightly visible -->
+    <div class="fixed inset-0 pointer-events-none opacity-[0.03] z-[-1]" style="background-image: url('https://www.transparenttextures.com/patterns/dark-matter.png');"></div>
   
-  {% block content %}
-  {% endblock %}
+    {% block content %}
+    {% endblock %}
 </main>
 
 {% include "components/snackbar.html" %}
@@ -202,6 +203,7 @@
         <p class="text-stone-600 text-xs font-mono uppercase tracking-widest">Powered by CTFd</p>
     </div>
 </footer>
+</div>
 
 {% include "components/notifications.html" %}
 

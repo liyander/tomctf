@@ -1,0 +1,101 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+  <div class="container">
+    <h1>Pro Lab Levels</h1>
+    <p>Configure score thresholds used for profile levels and Pro Lab access requirements.</p>
+    {% if request.args.get('saved') %}
+      <div class="alert alert-success mt-3">Level configuration saved successfully.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="container pb-5" id="levels-admin">
+  <form method="POST" id="levels-form">
+    <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+
+    <div class="mb-3">
+      <button type="button" class="btn btn-outline-primary" id="add-level">Add Level</button>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Level Rules</strong>
+        <span class="text-muted small">Rows are sorted by score when saved</span>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-striped mb-0 align-middle">
+          <thead>
+            <tr>
+              <th style="width: 45%;">Level Name</th>
+              <th style="width: 35%;">Minimum Score</th>
+              <th style="width: 20%;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="levels-body">
+            {% for level in levels %}
+            <tr class="level-row">
+              <td>
+                <input type="text" class="form-control" name="level_name[]" value="{{ level.name }}" placeholder="Operator" required>
+              </td>
+              <td>
+                <input type="number" min="0" step="1" class="form-control" name="min_score[]" value="{{ level.min_score }}" required>
+              </td>
+              <td>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-level">Remove</button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (() => {
+    const addButton = document.getElementById("add-level");
+    const tbody = document.getElementById("levels-body");
+
+    const levelRowTemplate = () => `
+      <tr class="level-row">
+        <td>
+          <input type="text" class="form-control" name="level_name[]" placeholder="New Level" required>
+        </td>
+        <td>
+          <input type="number" min="0" step="1" class="form-control" name="min_score[]" value="0" required>
+        </td>
+        <td>
+          <button type="button" class="btn btn-sm btn-outline-danger remove-level">Remove</button>
+        </td>
+      </tr>
+    `;
+
+    if (addButton && tbody) {
+      addButton.addEventListener("click", () => {
+        tbody.insertAdjacentHTML("beforeend", levelRowTemplate());
+      });
+
+      tbody.addEventListener("click", (event) => {
+        if (!event.target.classList.contains("remove-level")) {
+          return;
+        }
+
+        const row = event.target.closest(".level-row");
+        if (row) {
+          row.remove();
+        }
+
+        if (!tbody.querySelector(".level-row")) {
+          tbody.insertAdjacentHTML("beforeend", levelRowTemplate());
+        }
+      });
+    }
+  })();
+</script>
+{% endblock %}
