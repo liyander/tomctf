@@ -1,0 +1,566 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="container py-4 py-lg-5 py-xl-6 machines-detail-page">
+  <style>
+    .machines-detail-page {
+      max-width: 1240px;
+    }
+    .machines-detail-page .text-secondary {
+      color: #9fb5b9 !important;
+    }
+    .machines-detail-page .form-control {
+      background: rgba(10, 13, 18, 0.9);
+      border: 1px solid rgba(96, 181, 164, 0.35);
+      color: #e8f2f1;
+      border-radius: 0.8rem;
+    }
+    .machines-detail-page .form-control::placeholder {
+      color: #8fa3a8;
+    }
+    .machines-detail-page .form-control:focus {
+      background: rgba(10, 13, 18, 0.98);
+      border-color: rgba(118, 213, 194, 0.62);
+      box-shadow: 0 0 0 0.16rem rgba(86, 194, 172, 0.2);
+      color: #f5fbfa;
+    }
+    .machines-detail-page .btn-primary {
+      background: linear-gradient(120deg, #1f8f79, #247563);
+      border-color: rgba(109, 219, 196, 0.35);
+      color: #f4fffd;
+      border-radius: 0.75rem;
+      font-weight: 700;
+    }
+    .machines-detail-page .btn-primary:hover,
+    .machines-detail-page .btn-primary:focus {
+      background: linear-gradient(120deg, #22a58a, #288170);
+      border-color: rgba(133, 236, 214, 0.5);
+      color: #ffffff;
+    }
+    .machines-detail-page .btn-outline-primary {
+      border-color: rgba(109, 219, 196, 0.35);
+      color: #aeeede;
+    }
+    .machines-detail-page .btn-outline-primary:hover {
+      background: rgba(34, 145, 122, 0.2);
+      color: #f4fffd;
+      border-color: rgba(133, 236, 214, 0.5);
+    }
+    .machines-hero {
+      background: radial-gradient(circle at 90% 10%, rgba(242, 123, 34, 0.22), transparent 45%), linear-gradient(135deg, rgba(8, 30, 28, 0.95), rgba(16, 16, 18, 0.92));
+      border: 1px solid rgba(101, 196, 174, 0.2);
+      border-radius: 1.2rem;
+      padding: 1.5rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.28);
+    }
+    .machines-shell {
+      border: 1px solid rgba(84, 168, 150, 0.22);
+      background: linear-gradient(180deg, rgba(6, 14, 16, 0.88), rgba(8, 8, 10, 0.95));
+      border-radius: 1rem;
+      padding: 1.65rem;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03), 0 14px 34px rgba(0, 0, 0, 0.24);
+    }
+    .machines-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #d6ece6;
+      background: rgba(255, 255, 255, 0.04);
+      font-size: 0.82rem;
+      margin-right: 0.4rem;
+      margin-bottom: 0.35rem;
+    }
+    .machines-tab-nav {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .machines-tab-nav[data-tab-group='main-tabs'] {
+      margin-bottom: 1.45rem;
+      padding-bottom: 0.3rem;
+      border-bottom: 1px solid rgba(100, 201, 181, 0.14);
+    }
+    .machines-tab-nav[data-tab-group='play-tabs'] {
+      margin-bottom: 1rem;
+    }
+    .machines-tab-btn {
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      background: linear-gradient(180deg, rgba(26, 31, 38, 0.7), rgba(9, 10, 14, 0.9));
+      color: #deecea;
+      border-radius: 999px;
+      padding: 0.5rem 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.1px;
+      transition: all 0.15s ease;
+    }
+    .machines-tab-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(113, 219, 198, 0.4);
+      color: #f3fffb;
+    }
+    .machines-tab-btn.is-active {
+      background: linear-gradient(120deg, #1f8570, #256f60);
+      border-color: rgba(101, 196, 174, 0.65);
+      color: #fff;
+      box-shadow: 0 8px 18px rgba(22, 122, 101, 0.34);
+    }
+    .machines-tab-panel {
+      display: none;
+    }
+    .machines-tab-panel.is-active {
+      display: block;
+      animation: machinesFadeIn 0.2s ease;
+    }
+    .machines-card {
+      border-radius: 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      background: linear-gradient(160deg, rgba(8, 18, 20, 0.78), rgba(12, 13, 16, 0.92));
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+    }
+    .machines-card .card-body {
+      padding: 1.35rem;
+    }
+    .machines-tab-panel[data-tab-panel='play'] .machines-card {
+      margin-bottom: 1.15rem;
+    }
+    .machines-tab-panel[data-tab-panel='play'] .machines-card:last-child {
+      margin-bottom: 0;
+    }
+    .machines-status {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px dashed rgba(255, 255, 255, 0.2);
+      border-radius: 0.8rem;
+      padding: 0.7rem 0.9rem;
+      font-size: 0.9rem;
+      color: #dce8e6;
+    }
+    .machines-endpoint-box {
+      background: rgba(0, 0, 0, 0.22);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 0.7rem;
+      padding: 0.55rem;
+      font-family: monospace;
+      letter-spacing: 0.4px;
+    }
+    .machines-timer {
+      font-size: 0.9rem;
+      color: #b8c9cc;
+      font-weight: 600;
+    }
+    .machines-timer.warn {
+      color: #ffab40;
+    }
+    .machines-timer.danger {
+      color: #ff5252;
+    }
+    .machines-docker-badge {
+      border-radius: 999px;
+      font-weight: 700;
+      padding: 0.35rem 0.7rem;
+      border: 1px solid rgba(83, 208, 183, 0.38);
+      background: rgba(22, 113, 96, 0.25);
+      color: #b6f3e3;
+    }
+    .machines-action-btn {
+      min-width: 126px;
+      border-radius: 0.7rem;
+      font-weight: 700;
+    }
+    @media (max-width: 768px) {
+      .machines-shell {
+        padding: 1.15rem;
+      }
+      .machines-action-btn {
+        min-width: 0;
+        flex: 1 1 auto;
+      }
+    }
+    @keyframes machinesFadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+
+  <div class="machines-hero mb-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
+      <div>
+        <h1 class="mb-2">{{ machine.title }}</h1>
+        <div>
+          <span class="machines-chip">Difficulty: {{ machine.difficulty }}</span>
+          <span class="machines-chip">OS: {{ machine.os }}</span>
+          <span class="machines-chip">Released: {{ machine.release_date or 'N/A' }}</span>
+          <span class="machines-chip">Rating: {{ '%.1f'|format(machine.rating) }} ({{ machine.rating_count }})</span>
+        </div>
+      </div>
+      <a href="{{ url_for('prolabs.machines_listing') }}" class="btn btn-outline-light">Back to Machines</a>
+    </div>
+  </div>
+
+  <div class="machines-shell">
+    <div class="machines-tab-nav" data-tab-group="main-tabs">
+      <button type="button" class="machines-tab-btn is-active" data-tab-target="play">Play Machine</button>
+      <button type="button" class="machines-tab-btn" data-tab-target="info">Machine Info</button>
+      <button type="button" class="machines-tab-btn" data-tab-target="walkthrough">Walkthrough</button>
+    </div>
+
+    <div class="machines-tab-panel is-active" data-tab-panel="play">
+      <div class="machines-tab-nav" data-tab-group="play-tabs">
+        <button type="button" class="machines-tab-btn is-active" data-tab-target="adventure">Adventure Mode</button>
+        <button type="button" class="machines-tab-btn" data-tab-target="guided">Guided Mode</button>
+      </div>
+
+      <div class="machines-card mb-3">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+            <h5 class="mb-0">Docker Instance</h5>
+            <span class="machines-docker-badge">{{ machine.docker_image or 'Not configured' }}</span>
+          </div>
+          <p class="text-secondary mb-3">Spawn or stop your machine container directly from this page.</p>
+          <div class="d-flex flex-wrap gap-2 mb-3">
+            <button class="btn btn-success machines-action-btn" id="machine-container-start" {% if not machine.docker_enabled or not machine.docker_image %}disabled{% endif %}>Start Instance</button>
+            <button class="btn btn-outline-danger machines-action-btn" id="machine-container-stop" style="display:none;" {% if not machine.docker_enabled or not machine.docker_image %}disabled{% endif %}>Stop Machine</button>
+            <button class="btn btn-outline-success machines-action-btn" id="machine-container-extend" style="display:none;" {% if not machine.docker_enabled or not machine.docker_image %}disabled{% endif %}>Extend</button>
+            <button class="btn btn-outline-light machines-action-btn" id="machine-container-refresh" {% if not machine.docker_enabled or not machine.docker_image %}disabled{% endif %}>Refresh</button>
+          </div>
+          <div class="machines-status" id="machine-container-status-text">{{ machine.docker_status.message }}</div>
+          <div id="machine-container-endpoints" class="mt-2"></div>
+          <div id="machine-container-timer" class="machines-timer mt-2"></div>
+        </div>
+      </div>
+
+      <div class="machines-tab-panel is-active" data-tab-panel="adventure" data-tab-parent="play-tabs">
+      <div class="machines-card mb-3"><div class="card-body">
+        <h5 class="mb-3">Submit User Flag</h5>
+        <div class="input-group mb-2">
+          <input id="user-flag-input" class="form-control" placeholder="Enter user flag" {% if machine.user_flag_owned %}disabled{% endif %}>
+          <button class="btn btn-primary" id="submit-user-flag" {% if machine.user_flag_owned %}disabled{% endif %}>Submit Flag</button>
+        </div>
+        <small id="user-flag-feedback" class="text-secondary">{% if machine.user_flag_owned %}Already solved.{% endif %}</small>
+      </div></div>
+
+      <div class="machines-card"><div class="card-body">
+        <h5 class="mb-3">Submit Root Flag</h5>
+        <div class="input-group mb-2">
+          <input id="root-flag-input" class="form-control" placeholder="Enter root flag" {% if machine.root_flag_owned %}disabled{% endif %}>
+          <button class="btn btn-primary" id="submit-root-flag" {% if machine.root_flag_owned %}disabled{% endif %}>Submit Flag</button>
+        </div>
+        <small id="root-flag-feedback" class="text-secondary">{% if machine.root_flag_owned %}Already solved.{% endif %}</small>
+      </div></div>
+      </div>
+
+      <div class="machines-tab-panel" data-tab-panel="guided" data-tab-parent="play-tabs">
+      <div class="machines-card mb-3"><div class="card-body">
+        <h5 class="mb-3">Guided Questions</h5>
+        {% if machine.guided_questions %}
+          {% for q in machine.guided_questions %}
+          <div class="mb-3 p-3 border border-secondary border-opacity-25 rounded">
+            <label class="form-label fw-semibold mb-2">{{ q.question }}</label>
+            <div class="input-group mb-2">
+              <input class="form-control guided-answer" data-entry-id="guided-{{ q.id }}" placeholder="Your answer" {% if ('guided-' ~ q.id) in machine.guided_owned %}disabled{% endif %}>
+              <button class="btn btn-outline-primary submit-guided-answer" data-entry-id="guided-{{ q.id }}" {% if ('guided-' ~ q.id) in machine.guided_owned %}disabled{% endif %}>Submit</button>
+            </div>
+            <small class="text-secondary guided-feedback" data-entry-id="guided-{{ q.id }}">{% if ('guided-' ~ q.id) in machine.guided_owned %}Already solved.{% endif %}</small>
+          </div>
+          {% endfor %}
+        {% else %}
+          <p class="text-secondary mb-0">No guided questions configured.</p>
+        {% endif %}
+      </div></div>
+
+      <div class="machines-card mb-3"><div class="card-body">
+        <h5 class="mb-3">Submit User Flag</h5>
+        <div class="input-group mb-2">
+          <input id="guided-user-flag-input" class="form-control" placeholder="Enter user flag" {% if machine.user_flag_owned %}disabled{% endif %}>
+          <button class="btn btn-primary" id="guided-submit-user-flag" {% if machine.user_flag_owned %}disabled{% endif %}>Submit Flag</button>
+        </div>
+        <small id="guided-user-flag-feedback" class="text-secondary">{% if machine.user_flag_owned %}Already solved.{% endif %}</small>
+      </div></div>
+
+      <div class="machines-card"><div class="card-body">
+        <h5 class="mb-3">Submit Root Flag</h5>
+        <div class="input-group mb-2">
+          <input id="guided-root-flag-input" class="form-control" placeholder="Enter root flag" {% if machine.root_flag_owned %}disabled{% endif %}>
+          <button class="btn btn-primary" id="guided-submit-root-flag" {% if machine.root_flag_owned %}disabled{% endif %}>Submit Flag</button>
+        </div>
+        <small id="guided-root-flag-feedback" class="text-secondary">{% if machine.root_flag_owned %}Already solved.{% endif %}</small>
+      </div></div>
+      </div>
+    </div>
+
+    <div class="machines-tab-panel" data-tab-panel="info">
+      <div class="machines-card"><div class="card-body markdown-body">{{ machine.machine_info_html | safe }}</div></div>
+    </div>
+
+    <div class="machines-tab-panel" data-tab-panel="walkthrough">
+      <div class="machines-card mb-3"><div class="card-body markdown-body">{{ machine.walkthrough_html | safe }}</div></div>
+      <div class="machines-card"><div class="card-body">
+        <h5>Walkthrough Files</h5>
+        {% if machine.walkthrough_files %}
+          <ul class="mb-0">
+            {% for f in machine.walkthrough_files %}
+            <li><a href="{{ url_for('views.files', path=f.location) }}" target="_blank" rel="noopener">{{ f.name }}</a></li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-secondary mb-0">No walkthrough files uploaded.</p>
+        {% endif %}
+      </div></div>
+    </div>
+  </div>
+
+  <script type="application/json" id="machine-docker-status">{{ machine.docker_status | tojson }}</script>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const submitUrl = "{{ url_for('prolabs.machines_submit', slug=machine.slug) }}";
+  const containerUrl = "{{ url_for('prolabs.machines_container', slug=machine.slug) }}";
+  const initialDockerStatus = JSON.parse(document.getElementById('machine-docker-status')?.textContent || '{}');
+
+  const activateTabs = (groupName, parentGroup = null) => {
+    const buttons = Array.from(document.querySelectorAll(`[data-tab-group='${groupName}'] [data-tab-target]`));
+    const panels = Array.from(document.querySelectorAll(`[data-tab-panel]`)).filter((panel) => {
+      if (!parentGroup) return !panel.dataset.tabParent;
+      return panel.dataset.tabParent === parentGroup;
+    });
+
+    const setActive = (target) => {
+      buttons.forEach((btn) => {
+        btn.classList.toggle('is-active', btn.dataset.tabTarget === target);
+      });
+      panels.forEach((panel) => {
+        panel.classList.toggle('is-active', panel.dataset.tabPanel === target);
+      });
+    };
+
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => setActive(btn.dataset.tabTarget));
+    });
+  };
+
+  activateTabs('main-tabs');
+  activateTabs('play-tabs', 'play-tabs');
+
+  const statusText = document.getElementById('machine-container-status-text');
+  const endpoints = document.getElementById('machine-container-endpoints');
+  const timerNode = document.getElementById('machine-container-timer');
+  const startBtn = document.getElementById('machine-container-start');
+  const stopBtn = document.getElementById('machine-container-stop');
+  const extendBtn = document.getElementById('machine-container-extend');
+  let countdownInterval = null;
+
+  const clearCountdown = () => {
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+    }
+    if (timerNode) {
+      timerNode.textContent = '';
+      timerNode.classList.remove('warn', 'danger');
+    }
+  };
+
+  const copyText = async (value) => {
+    try {
+      if (window.isSecureContext && navigator.clipboard) {
+        await navigator.clipboard.writeText(value);
+        return true;
+      }
+      const input = document.createElement('input');
+      input.value = value;
+      document.body.appendChild(input);
+      input.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(input);
+      return ok;
+    } catch {
+      return false;
+    }
+  };
+
+  const showNotice = ({ title = 'Notice', text = '' } = {}) => {
+    const existing = document.getElementById('machineNoticeModal');
+    if (existing) existing.remove();
+    const modal = document.createElement('div');
+    modal.id = 'machineNoticeModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;';
+    modal.innerHTML = `
+      <div style="max-width:420px;width:100%;background:#fff;color:#1d2428;border-radius:10px;overflow:hidden;box-shadow:0 12px 28px rgba(0,0,0,.35)">
+        <div style="padding:.9rem 1rem;background:#ffc107;font-weight:700;display:flex;justify-content:space-between;align-items:center;">
+          <span>${title}</span>
+          <button id="machineNoticeClose" style="border:none;background:transparent;font-size:1.2rem;line-height:1;cursor:pointer;">&times;</button>
+        </div>
+        <div style="padding:1rem;">${text}</div>
+        <div style="padding:0 1rem 1rem;text-align:right;">
+          <button id="machineNoticeOk" class="btn btn-secondary btn-sm">Got it</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    const close = () => modal.remove();
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) close();
+    });
+    document.getElementById('machineNoticeClose')?.addEventListener('click', close);
+    document.getElementById('machineNoticeOk')?.addEventListener('click', close);
+  };
+
+  const bindEndpointCopy = () => {
+    Array.from(document.querySelectorAll('[data-copy-endpoint]')).forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const endpoint = btn.getAttribute('data-copy-endpoint') || '';
+        if (!endpoint) return;
+        const ok = await copyText(endpoint);
+        const old = btn.textContent;
+        btn.textContent = ok ? 'Copied' : 'Copy Failed';
+        setTimeout(() => {
+          btn.textContent = old;
+        }, 1000);
+      });
+    });
+  };
+
+  const startCountdown = (revertTime) => {
+    clearCountdown();
+    if (!timerNode || !revertTime) return;
+    const update = () => {
+      const now = Math.floor(Date.now() / 1000);
+      const distance = parseInt(revertTime, 10) - now;
+      if (distance <= 0) {
+        timerNode.textContent = 'Instance expired';
+        timerNode.classList.add('danger');
+        if (extendBtn) extendBtn.style.display = 'none';
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+        return;
+      }
+      const mins = Math.floor(distance / 60);
+      const secs = distance % 60;
+      timerNode.textContent = `Expires in ${mins}:${secs.toString().padStart(2, '0')}`;
+      timerNode.classList.toggle('warn', distance <= 120 && distance > 60);
+      timerNode.classList.toggle('danger', distance <= 60);
+      if (extendBtn && extendBtn.dataset.allowExtend === 'true') {
+        extendBtn.style.display = '';
+      }
+    };
+    update();
+    countdownInterval = setInterval(update, 1000);
+  };
+
+  const updateContainerView = (status) => {
+    if (!statusText || !endpoints || !status) return;
+    statusText.textContent = status.message || 'Container status updated.';
+    endpoints.innerHTML = '';
+    clearCountdown();
+
+    if (startBtn) startBtn.textContent = status.running ? 'Revert Instance' : 'Start Instance';
+    if (stopBtn) {
+      stopBtn.disabled = !status.running;
+      stopBtn.style.display = status.running ? '' : 'none';
+    }
+    if (extendBtn) {
+      const canExtend = Boolean(status.running && status.can_extend);
+      extendBtn.dataset.allowExtend = canExtend ? 'true' : 'false';
+      extendBtn.disabled = !canExtend;
+      extendBtn.style.display = canExtend ? '' : 'none';
+      extendBtn.textContent = canExtend ? 'Extend Timer' : 'Extend';
+    }
+
+    if (status.running && status.host && Array.isArray(status.ports) && status.ports.length) {
+      const rows = status.ports.map((port) => {
+        const endpoint = `${status.host}:${port}`;
+        return `<div class="d-flex align-items-center justify-content-between machines-endpoint-box mt-2"><span>${endpoint}</span><button class="btn btn-sm btn-outline-light" data-copy-endpoint="${endpoint}">Copy</button></div>`;
+      }).join('');
+      endpoints.innerHTML = rows;
+      bindEndpointCopy();
+      startCountdown(status.revert_time);
+      if (status.max_timer) {
+        statusText.textContent = `${status.message} Max allowed timer: ${Math.floor(status.max_timer / 60)} minutes.`;
+      }
+    } else if (extendBtn) {
+      extendBtn.style.display = 'none';
+    }
+  };
+
+  const callContainerAction = async (action) => {
+    try {
+      const res = await fetch(containerUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'CSRF-Token': window.init?.csrfNonce || ''
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ action })
+      });
+      const body = await res.json();
+      if (body?.data) updateContainerView(body.data);
+      if (body?.errors?.message && statusText) statusText.textContent = body.errors.message;
+      if (body?.message && (action === 'start' || action === 'stop' || action === 'extend')) {
+        showNotice({ title: 'Attention!', text: body.message });
+      }
+    } catch (error) {
+      if (statusText) statusText.textContent = 'Failed to update container state.';
+    }
+  };
+
+  updateContainerView(initialDockerStatus);
+
+  document.getElementById('machine-container-start')?.addEventListener('click', () => callContainerAction('start'));
+  document.getElementById('machine-container-stop')?.addEventListener('click', () => callContainerAction('stop'));
+  document.getElementById('machine-container-extend')?.addEventListener('click', () => callContainerAction('extend'));
+  document.getElementById('machine-container-refresh')?.addEventListener('click', () => callContainerAction('status'));
+
+  const submitEntry = async (entryId, value, feedbackNode) => {
+    if (!value) {
+      feedbackNode.textContent = 'Please enter a value.';
+      return;
+    }
+
+    try {
+      const res = await fetch(submitUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'CSRF-Token': window.init?.csrfNonce || ''
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ entry_id: entryId, answer: value })
+      });
+      const body = await res.json();
+      const message = body?.data?.message || body?.errors?.message || 'Submission processed.';
+      const totalScore = body?.data?.total_score;
+      feedbackNode.textContent = Number.isFinite(totalScore) ? `${message} | Total Score: ${totalScore}` : message;
+    } catch (e) {
+      feedbackNode.textContent = 'Submission failed.';
+    }
+  };
+
+  document.getElementById('submit-user-flag')?.addEventListener('click', () => {
+    submitEntry('user-flag', document.getElementById('user-flag-input').value.trim(), document.getElementById('user-flag-feedback'));
+  });
+  document.getElementById('submit-root-flag')?.addEventListener('click', () => {
+    submitEntry('root-flag', document.getElementById('root-flag-input').value.trim(), document.getElementById('root-flag-feedback'));
+  });
+  document.getElementById('guided-submit-user-flag')?.addEventListener('click', () => {
+    submitEntry('user-flag', document.getElementById('guided-user-flag-input').value.trim(), document.getElementById('guided-user-flag-feedback'));
+  });
+  document.getElementById('guided-submit-root-flag')?.addEventListener('click', () => {
+    submitEntry('root-flag', document.getElementById('guided-root-flag-input').value.trim(), document.getElementById('guided-root-flag-feedback'));
+  });
+
+  Array.from(document.querySelectorAll('.submit-guided-answer')).forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const entryId = btn.dataset.entryId;
+      const input = document.querySelector(`.guided-answer[data-entry-id='${entryId}']`);
+      const feedback = document.querySelector(`.guided-feedback[data-entry-id='${entryId}']`);
+      submitEntry(entryId, (input?.value || '').trim(), feedback);
+    });
+  });
+})();
+</script>
+{% endblock %}

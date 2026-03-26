@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="container py-4 py-lg-5 machines-list-page">
+  <style>
+    .machines-list-page {
+      max-width: 1240px;
+    }
+    .machines-muted {
+      color: #9cb2b6;
+    }
+    .machines-list-hero {
+      background: radial-gradient(circle at 10% 10%, rgba(42, 170, 149, 0.24), transparent 40%), linear-gradient(130deg, rgba(16, 23, 30, 0.95), rgba(12, 13, 17, 0.94));
+      border: 1px solid rgba(107, 210, 189, 0.2);
+      border-radius: 1.2rem;
+      padding: 1.65rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
+    }
+    .machines-filter-control {
+      background: rgba(10, 12, 16, 0.82);
+      color: #e8f0ef;
+      border: 1px solid rgba(104, 197, 178, 0.35);
+      border-radius: 0.9rem;
+      min-height: 52px;
+      padding: 0.75rem 1rem;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    }
+    .machines-filter-control::placeholder {
+      color: #95a7ae;
+    }
+    .machines-filter-control:focus {
+      border-color: rgba(123, 229, 207, 0.62);
+      box-shadow: 0 0 0 0.14rem rgba(99, 211, 186, 0.22);
+      color: #fff;
+      background: rgba(10, 12, 16, 0.92);
+    }
+    .machines-filter-control option {
+      color: #e6eff0;
+      background: #111418;
+    }
+    .machines-table-wrap {
+      border-radius: 1rem;
+      overflow: hidden;
+      border: 1px solid rgba(104, 197, 178, 0.22);
+      background: linear-gradient(180deg, rgba(11, 14, 18, 0.82), rgba(8, 9, 12, 0.95));
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.25);
+    }
+    .machines-table {
+      --bs-table-bg: transparent;
+      --bs-table-striped-bg: rgba(255, 255, 255, 0.02);
+      --bs-table-hover-bg: rgba(87, 185, 164, 0.1);
+      --bs-table-color: #e7eff0;
+      margin-bottom: 0;
+    }
+    .machines-table thead th {
+      border-bottom: 1px solid rgba(104, 197, 178, 0.3);
+      color: #f3f9f8;
+      font-weight: 700;
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+    }
+    .machines-table tbody td {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+      vertical-align: middle;
+    }
+    .machines-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    .machines-row-title {
+      color: #eff7f6;
+      font-size: 1.12rem;
+      line-height: 1.2;
+      margin-bottom: 0.2rem;
+    }
+    .machines-status-pill {
+      font-size: 0.78rem;
+      border-radius: 999px;
+      padding: 0.28rem 0.7rem;
+      border: 1px solid transparent;
+      font-weight: 700;
+    }
+    .machines-status-owned {
+      background: rgba(39, 173, 129, 0.2);
+      border-color: rgba(83, 224, 172, 0.4);
+      color: #8ff0ca;
+    }
+    .machines-status-partial {
+      background: rgba(224, 168, 62, 0.17);
+      border-color: rgba(245, 188, 79, 0.35);
+      color: #ffd27a;
+    }
+    .machines-status-unowned {
+      background: rgba(161, 173, 185, 0.14);
+      border-color: rgba(188, 198, 209, 0.24);
+      color: #cad5dd;
+    }
+    @media (max-width: 768px) {
+      .machines-list-hero {
+        padding: 1.15rem;
+      }
+      .machines-filter-control {
+        min-height: 48px;
+      }
+      .machines-table thead th,
+      .machines-table tbody td {
+        padding-top: 0.82rem;
+        padding-bottom: 0.82rem;
+      }
+    }
+  </style>
+
+  <div class="machines-list-hero">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+      <div>
+        <h1 class="mb-1">Machines</h1>
+        <div class="small machines-muted">Boot2Root arena with adventure and guided modes</div>
+      </div>
+      <div class="small machines-muted">{{ machines|length }} machine{{ 's' if machines|length != 1 else '' }}</div>
+    </div>
+    <div class="row g-3">
+      <div class="col-lg-5">
+        <input id="machine-search" class="form-control machines-filter-control" placeholder="Search by machine name...">
+      </div>
+      <div class="col-lg-2">
+        <select id="status-filter" class="form-select machines-filter-control">
+          <option value="">All Statuses</option>
+          <option value="Owned">Owned</option>
+          <option value="Partial">Partial</option>
+          <option value="Unowned">Unowned</option>
+        </select>
+      </div>
+      <div class="col-lg-2"><select id="difficulty-filter" class="form-select machines-filter-control"><option value="">All Difficulties</option>{% for m in machines %}<option value="{{ m.difficulty }}">{{ m.difficulty }}</option>{% endfor %}</select></div>
+      <div class="col-lg-2"><select id="os-filter" class="form-select machines-filter-control"><option value="">All OS</option>{% for m in machines %}<option value="{{ m.os }}">{{ m.os }}</option>{% endfor %}</select></div>
+    </div>
+  </div>
+
+  <div class="table-responsive machines-table-wrap">
+    <table class="table table-hover align-middle machines-table" id="machines-table">
+      <thead>
+        <tr>
+          <th>Machine</th>
+          <th>Status</th>
+          <th>Rating</th>
+          <th>User Solves</th>
+          <th>Root Solves</th>
+          <th>Release Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for machine in machines %}
+        <tr data-title="{{ machine.title|lower }}" data-status="{{ machine.status }}" data-difficulty="{{ machine.difficulty }}" data-os="{{ machine.os }}" data-href="{{ url_for('prolabs.machines_detail', slug=machine.slug) }}" style="cursor:pointer">
+          <td>
+            <div class="machines-row-title fw-bold">{{ machine.title }}</div>
+            <div class="small machines-muted">{{ machine.difficulty }} · {{ machine.os }}</div>
+          </td>
+          <td>
+            <span class="machines-status-pill {% if machine.status == 'Owned' %}machines-status-owned{% elif machine.status == 'Partial' %}machines-status-partial{% else %}machines-status-unowned{% endif %}">{{ machine.status }}</span>
+          </td>
+          <td><strong>{{ '%.1f'|format(machine.rating) }}</strong> <span class="machines-muted">({{ machine.rating_count }})</span></td>
+          <td>{{ machine.user_solves }}</td>
+          <td>{{ machine.root_solves }}</td>
+          <td>{{ machine.release_date }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const search = document.getElementById('machine-search');
+  const status = document.getElementById('status-filter');
+  const difficulty = document.getElementById('difficulty-filter');
+  const os = document.getElementById('os-filter');
+  const rows = Array.from(document.querySelectorAll('#machines-table tbody tr'));
+
+  const apply = () => {
+    const q = (search.value || '').toLowerCase();
+    const s = status.value;
+    const d = difficulty.value;
+    const o = os.value;
+    rows.forEach((row) => {
+      const title = row.dataset.title || '';
+      const okQ = !q || title.includes(q);
+      const okS = !s || row.dataset.status === s;
+      const okD = !d || row.dataset.difficulty === d;
+      const okO = !o || row.dataset.os === o;
+      row.style.display = okQ && okS && okD && okO ? '' : 'none';
+    });
+  };
+
+  search.addEventListener('input', apply);
+  status.addEventListener('change', apply);
+  difficulty.addEventListener('change', apply);
+  os.addEventListener('change', apply);
+
+  rows.forEach((row) => {
+    row.addEventListener('click', () => {
+      const href = row.dataset.href;
+      if (href) window.location = href;
+    });
+  });
+})();
+</script>
+{% endblock %}

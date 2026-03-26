@@ -1,0 +1,332 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+  <div class="container">
+    <h1>Boot2Root Machines</h1>
+    <p>Configure machine listing, info, walkthroughs, flags, and guided questions.</p>
+    {% if request.args.get('saved') %}
+      <div class="alert alert-success mt-3">Machines updated successfully.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <div>
+      <strong>Docker setup reference:</strong>
+      Configure the Docker host and repositories first, then attach image tags to each machine below.
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin_docker_config.docker_config') }}">Docker Config</a>
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin_docker_status.docker_admin') }}">Docker Status</a>
+    </div>
+  </div>
+
+  {% if docker_images_error %}
+  <div class="alert alert-warning">
+    <strong>Docker image list:</strong> {{ docker_images_error }}.
+    Configure Docker via <a href="{{ url_for('admin_docker_config.docker_config') }}">Docker Config</a> first.
+  </div>
+  {% endif %}
+
+  <template id="docker-image-options-template">
+    <option value="">Select Docker image tag</option>
+    {% for image in docker_images %}
+      <option value="{{ image }}">{{ image }}</option>
+    {% endfor %}
+  </template>
+
+  <form method="POST" id="machines-form" enctype="multipart/form-data">
+    <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+
+    <div class="mb-3">
+      <button type="button" class="btn btn-outline-primary" id="add-machine">Add Machine</button>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+
+    <div id="machines-wrapper" class="d-flex flex-column" style="gap: 1rem;">
+      {% for machine in machines %}
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>{{ machine.title }}</strong>
+          <button type="button" class="btn btn-sm btn-outline-danger remove-machine">Remove</button>
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group col-md-3">
+              <label>Slug</label>
+              <input class="form-control" name="slug[]" value="{{ machine.slug }}">
+            </div>
+            <div class="form-group col-md-3">
+              <label>Title</label>
+              <input class="form-control" name="title[]" value="{{ machine.title }}" required>
+            </div>
+            <div class="form-group col-md-2">
+              <label>Difficulty</label>
+              <input class="form-control" name="difficulty[]" value="{{ machine.difficulty }}">
+            </div>
+            <div class="form-group col-md-2">
+              <label>OS</label>
+              <input class="form-control" name="os[]" value="{{ machine.os }}">
+            </div>
+            <div class="form-group col-md-2">
+              <label>Release Date</label>
+              <input class="form-control" name="release_date[]" value="{{ machine.release_date }}">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-md-2">
+              <label>Rating</label>
+              <input class="form-control" type="number" step="0.1" name="rating[]" value="{{ machine.rating }}">
+            </div>
+            <div class="form-group col-md-2">
+              <label>Rating Count</label>
+              <input class="form-control" type="number" min="0" name="rating_count[]" value="{{ machine.rating_count }}">
+            </div>
+            <div class="form-group col-md-2">
+              <label>User Solves</label>
+              <input class="form-control" type="number" min="0" name="user_solves[]" value="{{ machine.user_solves }}">
+            </div>
+            <div class="form-group col-md-2">
+              <label>Root Solves</label>
+              <input class="form-control" type="number" min="0" name="root_solves[]" value="{{ machine.root_solves }}">
+            </div>
+            <div class="form-group col-md-2">
+              <label>User Points</label>
+              <input class="form-control" type="number" min="0" name="user_points[]" value="{{ machine.user_points }}">
+            </div>
+            <div class="form-group col-md-2">
+              <label>Root Points</label>
+              <input class="form-control" type="number" min="0" name="root_points[]" value="{{ machine.root_points }}">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label>User Flag</label>
+              <input class="form-control" name="user_flag[]" value="{{ machine.user_flag }}">
+            </div>
+            <div class="form-group col-md-6">
+              <label>Root Flag</label>
+              <input class="form-control" name="root_flag[]" value="{{ machine.root_flag }}">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-md-2">
+              <label>Docker Enabled</label>
+              <select class="form-control" name="docker_enabled[]">
+                <option value="0" {% if not machine.docker_enabled %}selected{% endif %}>Disabled</option>
+                <option value="1" {% if machine.docker_enabled %}selected{% endif %}>Enabled</option>
+              </select>
+            </div>
+            <div class="form-group col-md-7">
+              <label>Docker Image</label>
+              <select class="form-control docker-image-select" name="docker_image[]">
+                <option value="">Select Docker image tag</option>
+                {% for image in docker_images %}
+                  <option value="{{ image }}" {% if machine.docker_image == image %}selected{% endif %}>{{ image }}</option>
+                {% endfor %}
+                {% if machine.docker_image and machine.docker_image not in docker_images %}
+                  <option value="{{ machine.docker_image }}" selected>{{ machine.docker_image }} (current)</option>
+                {% endif %}
+              </select>
+            </div>
+            <div class="form-group col-md-3">
+              <label>Timer Cap</label>
+              <select class="form-control" name="docker_expiry[]">
+                <option value="0" {% if (machine.docker_expiry|int) == 0 %}selected{% endif %}>Use Docker Global</option>
+                <option value="1800" {% if (machine.docker_expiry|int) == 1800 %}selected{% endif %}>30 mins</option>
+                <option value="3600" {% if (machine.docker_expiry|int) == 3600 %}selected{% endif %}>60 mins</option>
+                <option value="7200" {% if (machine.docker_expiry|int) == 7200 %}selected{% endif %}>120 mins</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Machine Info (Markdown)</label>
+            <textarea class="form-control markdown" rows="5" name="machine_info[]">{{ machine.machine_info }}</textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Walkthrough (Markdown)</label>
+            <textarea class="form-control markdown" rows="5" name="walkthrough[]">{{ machine.walkthrough }}</textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Upload Walkthrough Files</label>
+            <input class="form-control" type="file" data-role="walkthrough-files" name="walkthrough_files_{{ loop.index0 }}[]" multiple>
+            <small class="form-text text-muted">You can upload multiple files.</small>
+          </div>
+
+          <div class="form-group">
+            <label>Existing Walkthrough Files</label>
+            <ul class="mb-2">
+              {% for wf in machine.walkthrough_files %}
+                <li>{{ wf.name }}</li>
+              {% endfor %}
+            </ul>
+            <input type="hidden" name="existing_walkthrough_files[]" value='{{ machine.walkthrough_files | tojson }}'>
+          </div>
+
+          <div class="form-group">
+            <label>Guided Questions</label>
+            <table class="table table-sm table-bordered mb-2 guided-table">
+              <thead>
+                <tr>
+                  <th>Question</th>
+                  <th>Answer</th>
+                  <th>Points</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for q in machine.guided_questions %}
+                <tr class="guided-row">
+                  <td><input class="form-control guided-question" value="{{ q.question }}"></td>
+                  <td><input class="form-control guided-answer" value="{{ q.answer }}"></td>
+                  <td><input class="form-control guided-points" type="number" min="0" value="{{ q.points }}"></td>
+                  <td><button type="button" class="btn btn-sm btn-outline-danger remove-guided-row">X</button></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            <button type="button" class="btn btn-sm btn-outline-primary add-guided-row">Add Question</button>
+            <input type="hidden" class="guided-json" name="guided_questions[]" value='{{ machine.guided_questions | tojson }}'>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const wrapper = document.getElementById('machines-wrapper');
+  const addBtn = document.getElementById('add-machine');
+  const form = document.getElementById('machines-form');
+
+  const guidedRow = () => `
+    <tr class="guided-row">
+      <td><input class="form-control guided-question"></td>
+      <td><input class="form-control guided-answer"></td>
+      <td><input class="form-control guided-points" type="number" min="0" value="0"></td>
+      <td><button type="button" class="btn btn-sm btn-outline-danger remove-guided-row">X</button></td>
+    </tr>`;
+
+  const machineCard = () => {
+    const dockerOptions = document.getElementById('docker-image-options-template')?.innerHTML || '<option value="">Select Docker image tag</option>';
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.innerHTML = `
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>New Machine</strong>
+        <button type="button" class="btn btn-sm btn-outline-danger remove-machine">Remove</button>
+      </div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group col-md-3"><label>Slug</label><input class="form-control" name="slug[]"></div>
+          <div class="form-group col-md-3"><label>Title</label><input class="form-control" name="title[]" required></div>
+          <div class="form-group col-md-2"><label>Difficulty</label><input class="form-control" name="difficulty[]" value="Easy"></div>
+          <div class="form-group col-md-2"><label>OS</label><input class="form-control" name="os[]" value="Linux"></div>
+          <div class="form-group col-md-2"><label>Release Date</label><input class="form-control" name="release_date[]"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group col-md-2"><label>Rating</label><input class="form-control" type="number" step="0.1" name="rating[]" value="0"></div>
+          <div class="form-group col-md-2"><label>Rating Count</label><input class="form-control" type="number" min="0" name="rating_count[]" value="0"></div>
+          <div class="form-group col-md-2"><label>User Solves</label><input class="form-control" type="number" min="0" name="user_solves[]" value="0"></div>
+          <div class="form-group col-md-2"><label>Root Solves</label><input class="form-control" type="number" min="0" name="root_solves[]" value="0"></div>
+          <div class="form-group col-md-2"><label>User Points</label><input class="form-control" type="number" min="0" name="user_points[]" value="50"></div>
+          <div class="form-group col-md-2"><label>Root Points</label><input class="form-control" type="number" min="0" name="root_points[]" value="100"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group col-md-6"><label>User Flag</label><input class="form-control" name="user_flag[]"></div>
+          <div class="form-group col-md-6"><label>Root Flag</label><input class="form-control" name="root_flag[]"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group col-md-2">
+            <label>Docker Enabled</label>
+            <select class="form-control" name="docker_enabled[]">
+              <option value="0" selected>Disabled</option>
+              <option value="1">Enabled</option>
+            </select>
+          </div>
+          <div class="form-group col-md-7"><label>Docker Image</label><select class="form-control docker-image-select" name="docker_image[]">${dockerOptions}</select></div>
+          <div class="form-group col-md-3">
+            <label>Timer Cap</label>
+            <select class="form-control" name="docker_expiry[]">
+              <option value="0" selected>Use Docker Global</option>
+              <option value="1800">30 mins</option>
+              <option value="3600">60 mins</option>
+              <option value="7200">120 mins</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label>Machine Info (Markdown)</label><textarea class="form-control markdown" rows="5" name="machine_info[]"></textarea></div>
+        <div class="form-group"><label>Walkthrough (Markdown)</label><textarea class="form-control markdown" rows="5" name="walkthrough[]"></textarea></div>
+        <div class="form-group"><label>Upload Walkthrough Files</label><input class="form-control" type="file" data-role="walkthrough-files" name="walkthrough_files_0[]" multiple></div>
+        <div class="form-group"><label>Existing Walkthrough Files</label><input type="hidden" name="existing_walkthrough_files[]" value='[]'><small class="form-text text-muted">No files uploaded yet.</small></div>
+        <div class="form-group">
+          <label>Guided Questions</label>
+          <table class="table table-sm table-bordered mb-2 guided-table"><thead><tr><th>Question</th><th>Answer</th><th>Points</th><th>Action</th></tr></thead><tbody></tbody></table>
+          <button type="button" class="btn btn-sm btn-outline-primary add-guided-row">Add Question</button>
+          <input type="hidden" class="guided-json" name="guided_questions[]" value='[]'>
+        </div>
+      </div>`;
+    return el;
+  };
+
+  const renumberWalkthroughInputs = () => {
+    const cards = Array.from(wrapper.querySelectorAll('.card'));
+    cards.forEach((card, idx) => {
+      const fileInput = card.querySelector('[data-role="walkthrough-files"]');
+      if (fileInput) fileInput.name = `walkthrough_files_${idx}[]`;
+    });
+  };
+
+  const serializeGuided = (card) => {
+    const rows = Array.from(card.querySelectorAll('.guided-row'));
+    const questions = rows.map((row, idx) => {
+      const question = (row.querySelector('.guided-question')?.value || '').trim();
+      const answer = (row.querySelector('.guided-answer')?.value || '').trim();
+      const points = parseInt((row.querySelector('.guided-points')?.value || '0').trim(), 10) || 0;
+      if (!question) return null;
+      return { id: `q${idx + 1}`, question, answer, points };
+    }).filter(Boolean);
+    const hidden = card.querySelector('.guided-json');
+    if (hidden) hidden.value = JSON.stringify(questions);
+  };
+
+  addBtn.addEventListener('click', () => {
+    wrapper.appendChild(machineCard());
+    renumberWalkthroughInputs();
+  });
+
+  wrapper.addEventListener('click', (e) => {
+    if (e.target.classList.contains('remove-machine')) {
+      e.target.closest('.card')?.remove();
+      renumberWalkthroughInputs();
+    }
+    if (e.target.classList.contains('add-guided-row')) {
+      const tbody = e.target.closest('.form-group')?.querySelector('.guided-table tbody');
+      if (tbody) tbody.insertAdjacentHTML('beforeend', guidedRow());
+    }
+    if (e.target.classList.contains('remove-guided-row')) {
+      e.target.closest('.guided-row')?.remove();
+    }
+  });
+
+  form.addEventListener('submit', () => {
+    renumberWalkthroughInputs();
+    wrapper.querySelectorAll('.card').forEach((card) => serializeGuided(card));
+  });
+
+  renumberWalkthroughInputs();
+})();
+</script>
+{% endblock %}

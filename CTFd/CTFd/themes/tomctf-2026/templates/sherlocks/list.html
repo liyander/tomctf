@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="container py-4 py-lg-5 sherlocks-page">
+  <style>
+    .sherlocks-page { max-width: 1240px; }
+    .sherlocks-muted { color: #9cb2b6; }
+    .sherlocks-hero {
+      background: radial-gradient(circle at 10% 10%, rgba(63, 124, 255, 0.24), transparent 40%), linear-gradient(130deg, rgba(16, 23, 30, 0.95), rgba(12, 13, 17, 0.94));
+      border: 1px solid rgba(106, 172, 255, 0.2);
+      border-radius: 1.2rem;
+      padding: 1.65rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
+    }
+    .sherlock-filter {
+      background: rgba(10, 12, 16, 0.82);
+      color: #e8f0ef;
+      border: 1px solid rgba(137, 190, 255, 0.35);
+      border-radius: 0.9rem;
+      min-height: 52px;
+      padding: 0.75rem 1rem;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+    }
+    .sherlock-filter::placeholder { color: #8da3ca; }
+    .sherlock-filter:focus {
+      border-color: rgba(137, 190, 255, 0.62);
+      box-shadow: 0 0 0 0.14rem rgba(119, 173, 255, 0.22);
+      background: rgba(10, 12, 16, 0.92);
+      color: #fff;
+    }
+    .sherlocks-table-wrap {
+      border-radius: 1rem;
+      overflow: hidden;
+      border: 1px solid rgba(111, 165, 255, 0.22);
+      background: linear-gradient(180deg, rgba(11, 14, 18, 0.82), rgba(8, 9, 12, 0.95));
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.25);
+    }
+    .sherlocks-table {
+      --bs-table-bg: transparent;
+      --bs-table-striped-bg: rgba(255, 255, 255, 0.02);
+      --bs-table-hover-bg: rgba(82, 139, 233, 0.1);
+      --bs-table-color: #e7eff0;
+      margin-bottom: 0;
+    }
+    .sherlocks-table thead th {
+      border-bottom: 1px solid rgba(111, 165, 255, 0.3);
+      color: #f3f9f8;
+      font-weight: 700;
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+    }
+    .sherlocks-table tbody td {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 1rem;
+      padding-bottom: 1rem;
+      vertical-align: middle;
+    }
+    .sherlocks-table tbody tr:last-child td { border-bottom: none; }
+    .sherlock-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .sherlock-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 0.65rem;
+      background: rgba(69, 131, 255, 0.15);
+      border: 1px solid rgba(69, 131, 255, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #8da3ca;
+      font-size: 1.1rem;
+    }
+    .sherlock-title { color: #eff7f6; font-size: 1.12rem; font-weight: bold; line-height: 1.2; margin-bottom: 0.2rem; }
+    .sherlock-sub { color: #9cb2b6; font-size: 0.85em; }
+    .sherlock-rating strong { color: #f4f8ff; }
+    .sherlock-rating span { color: #9cb2b6; }
+    .sherlock-progress-pill {
+      font-size: 0.8rem;
+      border-radius: 999px;
+      padding: 0.28rem 0.7rem;
+      border: 1px solid transparent;
+      font-weight: 700;
+      display: inline-block;
+    }
+    .progress-completed {
+      background: rgba(39, 173, 129, 0.2);
+      border-color: rgba(83, 224, 172, 0.4);
+      color: #8ff0ca;
+    }
+    .progress-started {
+      background: rgba(63, 124, 255, 0.17);
+      border-color: rgba(63, 124, 255, 0.35);
+      color: #8da3ca;
+    }
+    .progress-unstarted {
+      background: rgba(161, 173, 185, 0.14);
+      border-color: rgba(188, 198, 209, 0.24);
+      color: #cad5dd;
+    }
+  </style>
+
+  <div class="sherlocks-hero">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+      <div>
+        <h1 class="mb-1">Sherlocks</h1>
+        <div class="small sherlocks-muted">Guided investigation arena with progress-based tasks and Docker instances</div>
+      </div>
+      <div class="small sherlocks-muted">{{ sherlocks|length }} sherlock{{ 's' if sherlocks|length != 1 else '' }}</div>
+    </div>
+
+    <div class="row g-2 align-items-center">
+      <div class="col-lg-4"><input id="sherlock-search" class="form-control sherlock-filter" placeholder="Search Sherlocks..."></div>
+      <div class="col-lg-2"><select id="sherlock-status" class="form-select sherlock-filter"><option value="">Status - Both</option><option value="Started">Started</option><option value="Unstarted">Unstarted</option></select></div>
+      <div class="col-lg-2"><select id="sherlock-difficulty" class="form-select sherlock-filter"><option value="">All Difficulties</option>{% for s in sherlocks %}<option value="{{ s.difficulty }}">{{ s.difficulty }}</option>{% endfor %}</select></div>
+      <div class="col-lg-2"><select id="sherlock-category" class="form-select sherlock-filter"><option value="">All Categories</option>{% for s in sherlocks %}<option value="{{ s.category }}">{{ s.category }}</option>{% endfor %}</select></div>
+    </div>
+  </div>
+
+  <div class="table-responsive sherlocks-table-wrap">
+    <table class="table table-hover align-middle sherlocks-table" id="sherlocks-table">
+      <thead>
+        <tr>
+          <th>Sherlock</th>
+          <th>Progress</th>
+          <th>Rating</th>
+          <th>Solves</th>
+          <th>Release Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sherlock in sherlocks %}
+        {% set started = 'Completed' if sherlock.progress >= 100 else 'Started' if sherlock.progress > 0 else 'Unstarted' %}
+        <tr data-title="{{ sherlock.title|lower }}" data-status="{{ started }}" data-difficulty="{{ sherlock.difficulty }}" data-category="{{ sherlock.category }}" data-href="{{ url_for('prolabs.sherlocks_detail', slug=sherlock.slug) }}" style="cursor:pointer;">
+          <td>
+            <div class="sherlock-item">
+              <div class="sherlock-icon"><i class="fas fa-shield-alt"></i></div>
+              <div>
+                <div class="sherlock-title">{{ sherlock.title }}</div>
+                <div class="sherlock-sub">{{ sherlock.difficulty }} · {{ sherlock.category }}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="sherlock-progress-pill {% if started == 'Completed' %}progress-completed{% elif started == 'Started' %}progress-started{% else %}progress-unstarted{% endif %}">
+              {{ "Completed" if started == "Completed" else sherlock.progress|string + "%" if started == "Started" else "Unstarted" }}
+            </span>
+          </td>
+          <td class="sherlock-rating"><strong>{{ '%.1f'|format(sherlock.rating) }}</strong> <span>({{ sherlock.rating_count }})</span></td>
+          <td>{{ sherlock.solves }}</td>
+          <td>{{ sherlock.release_date }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const search = document.getElementById('sherlock-search');
+  const status = document.getElementById('sherlock-status');
+  const difficulty = document.getElementById('sherlock-difficulty');
+  const category = document.getElementById('sherlock-category');
+  const rows = Array.from(document.querySelectorAll('#sherlocks-table tbody tr'));
+
+  const apply = () => {
+    const q = (search.value || '').toLowerCase();
+    const s = status.value;
+    const d = difficulty.value;
+    const c = category.value;
+    rows.forEach((row) => {
+      const okQ = !q || (row.dataset.title || '').includes(q);
+      const okS = !s || row.dataset.status === s;
+      const okD = !d || row.dataset.difficulty === d;
+      const okC = !c || row.dataset.category === c;
+      row.style.display = okQ && okS && okD && okC ? '' : 'none';
+    });
+  };
+
+  search.addEventListener('input', apply);
+  status.addEventListener('change', apply);
+  difficulty.addEventListener('change', apply);
+  category.addEventListener('change', apply);
+
+  rows.forEach((row) => {
+    row.addEventListener('click', () => {
+      const href = row.dataset.href;
+      if (href) window.location = href;
+    });
+  });
+})();
+</script>
+{% endblock %}

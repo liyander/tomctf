@@ -10,6 +10,7 @@ from CTFd.models import db
 from CTFd.models import Awards
 from CTFd.plugins import register_admin_plugin_menu_bar
 from CTFd.utils.config.pages import build_markdown
+from CTFd.utils import uploads
 from CTFd.utils import get_config, set_config
 from CTFd.utils.decorators import admins_only, authed_only
 from CTFd.utils.dates import ctftime
@@ -94,6 +95,108 @@ class ProLabSubmission(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+class Boot2RootSubmission(db.Model):
+    __tablename__ = "boot2root_submissions"
+    __table_args__ = (
+        db.UniqueConstraint("machine_slug", "entry_id", "user_id"),
+        db.UniqueConstraint("machine_slug", "entry_id", "team_id"),
+        {},
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    machine_slug = db.Column(db.String(128), index=True, nullable=False)
+    entry_id = db.Column(db.String(128), index=True, nullable=False)
+    provided = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(32), nullable=False, default="incorrect")
+    ip = db.Column(db.String(46), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    team_id = db.Column(db.Integer, db.ForeignKey("teams.id", ondelete="CASCADE"), nullable=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class SherlockSubmission(db.Model):
+    __tablename__ = "sherlock_submissions"
+    __table_args__ = (
+        db.UniqueConstraint("sherlock_slug", "entry_id", "user_id"),
+        db.UniqueConstraint("sherlock_slug", "entry_id", "team_id"),
+        {},
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    sherlock_slug = db.Column(db.String(128), index=True, nullable=False)
+    entry_id = db.Column(db.String(128), index=True, nullable=False)
+    provided = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(32), nullable=False, default="incorrect")
+    ip = db.Column(db.String(46), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    team_id = db.Column(db.Integer, db.ForeignKey("teams.id", ondelete="CASCADE"), nullable=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+MACHINES_CONFIG_KEY = "boot2root_machines"
+
+DEFAULT_BOOT2ROOT_MACHINES = [
+    {
+        "slug": "cap",
+        "title": "Cap",
+        "difficulty": "Easy",
+        "os": "Linux",
+        "rating": 4.6,
+        "rating_count": 3049,
+        "user_solves": 89438,
+        "root_solves": 82126,
+        "release_date": "05 Jun 2021",
+        "machine_info": "## Machine Info\nCap is an easy Linux machine focused on misconfigurations and practical enumeration.",
+        "walkthrough": "## Walkthrough\nAdd your walkthrough details here.",
+        "walkthrough_files": [],
+        "user_flag": "",
+        "root_flag": "",
+        "user_points": 50,
+        "root_points": 100,
+        "guided_questions": [
+            {
+                "id": "q1",
+                "question": "Which service exposed the vulnerable functionality?",
+                "answer": "ftp",
+                "points": 10,
+            }
+        ],
+    }
+]
+
+MACHINE_TIMER_TIERS = [1800, 3600, 7200]
+MACHINE_TIMER_DEFAULT = 1800
+
+SHERLOCKS_CONFIG_KEY = "prolab_sherlocks"
+
+DEFAULT_SHERLOCKS = [
+    {
+        "slug": "brutus",
+        "title": "Brutus",
+        "difficulty": "Very Easy",
+        "category": "DFIR",
+        "rating": 4.7,
+        "rating_count": 2034,
+        "solves": 31503,
+        "release_date": "04 Apr 2024",
+        "description": "## Sherlock Scenario\nAnalyze Linux authentication evidence and answer task questions.",
+        "docker_enabled": False,
+        "docker_image": "",
+        "docker_expiry": 0,
+        "tasks": [
+            {
+                "id": "task-1",
+                "title": "Task 1",
+                "question": "Analyze auth.log. What is the source IP used for brute force?",
+                "hint": "Look for repeated failed password attempts.",
+                "answer": "127.0.0.1",
+                "points": 20,
+            }
+        ],
+    }
+]
+
+
 DEFAULT_PROLABS = [
     {
         "slug": "mythical",
@@ -173,27 +276,41 @@ def _safe_points(value):
         return 0
 
 
-def _safe_int(value, fallback=0):
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return fallback
-
-
-def _normalize_level_name(value):
-    return (value or "").strip()
-
-
-def _safe_int(value, default=0):
-    """Convert value to int safely, handling strings and integers."""
+def _safe_int(value, fallback=0, default=None):
+    if default is not None:
+        fallback = default
     if isinstance(value, int):
         return max(0, value)
     if isinstance(value, str):
         try:
             return max(0, int(value.strip()))
         except (ValueError, AttributeError):
-            return default
-    return default
+            return fallback
+    try:
+        return max(0, int(value))
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _safe_float(value, fallback=0.0):
+    try:
+        return max(0.0, float(value))
+    except (TypeError, ValueError):
+        return fallback
+
+
+def _as_bool(value):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on", "enabled"}
+    return False
+
+
+def _normalize_level_name(value):
+    return (value or "").strip()
 
 
 def _normalize_levels(levels):
@@ -865,12 +982,1445 @@ def prolab_levels_admin():
     return render_template("prolabs/levels.html", levels=levels)
 
 
+def _normalize_guided_questions(raw_questions):
+    if isinstance(raw_questions, str):
+        try:
+            raw_questions = json.loads(raw_questions)
+        except Exception:
+            raw_questions = []
+
+    if not isinstance(raw_questions, list):
+        raw_questions = []
+
+    questions = []
+    for idx, item in enumerate(raw_questions):
+        if not isinstance(item, dict):
+            continue
+        qid = _slugify(item.get("id") or f"q-{idx + 1}")
+        question = (item.get("question") or "").strip()
+        answer = (item.get("answer") or "").strip()
+        if not question:
+            continue
+        questions.append(
+            {
+                "id": qid,
+                "question": question,
+                "answer": answer,
+                "points": _safe_points(item.get("points", 0)),
+            }
+        )
+    return questions
+
+
+def _normalize_walkthrough_files(raw_files):
+    if isinstance(raw_files, str):
+        try:
+            raw_files = json.loads(raw_files)
+        except Exception:
+            raw_files = []
+
+    if not isinstance(raw_files, list):
+        return []
+
+    normalized = []
+    for item in raw_files:
+        if not isinstance(item, dict):
+            continue
+        location = (item.get("location") or "").strip()
+        if not location:
+            continue
+        normalized.append(
+            {
+                "name": (item.get("name") or location.split("/")[-1]).strip(),
+                "location": location,
+            }
+        )
+    return normalized
+
+
+def _normalize_boot2root_machine(raw, index):
+    title = (raw.get("title") or f"Machine {index + 1}").strip()
+    slug = _slugify(raw.get("slug") or title) or f"machine-{index + 1}"
+    difficulty = (raw.get("difficulty") or "Easy").strip()
+    os_name = (raw.get("os") or "Linux").strip()
+    release_date = (raw.get("release_date") or "").strip()
+    machine_info = (raw.get("machine_info") or "").strip()
+    walkthrough = (raw.get("walkthrough") or "").strip()
+
+    return {
+        "slug": slug,
+        "title": title,
+        "difficulty": difficulty,
+        "os": os_name,
+        "rating": _safe_float(raw.get("rating", 0), 0.0),
+        "rating_count": _safe_int(raw.get("rating_count", 0), 0),
+        "user_solves": _safe_int(raw.get("user_solves", 0), 0),
+        "root_solves": _safe_int(raw.get("root_solves", 0), 0),
+        "release_date": release_date,
+        "machine_info": machine_info,
+        "machine_info_html": build_markdown(machine_info, sanitize=True),
+        "walkthrough": walkthrough,
+        "walkthrough_html": build_markdown(walkthrough, sanitize=True),
+        "walkthrough_files": _normalize_walkthrough_files(raw.get("walkthrough_files", [])),
+        "user_flag": (raw.get("user_flag") or "").strip(),
+        "root_flag": (raw.get("root_flag") or "").strip(),
+        "user_points": _safe_points(raw.get("user_points", 50)),
+        "root_points": _safe_points(raw.get("root_points", 100)),
+        "guided_questions": _normalize_guided_questions(raw.get("guided_questions", [])),
+        "docker_enabled": _as_bool(raw.get("docker_enabled", False)),
+        "docker_image": (raw.get("docker_image") or "").strip(),
+        "docker_expiry": _safe_int(raw.get("docker_expiry", 0), 0),
+    }
+
+
+def get_boot2root_machines():
+    configured = get_config(MACHINES_CONFIG_KEY)
+    if not configured:
+        return [
+            _normalize_boot2root_machine(item, index)
+            for index, item in enumerate(DEFAULT_BOOT2ROOT_MACHINES)
+        ]
+
+    try:
+        data = json.loads(configured)
+        if not isinstance(data, list):
+            raise ValueError("Expected list")
+    except Exception:
+        data = DEFAULT_BOOT2ROOT_MACHINES
+
+    machines = []
+    for index, item in enumerate(data):
+        if isinstance(item, dict):
+            machines.append(_normalize_boot2root_machine(item, index))
+
+    if not machines:
+        machines = [
+            _normalize_boot2root_machine(item, index)
+            for index, item in enumerate(DEFAULT_BOOT2ROOT_MACHINES)
+        ]
+    return machines
+
+
+def _get_machine_submissions(machine_slug):
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        return {}
+
+    query = Boot2RootSubmission.query.filter_by(machine_slug=machine_slug, status="correct")
+    if scope == "team":
+        query = query.filter_by(team_id=team.id)
+    else:
+        query = query.filter_by(user_id=user.id)
+
+    return {row.entry_id: row for row in query.all()}
+
+
+def _find_guided_question(machine, question_id):
+    for item in machine.get("guided_questions", []):
+        if item.get("id") == question_id:
+            return item
+    return None
+
+
+def _normalize_sherlock_tasks(raw_tasks):
+    if isinstance(raw_tasks, str):
+        try:
+            raw_tasks = json.loads(raw_tasks)
+        except Exception:
+            raw_tasks = []
+
+    if not isinstance(raw_tasks, list):
+        raw_tasks = []
+
+    normalized = []
+    for idx, item in enumerate(raw_tasks):
+        if not isinstance(item, dict):
+            continue
+        task_id = _slugify(item.get("id") or f"task-{idx + 1}") or f"task-{idx + 1}"
+        question = (item.get("question") or "").strip()
+        if not question:
+            continue
+        normalized.append(
+            {
+                "id": task_id,
+                "title": (item.get("title") or f"Task {idx + 1}").strip(),
+                "question": question,
+                "hint": (item.get("hint") or "").strip(),
+                "answer": (item.get("answer") or "").strip(),
+                "points": _safe_points(item.get("points", 0)),
+            }
+        )
+    return normalized
+
+
+def _normalize_sherlock(raw, index):
+    title = (raw.get("title") or f"Sherlock {index + 1}").strip()
+    slug = _slugify(raw.get("slug") or title) or f"sherlock-{index + 1}"
+    description = (raw.get("description") or "").strip()
+    tasks = _normalize_sherlock_tasks(raw.get("tasks", []))
+
+    return {
+        "slug": slug,
+        "title": title,
+        "difficulty": (raw.get("difficulty") or "Very Easy").strip(),
+        "category": (raw.get("category") or "DFIR").strip(),
+        "rating": _safe_float(raw.get("rating", 0), 0.0),
+        "rating_count": _safe_int(raw.get("rating_count", 0), 0),
+        "solves": _safe_int(raw.get("solves", 0), 0),
+        "release_date": (raw.get("release_date") or "").strip(),
+        "description": description,
+        "description_html": build_markdown(description, sanitize=True),
+        "docker_enabled": _as_bool(raw.get("docker_enabled", False)),
+        "docker_image": (raw.get("docker_image") or "").strip(),
+        "docker_expiry": _safe_int(raw.get("docker_expiry", 0), 0),
+        "tasks": tasks,
+    }
+
+
+def get_sherlocks():
+    configured = get_config(SHERLOCKS_CONFIG_KEY)
+    if not configured:
+        return [_normalize_sherlock(item, index) for index, item in enumerate(DEFAULT_SHERLOCKS)]
+
+    try:
+        data = json.loads(configured)
+        if not isinstance(data, list):
+            raise ValueError("Expected list")
+    except Exception:
+        data = DEFAULT_SHERLOCKS
+
+    sherlocks = []
+    for index, item in enumerate(data):
+        if isinstance(item, dict):
+            sherlocks.append(_normalize_sherlock(item, index))
+
+    if not sherlocks:
+        sherlocks = [_normalize_sherlock(item, index) for index, item in enumerate(DEFAULT_SHERLOCKS)]
+    return sherlocks
+
+
+def _get_sherlock_submissions(sherlock_slug):
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        return {}
+
+    query = SherlockSubmission.query.filter_by(sherlock_slug=sherlock_slug, status="correct")
+    if scope == "team":
+        query = query.filter_by(team_id=team.id)
+    else:
+        query = query.filter_by(user_id=user.id)
+
+    return {row.entry_id: row for row in query.all()}
+
+
+def _find_sherlock_task(sherlock, entry_id):
+    for task in sherlock.get("tasks", []):
+        if task.get("id") == entry_id:
+            return task
+    return None
+
+
+def _get_sherlock_progress(sherlock):
+    tasks = sherlock.get("tasks", [])
+    total = len(tasks)
+    if total == 0:
+        return 0
+    solved = _get_sherlock_submissions(sherlock["slug"])
+    solved_count = sum(1 for task in tasks if task.get("id") in solved)
+    return int((solved_count / total) * 100)
+
+
+def _get_docker_challenge_dependencies():
+    try:
+        from CTFd.plugins.docker_challenges import (
+            DockerChallengeTracker,
+            DockerConfig,
+            add_port_forward,
+            create_container,
+            delete_container,
+            get_repositories,
+            get_unavailable_ports,
+        )
+    except Exception:
+        return None
+
+    return {
+        "DockerChallengeTracker": DockerChallengeTracker,
+        "DockerConfig": DockerConfig,
+        "add_port_forward": add_port_forward,
+        "create_container": create_container,
+        "delete_container": delete_container,
+        "get_repositories": get_repositories,
+        "get_unavailable_ports": get_unavailable_ports,
+    }
+
+
+def _get_machine_container_entry(slug, machine, deps, user, team, scope):
+    image = machine.get("docker_image")
+    if not image:
+        return None
+
+    challenge_key = f"machine:{slug}"
+    query = deps["DockerChallengeTracker"].query.filter_by(
+        docker_image=image,
+        challenge=challenge_key,
+    )
+    if scope == "team" and team is not None:
+        query = query.filter_by(team_id=team.id)
+    else:
+        query = query.filter_by(user_id=user.id)
+
+    return query.first()
+
+
+def _clean_expired_machine_container(slug, machine, deps, docker_config, user, team, scope):
+    entry = _get_machine_container_entry(slug, machine, deps, user, team, scope)
+    if entry is None:
+        return None
+
+    now = int(datetime.utcnow().timestamp())
+    if entry.revert_time and int(entry.revert_time) <= now:
+        try:
+            deps["delete_container"](docker_config, entry.instance_id, ports_str=entry.ports)
+        except Exception:
+            pass
+        deps["DockerChallengeTracker"].query.filter_by(id=entry.id).delete()
+        db.session.commit()
+        return None
+
+    return entry
+
+
+def _build_machine_docker_status(slug, machine):
+    max_timer = MACHINE_TIMER_DEFAULT
+    base = {
+        "enabled": bool(machine.get("docker_enabled")),
+        "configured": False,
+        "authenticated": False,
+        "running": False,
+        "docker_image": machine.get("docker_image", ""),
+        "host": "",
+        "ports": [],
+        "revert_time": None,
+        "max_timer": max_timer,
+        "can_extend": False,
+        "current_tier": 0,
+        "message": "Docker is disabled for this machine.",
+    }
+
+    if not base["enabled"]:
+        return base
+
+    if not machine.get("docker_image"):
+        base["message"] = "No Docker image configured by admins."
+        return base
+
+    deps = _get_docker_challenge_dependencies()
+    if deps is None:
+        base["message"] = "Docker plugin is unavailable."
+        return base
+
+    docker_config = deps["DockerConfig"].query.filter_by(id=1).first()
+    if docker_config is None or not docker_config.hostname:
+        base["message"] = "Docker host is not configured."
+        return base
+
+    max_timer = _resolve_machine_timer_cap(machine, docker_config)
+    base["max_timer"] = max_timer
+
+    base["configured"] = True
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        base["message"] = "Log in to spawn a machine instance."
+        return base
+
+    base["authenticated"] = True
+    entry = _clean_expired_machine_container(slug, machine, deps, docker_config, user, team, scope)
+    if entry is None:
+        base["message"] = "No active container instance."
+        return base
+
+    host = docker_config.display_host or str(docker_config.hostname).split(":")[0]
+    ports = [p for p in (entry.ports or "").split(",") if p]
+    tiers = _timer_tiers_for_cap(max_timer)
+    current_tier = 0
+    if entry.revert_time and entry.timestamp:
+        current_tier = max(0, int(entry.revert_time) - int(entry.timestamp))
+    can_extend = any(tier > current_tier for tier in tiers)
+
+    base.update(
+        {
+            "running": True,
+            "host": host,
+            "ports": ports,
+            "revert_time": entry.revert_time,
+            "current_tier": current_tier,
+            "can_extend": can_extend,
+            "message": "Container is running.",
+        }
+    )
+    return base
+
+
+def _resolve_machine_timer_cap(machine, docker_config=None):
+    configured = _safe_int(machine.get("docker_expiry", 0), 0)
+    if configured in MACHINE_TIMER_TIERS:
+        return configured
+
+    if configured <= 0 and docker_config is not None:
+        configured = _safe_int(getattr(docker_config, "container_expiry", 0), 0)
+
+    if configured <= 0:
+        return MACHINE_TIMER_DEFAULT
+
+    for tier in MACHINE_TIMER_TIERS:
+        if configured <= tier:
+            return tier
+    return MACHINE_TIMER_TIERS[-1]
+
+
+def _timer_tiers_for_cap(max_timer):
+    tiers = [tier for tier in MACHINE_TIMER_TIERS if tier <= max_timer]
+    return tiers or [MACHINE_TIMER_DEFAULT]
+
+
+def _get_available_docker_images():
+    deps = _get_docker_challenge_dependencies()
+    if deps is None:
+        return [], "Docker plugin unavailable"
+
+    try:
+        docker_config = deps["DockerConfig"].query.filter_by(id=1).first()
+        if docker_config is None or not docker_config.hostname:
+            return [], "Docker host is not configured"
+        repositories = deps["get_repositories"](docker_config, tags=True) or []
+        repositories = sorted({str(item).strip() for item in repositories if str(item).strip()})
+        return repositories, ""
+    except Exception:
+        return [], "Failed to load Docker image tags"
+
+
+def _get_sherlock_container_entry(slug, sherlock, deps, user, team, scope):
+    image = sherlock.get("docker_image")
+    if not image:
+        return None
+
+    challenge_key = f"sherlock:{slug}"
+    query = deps["DockerChallengeTracker"].query.filter_by(
+        docker_image=image,
+        challenge=challenge_key,
+    )
+    if scope == "team" and team is not None:
+        query = query.filter_by(team_id=team.id)
+    else:
+        query = query.filter_by(user_id=user.id)
+    return query.first()
+
+
+def _clean_expired_sherlock_container(slug, sherlock, deps, docker_config, user, team, scope):
+    entry = _get_sherlock_container_entry(slug, sherlock, deps, user, team, scope)
+    if entry is None:
+        return None
+
+    now = int(datetime.utcnow().timestamp())
+    if entry.revert_time and int(entry.revert_time) <= now:
+        try:
+            deps["delete_container"](docker_config, entry.instance_id, ports_str=entry.ports)
+        except Exception:
+            pass
+        deps["DockerChallengeTracker"].query.filter_by(id=entry.id).delete()
+        db.session.commit()
+        return None
+
+    return entry
+
+
+def _build_sherlock_docker_status(slug, sherlock):
+    max_timer = MACHINE_TIMER_DEFAULT
+    base = {
+        "enabled": bool(sherlock.get("docker_enabled")),
+        "configured": False,
+        "authenticated": False,
+        "running": False,
+        "docker_image": sherlock.get("docker_image", ""),
+        "host": "",
+        "ports": [],
+        "revert_time": None,
+        "max_timer": max_timer,
+        "can_extend": False,
+        "current_tier": 0,
+        "message": "Docker is disabled for this sherlock.",
+    }
+
+    if not base["enabled"]:
+        return base
+
+    if not sherlock.get("docker_image"):
+        base["message"] = "No Docker image configured by admins."
+        return base
+
+    deps = _get_docker_challenge_dependencies()
+    if deps is None:
+        base["message"] = "Docker plugin is unavailable."
+        return base
+
+    docker_config = deps["DockerConfig"].query.filter_by(id=1).first()
+    if docker_config is None or not docker_config.hostname:
+        base["message"] = "Docker host is not configured."
+        return base
+
+    max_timer = _resolve_machine_timer_cap(sherlock, docker_config)
+    base["max_timer"] = max_timer
+
+    base["configured"] = True
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        base["message"] = "Log in to spawn a sherlock instance."
+        return base
+
+    base["authenticated"] = True
+    entry = _clean_expired_sherlock_container(slug, sherlock, deps, docker_config, user, team, scope)
+    if entry is None:
+        base["message"] = "No active container instance."
+        return base
+
+    host = docker_config.display_host or str(docker_config.hostname).split(":")[0]
+    ports = [p for p in (entry.ports or "").split(",") if p]
+    tiers = _timer_tiers_for_cap(max_timer)
+    current_tier = 0
+    if entry.revert_time and entry.timestamp:
+        current_tier = max(0, int(entry.revert_time) - int(entry.timestamp))
+    can_extend = any(tier > current_tier for tier in tiers)
+
+    base.update(
+        {
+            "running": True,
+            "host": host,
+            "ports": ports,
+            "revert_time": entry.revert_time,
+            "current_tier": current_tier,
+            "can_extend": can_extend,
+            "message": "Container is running.",
+        }
+    )
+    return base
+
+
+@prolabs.route("/machines", methods=["GET"])
+def machines_listing():
+    machines = get_boot2root_machines()
+    user, _, _ = _get_current_account_scope()
+    for machine in machines:
+        machine["status"] = "Unowned"
+        machine["owned_user"] = False
+        machine["owned_root"] = False
+        if user is None:
+            continue
+
+        solved = _get_machine_submissions(machine["slug"])
+        machine["owned_user"] = "user-flag" in solved
+        machine["owned_root"] = "root-flag" in solved
+        if machine["owned_user"] and machine["owned_root"]:
+            machine["status"] = "Owned"
+        elif machine["owned_user"] or machine["owned_root"]:
+            machine["status"] = "Partial"
+
+    return render_template("machines/list.html", machines=machines)
+
+
+@prolabs.route("/machines/<slug>", methods=["GET"])
+def machines_detail(slug):
+    machines = get_boot2root_machines()
+    machine = next((item for item in machines if item["slug"] == slug), None)
+    if not machine:
+        abort(404)
+
+    solved = _get_machine_submissions(slug)
+    machine["user_flag_owned"] = "user-flag" in solved
+    machine["root_flag_owned"] = "root-flag" in solved
+    machine["guided_owned"] = [key for key in solved.keys() if key.startswith("guided-")]
+    machine["docker_status"] = _build_machine_docker_status(slug, machine)
+
+    return render_template("machines/detail.html", machine=machine)
+
+
+@prolabs.route("/api/v1/machines/<slug>/container", methods=["GET", "POST"])
+@authed_only
+def machines_container(slug):
+    machines = get_boot2root_machines()
+    machine = next((item for item in machines if item["slug"] == slug), None)
+    if not machine:
+        return {"success": False, "errors": {"message": "Machine not found"}}, 404
+
+    action = "status"
+    if request.method == "POST":
+        req = request.form or request.get_json(silent=True) or {}
+        action = (req.get("action") or "status").strip().lower()
+    else:
+        action = (request.args.get("action") or "status").strip().lower()
+
+    if action not in {"status", "start", "stop", "extend"}:
+        return {"success": False, "errors": {"message": "Unsupported action"}}, 400
+
+    if not machine.get("docker_enabled"):
+        return {"success": False, "errors": {"message": "Docker is disabled for this machine"}}, 400
+    if not machine.get("docker_image"):
+        return {"success": False, "errors": {"message": "No Docker image configured for this machine"}}, 400
+
+    deps = _get_docker_challenge_dependencies()
+    if deps is None:
+        return {"success": False, "errors": {"message": "Docker plugin is unavailable"}}, 503
+
+    docker_config = deps["DockerConfig"].query.filter_by(id=1).first()
+    if docker_config is None or not docker_config.hostname:
+        return {"success": False, "errors": {"message": "Docker host is not configured"}}, 403
+
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        return {"success": False, "errors": {"message": "Authentication required"}}, 403
+
+    existing = _clean_expired_machine_container(
+        slug,
+        machine,
+        deps,
+        docker_config,
+        user,
+        team,
+        scope,
+    )
+
+    if action == "status":
+        return {"success": True, "data": _build_machine_docker_status(slug, machine)}
+
+    if action == "extend":
+        if existing is None:
+            return {
+                "success": False,
+                "errors": {"message": "No running container to extend."},
+            }, 400
+
+        max_timer = _resolve_machine_timer_cap(machine, docker_config)
+        tiers = _timer_tiers_for_cap(max_timer)
+        current_tier = (
+            max(0, int(existing.revert_time) - int(existing.timestamp))
+            if existing.revert_time and existing.timestamp
+            else tiers[0]
+        )
+        next_tier = next((tier for tier in tiers if tier > current_tier), None)
+        if next_tier is None:
+            return {
+                "success": False,
+                "errors": {"message": "Maximum allowed timer has been reached for this machine."},
+                "data": _build_machine_docker_status(slug, machine),
+            }, 400
+
+        base_ts = int(existing.timestamp) if existing.timestamp else int(datetime.utcnow().timestamp())
+        existing.revert_time = base_ts + next_tier
+        db.session.commit()
+        return {
+            "success": True,
+            "data": _build_machine_docker_status(slug, machine),
+            "message": f"Container extended to {next_tier // 60} minutes.",
+        }
+
+    if action == "stop":
+        if existing is None:
+            return {
+                "success": True,
+                "data": _build_machine_docker_status(slug, machine),
+                "message": "No running container to stop.",
+            }
+
+        try:
+            deps["delete_container"](docker_config, existing.instance_id, ports_str=existing.ports)
+            deps["DockerChallengeTracker"].query.filter_by(id=existing.id).delete()
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            return {"success": False, "errors": {"message": "Failed to stop container"}}, 500
+
+        return {
+            "success": True,
+            "data": _build_machine_docker_status(slug, machine),
+            "message": "Container stopped.",
+        }
+
+    did_revert = False
+    if existing is not None:
+        # Match docker challenge behavior: start acts as a revert when an instance already exists.
+        try:
+            deps["delete_container"](docker_config, existing.instance_id, ports_str=existing.ports)
+            deps["DockerChallengeTracker"].query.filter_by(id=existing.id).delete()
+            db.session.commit()
+            did_revert = True
+        except Exception:
+            db.session.rollback()
+            return {
+                "success": False,
+                "errors": {"message": "Failed to revert existing container"},
+            }, 500
+
+    repositories = []
+    try:
+        repositories = deps["get_repositories"](docker_config, tags=True) or []
+    except Exception:
+        repositories = []
+
+    image_name = machine.get("docker_image")
+    if repositories:
+        image_repo = image_name.split(":", 1)[0]
+        if image_name not in repositories and image_repo not in repositories:
+            return {
+                "success": False,
+                "errors": {"message": f"Docker image {image_name} is not available on the host"},
+            }, 403
+
+    if scope == "team" and team is not None:
+        running_count = deps["DockerChallengeTracker"].query.filter_by(team_id=team.id).count()
+    else:
+        running_count = deps["DockerChallengeTracker"].query.filter_by(user_id=user.id).count()
+
+    max_containers = 3
+    if running_count >= max_containers:
+        return {
+            "success": False,
+            "errors": {
+                "message": f"You already have {running_count} running containers. Stop one before spawning a new instance.",
+            },
+        }, 403
+
+    create_result = deps["create_container"](
+        docker_config,
+        image_name,
+        team.name if scope == "team" and team is not None else user.name,
+        deps["get_unavailable_ports"](docker_config),
+    )
+    if not create_result or not create_result[0] or "Id" not in create_result[0]:
+        return {
+            "success": False,
+            "errors": {"message": "Failed to create Docker container. Verify Docker host and image settings."},
+        }, 500
+
+    port_bindings = json.loads(create_result[1]).get("HostConfig", {}).get("PortBindings", {})
+    host_ports = []
+    for bindings in port_bindings.values():
+        if not bindings:
+            continue
+        host_port = bindings[0].get("HostPort")
+        if host_port:
+            host_ports.append(host_port)
+
+    for host_port in host_ports:
+        try:
+            deps["add_port_forward"](host_port, docker_config.display_host)
+        except Exception:
+            continue
+
+    now = int(datetime.utcnow().timestamp())
+    max_timer = _resolve_machine_timer_cap(machine, docker_config)
+    tiers = _timer_tiers_for_cap(max_timer)
+    initial_timer = tiers[0]
+    challenge_key = f"machine:{slug}"
+    tracker = deps["DockerChallengeTracker"](
+        team_id=team.id if scope == "team" and team is not None else None,
+        user_id=user.id if scope != "team" else None,
+        docker_image=image_name,
+        timestamp=now,
+        revert_time=now + initial_timer,
+        instance_id=create_result[0]["Id"],
+        ports=",".join(host_ports),
+        host=(docker_config.display_host or str(docker_config.hostname).split(":")[0]),
+        challenge=challenge_key,
+    )
+    db.session.add(tracker)
+    db.session.commit()
+
+    return {
+        "success": True,
+        "data": _build_machine_docker_status(slug, machine),
+        "message": (
+            f"Container reverted. Timer set to {initial_timer // 60} minutes."
+            if did_revert
+            else f"Container started. Timer set to {initial_timer // 60} minutes."
+        ),
+    }
+
+
+@prolabs.route("/api/v1/machines/<slug>/submit", methods=["POST"])
+@authed_only
+def machines_submit(slug):
+    req = request.form or request.get_json(silent=True) or {}
+    entry_id = (req.get("entry_id") or "").strip()
+    answer = (req.get("answer") or "").strip()
+
+    if not entry_id or not answer:
+        return {"success": False, "errors": {"message": "Missing entry_id or answer"}}, 400
+
+    machines = get_boot2root_machines()
+    machine = next((item for item in machines if item["slug"] == slug), None)
+    if not machine:
+        return {"success": False, "errors": {"message": "Machine not found"}}, 404
+
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        return {"success": False, "errors": {"message": "Authentication required"}}, 403
+
+    if not (ctftime() or is_admin()):
+        return {"success": False, "errors": {"message": "Submissions are closed"}}, 403
+
+    expected = ""
+    points = 0
+    award_name = ""
+
+    if entry_id == "user-flag":
+        expected = machine.get("user_flag", "")
+        points = _safe_points(machine.get("user_points", 0))
+        award_name = f"{machine['title']} - User Flag"
+    elif entry_id == "root-flag":
+        expected = machine.get("root_flag", "")
+        points = _safe_points(machine.get("root_points", 0))
+        award_name = f"{machine['title']} - Root Flag"
+    elif entry_id.startswith("guided-"):
+        qid = entry_id.replace("guided-", "", 1)
+        question = _find_guided_question(machine, qid)
+        if not question:
+            return {"success": False, "errors": {"message": "Unknown guided question"}}, 404
+        expected = question.get("answer", "")
+        points = _safe_points(question.get("points", 0))
+        award_name = f"{machine['title']} - Guided {qid}"
+    else:
+        return {"success": False, "errors": {"message": "Unknown entry type"}}, 400
+
+    scoped_query = Boot2RootSubmission.query.filter_by(machine_slug=slug, entry_id=entry_id)
+    if scope == "team":
+        scoped_query = scoped_query.filter_by(team_id=team.id)
+    else:
+        scoped_query = scoped_query.filter_by(user_id=user.id)
+
+    existing = scoped_query.first()
+    if existing is not None and existing.status == "correct":
+        return {
+            "success": True,
+            "data": {
+                "status": "already_solved",
+                "message": "Correct but you already solved this",
+                "total_score": _get_current_account_score(),
+            },
+        }
+
+    is_correct = expected and answer == expected
+
+    if existing is None:
+        row = Boot2RootSubmission(
+            machine_slug=slug,
+            entry_id=entry_id,
+            provided=answer,
+            status="correct" if is_correct else "incorrect",
+            ip=get_ip(req=request),
+            user_id=user.id,
+            team_id=team.id if team else None,
+        )
+        db.session.add(row)
+    else:
+        existing.provided = answer
+        existing.status = "correct" if is_correct else "incorrect"
+        existing.ip = get_ip(req=request)
+        existing.user_id = user.id
+        existing.team_id = team.id if team else None
+        existing.date = datetime.utcnow()
+
+    if is_correct and points > 0:
+        db.session.add(
+            Awards(
+                user_id=user.id,
+                team_id=team.id if team else None,
+                name=award_name[:80],
+                description=f"Solved {entry_id} in {machine['title']}",
+                value=points,
+                category="Boot2Root Machines",
+                icon="fas fa-server",
+            )
+        )
+
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return {
+            "success": True,
+            "data": {
+                "status": "already_solved",
+                "message": "Correct but you already solved this",
+                "total_score": _get_current_account_score(),
+            },
+        }
+
+    if is_correct:
+        if points > 0:
+            clear_standings()
+        return {
+            "success": True,
+            "data": {
+                "status": "correct",
+                "message": f"Correct (+{points} pts)" if points > 0 else "Correct",
+                "points": points,
+                "total_score": _get_current_account_score(),
+            },
+        }
+
+    return {
+        "success": True,
+        "data": {
+            "status": "incorrect",
+            "message": "Incorrect",
+            "total_score": _get_current_account_score(),
+        },
+    }
+
+
+@prolabs.route("/sherlocks", methods=["GET"])
+def sherlocks_listing():
+    sherlocks = get_sherlocks()
+    for sherlock in sherlocks:
+        sherlock["progress"] = _get_sherlock_progress(sherlock)
+    return render_template("sherlocks/list.html", sherlocks=sherlocks)
+
+
+@prolabs.route("/sherlocks/<slug>", methods=["GET"])
+def sherlocks_detail(slug):
+    sherlocks = get_sherlocks()
+    sherlock = next((item for item in sherlocks if item["slug"] == slug), None)
+    if not sherlock:
+        abort(404)
+
+    solved = _get_sherlock_submissions(slug)
+    sherlock["solved_task_ids"] = [task_id for task_id in solved.keys()]
+    sherlock["progress"] = _get_sherlock_progress(sherlock)
+    sherlock["docker_status"] = _build_sherlock_docker_status(slug, sherlock)
+    return render_template("sherlocks/detail.html", sherlock=sherlock)
+
+
+@prolabs.route("/api/v1/sherlocks/<slug>/container", methods=["GET", "POST"])
+@authed_only
+def sherlocks_container(slug):
+    sherlocks = get_sherlocks()
+    sherlock = next((item for item in sherlocks if item["slug"] == slug), None)
+    if not sherlock:
+        return {"success": False, "errors": {"message": "Sherlock not found"}}, 404
+
+    action = "status"
+    if request.method == "POST":
+        req = request.form or request.get_json(silent=True) or {}
+        action = (req.get("action") or "status").strip().lower()
+    else:
+        action = (request.args.get("action") or "status").strip().lower()
+
+    if action not in {"status", "start", "stop", "extend"}:
+        return {"success": False, "errors": {"message": "Unsupported action"}}, 400
+
+    if not sherlock.get("docker_enabled"):
+        return {"success": False, "errors": {"message": "Docker is disabled for this sherlock"}}, 400
+    if not sherlock.get("docker_image"):
+        return {"success": False, "errors": {"message": "No Docker image configured for this sherlock"}}, 400
+
+    deps = _get_docker_challenge_dependencies()
+    if deps is None:
+        return {"success": False, "errors": {"message": "Docker plugin is unavailable"}}, 503
+
+    docker_config = deps["DockerConfig"].query.filter_by(id=1).first()
+    if docker_config is None or not docker_config.hostname:
+        return {"success": False, "errors": {"message": "Docker host is not configured"}}, 403
+
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        return {"success": False, "errors": {"message": "Authentication required"}}, 403
+
+    existing = _clean_expired_sherlock_container(
+        slug,
+        sherlock,
+        deps,
+        docker_config,
+        user,
+        team,
+        scope,
+    )
+
+    if action == "status":
+        return {"success": True, "data": _build_sherlock_docker_status(slug, sherlock)}
+
+    if action == "extend":
+        if existing is None:
+            return {"success": False, "errors": {"message": "No running container to extend."}}, 400
+
+        max_timer = _resolve_machine_timer_cap(sherlock, docker_config)
+        tiers = _timer_tiers_for_cap(max_timer)
+        current_tier = (
+            max(0, int(existing.revert_time) - int(existing.timestamp))
+            if existing.revert_time and existing.timestamp
+            else tiers[0]
+        )
+        next_tier = next((tier for tier in tiers if tier > current_tier), None)
+        if next_tier is None:
+            return {
+                "success": False,
+                "errors": {"message": "Maximum allowed timer has been reached for this sherlock."},
+                "data": _build_sherlock_docker_status(slug, sherlock),
+            }, 400
+
+        base_ts = int(existing.timestamp) if existing.timestamp else int(datetime.utcnow().timestamp())
+        existing.revert_time = base_ts + next_tier
+        db.session.commit()
+        return {
+            "success": True,
+            "data": _build_sherlock_docker_status(slug, sherlock),
+            "message": f"Container extended to {next_tier // 60} minutes.",
+        }
+
+    if action == "stop":
+        if existing is None:
+            return {
+                "success": True,
+                "data": _build_sherlock_docker_status(slug, sherlock),
+                "message": "No running container to stop.",
+            }
+
+        try:
+            deps["delete_container"](docker_config, existing.instance_id, ports_str=existing.ports)
+            deps["DockerChallengeTracker"].query.filter_by(id=existing.id).delete()
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            return {"success": False, "errors": {"message": "Failed to stop container"}}, 500
+
+        return {
+            "success": True,
+            "data": _build_sherlock_docker_status(slug, sherlock),
+            "message": "Container stopped.",
+        }
+
+    did_revert = False
+    if existing is not None:
+        try:
+            deps["delete_container"](docker_config, existing.instance_id, ports_str=existing.ports)
+            deps["DockerChallengeTracker"].query.filter_by(id=existing.id).delete()
+            db.session.commit()
+            did_revert = True
+        except Exception:
+            db.session.rollback()
+            return {"success": False, "errors": {"message": "Failed to revert existing container"}}, 500
+
+    repositories = []
+    try:
+        repositories = deps["get_repositories"](docker_config, tags=True) or []
+    except Exception:
+        repositories = []
+
+    image_name = sherlock.get("docker_image")
+    if repositories:
+        image_repo = image_name.split(":", 1)[0]
+        if image_name not in repositories and image_repo not in repositories:
+            return {
+                "success": False,
+                "errors": {"message": f"Docker image {image_name} is not available on the host"},
+            }, 403
+
+    if scope == "team" and team is not None:
+        running_count = deps["DockerChallengeTracker"].query.filter_by(team_id=team.id).count()
+    else:
+        running_count = deps["DockerChallengeTracker"].query.filter_by(user_id=user.id).count()
+
+    if running_count >= 3:
+        return {
+            "success": False,
+            "errors": {
+                "message": f"You already have {running_count} running containers. Stop one before spawning a new instance.",
+            },
+        }, 403
+
+    create_result = deps["create_container"](
+        docker_config,
+        image_name,
+        team.name if scope == "team" and team is not None else user.name,
+        deps["get_unavailable_ports"](docker_config),
+    )
+    if not create_result or not create_result[0] or "Id" not in create_result[0]:
+        return {
+            "success": False,
+            "errors": {"message": "Failed to create Docker container. Verify Docker host and image settings."},
+        }, 500
+
+    port_bindings = json.loads(create_result[1]).get("HostConfig", {}).get("PortBindings", {})
+    host_ports = []
+    for bindings in port_bindings.values():
+        if not bindings:
+            continue
+        host_port = bindings[0].get("HostPort")
+        if host_port:
+            host_ports.append(host_port)
+
+    for host_port in host_ports:
+        try:
+            deps["add_port_forward"](host_port, docker_config.display_host)
+        except Exception:
+            continue
+
+    now = int(datetime.utcnow().timestamp())
+    max_timer = _resolve_machine_timer_cap(sherlock, docker_config)
+    tiers = _timer_tiers_for_cap(max_timer)
+    initial_timer = tiers[0]
+    challenge_key = f"sherlock:{slug}"
+    tracker = deps["DockerChallengeTracker"](
+        team_id=team.id if scope == "team" and team is not None else None,
+        user_id=user.id if scope != "team" else None,
+        docker_image=image_name,
+        timestamp=now,
+        revert_time=now + initial_timer,
+        instance_id=create_result[0]["Id"],
+        ports=",".join(host_ports),
+        host=(docker_config.display_host or str(docker_config.hostname).split(":")[0]),
+        challenge=challenge_key,
+    )
+    db.session.add(tracker)
+    db.session.commit()
+
+    return {
+        "success": True,
+        "data": _build_sherlock_docker_status(slug, sherlock),
+        "message": (
+            f"Container reverted. Timer set to {initial_timer // 60} minutes."
+            if did_revert
+            else f"Container started. Timer set to {initial_timer // 60} minutes."
+        ),
+    }
+
+
+@prolabs.route("/api/v1/sherlocks/<slug>/submit", methods=["POST"])
+@authed_only
+def sherlocks_submit(slug):
+    req = request.form or request.get_json(silent=True) or {}
+    entry_id = (req.get("entry_id") or "").strip()
+    answer = (req.get("answer") or "").strip()
+
+    if not entry_id or not answer:
+        return {"success": False, "errors": {"message": "Missing entry_id or answer"}}, 400
+
+    sherlocks = get_sherlocks()
+    sherlock = next((item for item in sherlocks if item["slug"] == slug), None)
+    if not sherlock:
+        return {"success": False, "errors": {"message": "Sherlock not found"}}, 404
+
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        return {"success": False, "errors": {"message": "Authentication required"}}, 403
+
+    if not (ctftime() or is_admin()):
+        return {"success": False, "errors": {"message": "Submissions are closed"}}, 403
+
+    task = _find_sherlock_task(sherlock, entry_id)
+    if task is None:
+        return {"success": False, "errors": {"message": "Unknown task"}}, 404
+
+    scoped_query = SherlockSubmission.query.filter_by(sherlock_slug=slug, entry_id=entry_id)
+    if scope == "team":
+        scoped_query = scoped_query.filter_by(team_id=team.id)
+    else:
+        scoped_query = scoped_query.filter_by(user_id=user.id)
+
+    existing = scoped_query.first()
+    if existing is not None and existing.status == "correct":
+        return {
+            "success": True,
+            "data": {
+                "status": "already_solved",
+                "message": "Correct but you already solved this task",
+                "total_score": _get_current_account_score(),
+                "progress": _get_sherlock_progress(sherlock),
+            },
+        }
+
+    expected = task.get("answer", "")
+    is_correct = expected and answer == expected
+    points = _safe_points(task.get("points", 0))
+
+    if existing is None:
+        row = SherlockSubmission(
+            sherlock_slug=slug,
+            entry_id=entry_id,
+            provided=answer,
+            status="correct" if is_correct else "incorrect",
+            ip=get_ip(req=request),
+            user_id=user.id,
+            team_id=team.id if team else None,
+        )
+        db.session.add(row)
+    else:
+        existing.provided = answer
+        existing.status = "correct" if is_correct else "incorrect"
+        existing.ip = get_ip(req=request)
+        existing.user_id = user.id
+        existing.team_id = team.id if team else None
+        existing.date = datetime.utcnow()
+
+    if is_correct and points > 0:
+        db.session.add(
+            Awards(
+                user_id=user.id,
+                team_id=team.id if team else None,
+                name=f"{sherlock['title']} - {task.get('title', entry_id)}"[:80],
+                description=f"Solved {entry_id} in {sherlock['title']}",
+                value=points,
+                category="Sherlocks",
+                icon="fas fa-user-secret",
+            )
+        )
+
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return {
+            "success": True,
+            "data": {
+                "status": "already_solved",
+                "message": "Correct but you already solved this task",
+                "total_score": _get_current_account_score(),
+                "progress": _get_sherlock_progress(sherlock),
+            },
+        }
+
+    if is_correct:
+        if points > 0:
+            clear_standings()
+        return {
+            "success": True,
+            "data": {
+                "status": "correct",
+                "message": f"Correct (+{points} pts)" if points > 0 else "Correct",
+                "points": points,
+                "total_score": _get_current_account_score(),
+                "progress": _get_sherlock_progress(sherlock),
+            },
+        }
+
+    return {
+        "success": True,
+        "data": {
+            "status": "incorrect",
+            "message": "Incorrect",
+            "total_score": _get_current_account_score(),
+            "progress": _get_sherlock_progress(sherlock),
+        },
+    }
+
+
+@prolabs.route("/admin/sherlocks", methods=["GET", "POST"])
+@admins_only
+def sherlocks_admin():
+    if request.method == "POST":
+        slugs = request.form.getlist("slug[]")
+        titles = request.form.getlist("title[]")
+        difficulties = request.form.getlist("difficulty[]")
+        categories = request.form.getlist("category[]")
+        ratings = request.form.getlist("rating[]")
+        rating_counts = request.form.getlist("rating_count[]")
+        solves = request.form.getlist("solves[]")
+        release_dates = request.form.getlist("release_date[]")
+        descriptions = request.form.getlist("description[]")
+        tasks_values = request.form.getlist("tasks[]")
+        docker_enabled_values = request.form.getlist("docker_enabled[]")
+        docker_images = request.form.getlist("docker_image[]")
+        docker_expiry_values = request.form.getlist("docker_expiry[]")
+
+        row_count = max(
+            len(slugs),
+            len(titles),
+            len(difficulties),
+            len(categories),
+            len(descriptions),
+            len(tasks_values),
+            len(docker_enabled_values),
+            len(docker_images),
+        )
+
+        sherlocks = []
+        for i in range(row_count):
+            title = (titles[i] if i < len(titles) else "").strip()
+            if not title:
+                continue
+
+            slug = _slugify((slugs[i] if i < len(slugs) else "").strip() or title)
+            try:
+                parsed_tasks = json.loads(tasks_values[i] if i < len(tasks_values) else "[]")
+            except Exception:
+                parsed_tasks = []
+
+            sherlocks.append(
+                {
+                    "slug": slug,
+                    "title": title,
+                    "difficulty": (difficulties[i] if i < len(difficulties) else "Very Easy").strip(),
+                    "category": (categories[i] if i < len(categories) else "DFIR").strip(),
+                    "rating": float(ratings[i]) if i < len(ratings) and ratings[i] else 0,
+                    "rating_count": _safe_int(rating_counts[i] if i < len(rating_counts) else 0, 0),
+                    "solves": _safe_int(solves[i] if i < len(solves) else 0, 0),
+                    "release_date": (release_dates[i] if i < len(release_dates) else "").strip(),
+                    "description": (descriptions[i] if i < len(descriptions) else "").strip(),
+                    "tasks": _normalize_sherlock_tasks(parsed_tasks),
+                    "docker_enabled": _as_bool(
+                        docker_enabled_values[i] if i < len(docker_enabled_values) else "0"
+                    ),
+                    "docker_image": (docker_images[i] if i < len(docker_images) else "").strip(),
+                    "docker_expiry": _safe_int(
+                        docker_expiry_values[i] if i < len(docker_expiry_values) else 0,
+                        0,
+                    ),
+                }
+            )
+
+        if not sherlocks:
+            sherlocks = DEFAULT_SHERLOCKS
+
+        set_config(SHERLOCKS_CONFIG_KEY, json.dumps(sherlocks))
+        return redirect(url_for("prolabs.sherlocks_admin", saved=1))
+
+    sherlocks = get_sherlocks()
+    docker_images, docker_images_error = _get_available_docker_images()
+    return render_template(
+        "sherlocks/admin.html",
+        sherlocks=sherlocks,
+        docker_images=docker_images,
+        docker_images_error=docker_images_error,
+    )
+
+
+@prolabs.route("/admin/machines", methods=["GET", "POST"])
+@admins_only
+def machines_admin():
+    if request.method == "POST":
+        slugs = request.form.getlist("slug[]")
+        titles = request.form.getlist("title[]")
+        difficulties = request.form.getlist("difficulty[]")
+        os_values = request.form.getlist("os[]")
+        ratings = request.form.getlist("rating[]")
+        rating_counts = request.form.getlist("rating_count[]")
+        user_solves = request.form.getlist("user_solves[]")
+        root_solves = request.form.getlist("root_solves[]")
+        release_dates = request.form.getlist("release_date[]")
+        machine_infos = request.form.getlist("machine_info[]")
+        walkthroughs = request.form.getlist("walkthrough[]")
+        user_flags = request.form.getlist("user_flag[]")
+        root_flags = request.form.getlist("root_flag[]")
+        user_points = request.form.getlist("user_points[]")
+        root_points = request.form.getlist("root_points[]")
+        docker_enabled_values = request.form.getlist("docker_enabled[]")
+        docker_images = request.form.getlist("docker_image[]")
+        docker_expiry_values = request.form.getlist("docker_expiry[]")
+        guided_questions = request.form.getlist("guided_questions[]")
+        existing_walkthrough_files = request.form.getlist("existing_walkthrough_files[]")
+
+        row_count = max(
+            len(slugs),
+            len(titles),
+            len(difficulties),
+            len(os_values),
+            len(machine_infos),
+            len(walkthroughs),
+            len(user_flags),
+            len(root_flags),
+            len(docker_enabled_values),
+            len(docker_images),
+        )
+
+        machines = []
+        for i in range(row_count):
+            title = (titles[i] if i < len(titles) else "").strip()
+            if not title:
+                continue
+
+            slug = _slugify((slugs[i] if i < len(slugs) else "").strip() or title)
+            existing_files = _normalize_walkthrough_files(
+                existing_walkthrough_files[i] if i < len(existing_walkthrough_files) else "[]"
+            )
+
+            uploaded_files = request.files.getlist(f"walkthrough_files_{i}[]")
+            uploaded_rows = []
+            for file_obj in uploaded_files:
+                if not file_obj or not getattr(file_obj, "filename", ""):
+                    continue
+                safe_name = re.sub(r"[^a-zA-Z0-9._-]+", "-", file_obj.filename)
+                unique_name = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}-{safe_name}"
+                location = f"machines/{slug}-{unique_name}"
+                try:
+                    uploaded = uploads.upload_file(file=file_obj, location=location)
+                    uploaded_rows.append(
+                        {
+                            "name": file_obj.filename,
+                            "location": uploaded.location,
+                        }
+                    )
+                except Exception:
+                    continue
+
+            combined_files = existing_files + uploaded_rows
+
+            try:
+                parsed_guided = json.loads(guided_questions[i] if i < len(guided_questions) else "[]")
+            except Exception:
+                parsed_guided = []
+
+            machine = {
+                "slug": slug,
+                "title": title,
+                "difficulty": (difficulties[i] if i < len(difficulties) else "Easy").strip(),
+                "os": (os_values[i] if i < len(os_values) else "Linux").strip(),
+                "rating": float(ratings[i]) if i < len(ratings) and ratings[i] else 0,
+                "rating_count": _safe_int(rating_counts[i] if i < len(rating_counts) else 0, 0),
+                "user_solves": _safe_int(user_solves[i] if i < len(user_solves) else 0, 0),
+                "root_solves": _safe_int(root_solves[i] if i < len(root_solves) else 0, 0),
+                "release_date": (release_dates[i] if i < len(release_dates) else "").strip(),
+                "machine_info": (machine_infos[i] if i < len(machine_infos) else "").strip(),
+                "walkthrough": (walkthroughs[i] if i < len(walkthroughs) else "").strip(),
+                "walkthrough_files": combined_files,
+                "user_flag": (user_flags[i] if i < len(user_flags) else "").strip(),
+                "root_flag": (root_flags[i] if i < len(root_flags) else "").strip(),
+                "user_points": _safe_points(user_points[i] if i < len(user_points) else 50),
+                "root_points": _safe_points(root_points[i] if i < len(root_points) else 100),
+                "guided_questions": _normalize_guided_questions(parsed_guided),
+                "docker_enabled": _as_bool(
+                    docker_enabled_values[i] if i < len(docker_enabled_values) else "0"
+                ),
+                "docker_image": (docker_images[i] if i < len(docker_images) else "").strip(),
+                "docker_expiry": _safe_int(
+                    docker_expiry_values[i] if i < len(docker_expiry_values) else 0,
+                    0,
+                ),
+            }
+            machines.append(machine)
+
+        if not machines:
+            machines = DEFAULT_BOOT2ROOT_MACHINES
+
+        set_config(MACHINES_CONFIG_KEY, json.dumps(machines))
+        return redirect(url_for("prolabs.machines_admin", saved=1))
+
+    machines = get_boot2root_machines()
+    docker_images, docker_images_error = _get_available_docker_images()
+    return render_template(
+        "machines/admin.html",
+        machines=machines,
+        docker_images=docker_images,
+        docker_images_error=docker_images_error,
+    )
+
+
 def load(app):
     with app.app_context():
         db.create_all()
     app.register_blueprint(prolabs)
     register_admin_plugin_menu_bar("Pro Labs", "/admin/prolabs")
     register_admin_plugin_menu_bar("Pro Lab Levels", "/admin/prolabs/levels")
+    register_admin_plugin_menu_bar("Machines", "/admin/machines")
+    register_admin_plugin_menu_bar("Sherlocks", "/admin/sherlocks")
 
     @app.context_processor
     def inject_prolab_level_helpers():

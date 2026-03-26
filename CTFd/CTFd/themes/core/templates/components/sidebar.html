@@ -23,6 +23,7 @@
       <a href="/rules" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-colors {% if request.path.startswith('/rules') %}bg-primary/20 text-white border border-primary/30{% else %}text-gray-400 hover:text-white hover:bg-white/5{% endif %}">The Rules</a>
 
       <a href="{{ url_for('prolabs.prolab_listing') }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-colors {% if request.path.startswith('/pro-red-team-labs') %}bg-primary/20 text-white border border-primary/30{% else %}text-gray-400 hover:text-white hover:bg-white/5{% endif %}">Pro Red Team Labs</a>
+      <a href="{{ url_for('prolabs.machines_listing') }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-colors {% if request.path.startswith('/machines') %}bg-primary/20 text-white border border-primary/30{% else %}text-gray-400 hover:text-white hover:bg-white/5{% endif %}">Machines</a>
 
       {% if Configs.account_visibility != 'admins' %}
       <a href="{{ url_for('users.listing') }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest transition-colors {% if request.path.startswith('/users') %}bg-primary/20 text-white border border-primary/30{% else %}text-gray-400 hover:text-white hover:bg-white/5{% endif %}">Users</a>
@@ -75,6 +76,7 @@
     {% endif %}
     <a href="/rules" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest text-gray-300 hover:text-white hover:bg-white/5">The Rules</a>
     <a href="{{ url_for('prolabs.prolab_listing') }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest text-gray-300 hover:text-white hover:bg-white/5">Pro Red Team Labs</a>
+    <a href="{{ url_for('prolabs.machines_listing') }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest text-gray-300 hover:text-white hover:bg-white/5">Machines</a>
     
     {% if Configs.account_visibility != 'admins' %}
     <a href="{{ url_for('users.listing') }}" class="block px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-widest text-gray-300 hover:text-white hover:bg-white/5">Users</a>
