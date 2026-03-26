@@ -681,6 +681,7 @@ def get_prolabs():
 
 
 @prolabs.route("/pro-red-team-labs", methods=["GET"])
+@authed_only
 def prolab_listing():
     labs = get_prolabs()
     level_rules = get_level_rules()
@@ -692,6 +693,7 @@ def prolab_listing():
 
 
 @prolabs.route("/pro-red-team-labs/<slug>", methods=["GET"])
+@authed_only
 def prolab_detail(slug):
     labs = get_prolabs()
     lab = next((item for item in labs if item["slug"] == slug), None)
@@ -1507,6 +1509,7 @@ def _build_sherlock_docker_status(slug, sherlock):
 
 
 @prolabs.route("/machines", methods=["GET"])
+@authed_only
 def machines_listing():
     machines = get_boot2root_machines()
     user, _, _ = _get_current_account_scope()
@@ -1529,6 +1532,7 @@ def machines_listing():
 
 
 @prolabs.route("/machines/<slug>", methods=["GET"])
+@authed_only
 def machines_detail(slug):
     machines = get_boot2root_machines()
     machine = next((item for item in machines if item["slug"] == slug), None)
@@ -1879,6 +1883,7 @@ def machines_submit(slug):
 
 
 @prolabs.route("/sherlocks", methods=["GET"])
+@authed_only
 def sherlocks_listing():
     sherlocks = get_sherlocks()
     for sherlock in sherlocks:
@@ -1887,6 +1892,7 @@ def sherlocks_listing():
 
 
 @prolabs.route("/sherlocks/<slug>", methods=["GET"])
+@authed_only
 def sherlocks_detail(slug):
     sherlocks = get_sherlocks()
     sherlock = next((item for item in sherlocks if item["slug"] == slug), None)
