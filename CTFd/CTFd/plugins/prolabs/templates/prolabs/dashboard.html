@@ -1,0 +1,831 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  :root {
+    --dash-bg: #090c14;
+    --dash-bg-soft: #0e1422;
+    --dash-card: #111a2b;
+    --dash-border: rgba(236, 19, 19, 0.18);
+    --dash-border-soft: rgba(236, 19, 19, 0.1);
+    --dash-text: #eef2ff;
+    --dash-muted: #8da0c3;
+    --dash-track: #24324a;
+    --dash-danger: #ec1313;
+    --dash-green: #9fef00;
+  }
+
+  html,
+  body.with-sidebar {
+    background:
+      radial-gradient(1000px 480px at -8% -15%, rgba(236, 19, 19, 0.12), transparent 60%),
+      radial-gradient(900px 420px at 110% -20%, rgba(236, 19, 19, 0.1), transparent 62%),
+      linear-gradient(180deg, var(--dash-bg), var(--dash-bg-soft));
+    overflow-x: hidden;
+  }
+
+  .tom-dashboard {
+    min-height: auto;
+    padding: 1.2rem;
+    background:
+      radial-gradient(1000px 480px at -8% -15%, rgba(236, 19, 19, 0.12), transparent 60%),
+      radial-gradient(900px 420px at 110% -20%, rgba(236, 19, 19, 0.1), transparent 62%),
+      linear-gradient(180deg, var(--dash-bg), var(--dash-bg-soft));
+    color: var(--dash-text);
+  }
+
+  body.with-sidebar,
+  .tom-main-content {
+    background:
+      radial-gradient(1000px 480px at -8% -15%, rgba(236, 19, 19, 0.12), transparent 60%),
+      radial-gradient(900px 420px at 110% -20%, rgba(236, 19, 19, 0.1), transparent 62%),
+      linear-gradient(180deg, var(--dash-bg), var(--dash-bg-soft));
+    overflow-x: hidden;
+  }
+
+  .dash-top {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .dash-card {
+    background: linear-gradient(180deg, rgba(17, 26, 43, 0.94), rgba(15, 23, 37, 0.97));
+    border: 1px solid var(--dash-border-soft);
+    border-radius: 12px;
+    padding: 1rem;
+  }
+
+  .dash-app-label {
+    text-align: center;
+    color: var(--dash-muted);
+    font-weight: 700;
+    margin-top: 0.25rem;
+  }
+
+  .dash-logo {
+    width: 94px;
+    height: 94px;
+    margin: 0 auto 0.5rem;
+    border-radius: 16px;
+    border: 2px solid rgba(236, 19, 19, 0.45);
+    background: rgba(9, 14, 25, 0.8);
+    display: grid;
+    place-items: center;
+    color: var(--dash-green);
+    font-size: 2rem;
+    box-shadow: 0 0 24px rgba(236, 19, 19, 0.22);
+  }
+
+  .dash-name {
+    text-align: center;
+    margin: 0.35rem 0 0.9rem;
+    font-weight: 800;
+    font-size: 2.1rem;
+    line-height: 1;
+  }
+
+  .dash-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.35rem;
+    color: #d9e3f9;
+    font-weight: 600;
+  }
+
+  .dash-track {
+    height: 7px;
+    border-radius: 999px;
+    background: var(--dash-track);
+    overflow: hidden;
+  }
+
+  .dash-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--dash-green);
+    box-shadow: 0 0 12px rgba(159, 239, 0, 0.35);
+  }
+
+  .dash-rank,
+  .dash-mini {
+    margin-top: 0.8rem;
+    border: 1px solid rgba(236, 19, 19, 0.14);
+    border-radius: 10px;
+    background: rgba(18, 30, 49, 0.65);
+  }
+
+  .dash-rank {
+    padding: 0.9rem;
+  }
+
+  .dash-rank .v {
+    font-size: 1.95rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .dash-rank .l {
+    color: var(--dash-muted);
+    margin-top: 0.2rem;
+  }
+
+  .dash-mini-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin-top: 0.65rem;
+  }
+
+  .dash-mini {
+    padding: 0.7rem;
+  }
+
+  .dash-mini .v {
+    font-size: 1.7rem;
+    line-height: 1;
+    font-weight: 800;
+  }
+
+  .dash-mini .l {
+    color: var(--dash-muted);
+  }
+
+  .dash-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .dash-kpi {
+    background: linear-gradient(180deg, rgba(17, 26, 43, 0.94), rgba(15, 23, 37, 0.97));
+    border: 1px solid var(--dash-border-soft);
+    border-radius: 12px;
+    padding: 0.95rem 1rem;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    user-select: none;
+    position: relative;
+  }
+
+  .dash-kpi:hover {
+    border-color: rgba(236, 19, 19, 0.28);
+  }
+
+  .dash-kpi.active {
+    border-color: rgba(236, 19, 19, 0.46);
+    box-shadow: 0 0 20px rgba(236, 19, 19, 0.15);
+  }
+
+  .dash-kpi .v {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .dash-kpi .l {
+    color: var(--dash-muted);
+    margin-top: 0.22rem;
+    font-size: 1rem;
+  }
+
+  .dash-kpi-detail {
+    margin-top: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--dash-muted);
+    min-height: 1.2rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .dash-kpi.active .dash-kpi-detail {
+    opacity: 1;
+  }
+
+  .dash-panels {
+    display: grid;
+    grid-template-columns: 1.65fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .dash-panel {
+    background: linear-gradient(180deg, rgba(17, 26, 43, 0.94), rgba(15, 23, 37, 0.97));
+    border: 1px solid var(--dash-border-soft);
+    border-radius: 12px;
+    padding: 1rem;
+  }
+
+  .dash-panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.6rem;
+  }
+
+  .dash-title {
+    margin: 0;
+    font-size: 1.95rem;
+    line-height: 1;
+    font-weight: 800;
+  }
+
+  .dash-sub {
+    color: var(--dash-muted);
+    margin-top: 0.2rem;
+    font-size: 0.94rem;
+  }
+
+  .dash-filter {
+    border: 1px solid rgba(236, 19, 19, 0.3);
+    background: rgba(8, 14, 24, 0.85);
+    color: #f1f5ff;
+    border-radius: 8px;
+    padding: 0.45rem 0.7rem;
+    min-width: 80px;
+  }
+
+  .dash-chart {
+    width: 100%;
+    height: 320px;
+    border: 1px solid rgba(236, 19, 19, 0.12);
+    border-radius: 8px;
+    background: rgba(8, 16, 28, 0.5);
+    padding: 0.8rem;
+  }
+
+  .dash-lab-counters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .dash-lab-counter {
+    cursor: pointer;
+  }
+
+  .dash-lab-counter.active {
+    border-color: rgba(236, 19, 19, 0.46);
+    box-shadow: 0 0 20px rgba(236, 19, 19, 0.15);
+  }
+
+  .dash-lab-details {
+    margin-bottom: 1rem;
+    padding: 0.9rem;
+    border: 1px solid rgba(236, 19, 19, 0.15);
+    border-radius: 12px;
+    background: rgba(13, 22, 36, 0.65);
+  }
+
+  .dash-lab-details-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.7rem;
+  }
+
+  .dash-lab-details-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  .dash-lab-details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem 1rem;
+  }
+
+  .dash-list {
+    background: linear-gradient(180deg, rgba(17, 26, 43, 0.94), rgba(15, 23, 37, 0.97));
+    border: 1px solid var(--dash-border-soft);
+    border-radius: 12px;
+    padding: 1rem;
+  }
+
+  #categoryProgressPanel {
+    margin-bottom: 1rem;
+  }
+
+  .dash-list-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.7rem;
+  }
+
+  .dash-list-title {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+
+  .dash-list-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem 1.3rem;
+  }
+
+  .dash-item {
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    align-items: center;
+    column-gap: 0.65rem;
+  }
+
+  .dash-avatar,
+  .dash-avatar img {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+  }
+
+  .dash-avatar {
+    border: 1px solid rgba(236, 19, 19, 0.2);
+    background: rgba(28, 42, 66, 0.85);
+    color: #d8e3f9;
+    display: grid;
+    place-items: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    overflow: hidden;
+  }
+
+  .dash-item-name {
+    margin: 0;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  .dash-item-sub {
+    margin: 0.05rem 0 0;
+    color: var(--dash-muted);
+    font-size: 0.82rem;
+  }
+
+  .dash-item-pct {
+    color: #93abd0;
+    font-weight: 700;
+    font-size: 0.93rem;
+  }
+
+  .dash-empty {
+    color: var(--dash-muted);
+    padding: 0.5rem 0;
+  }
+
+  @media (max-width: 1200px) {
+    .dash-panels {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 992px) {
+    .dash-top,
+    .dash-kpis,
+    .dash-lab-counters,
+    .dash-lab-details-grid,
+    .dash-list-grid,
+    .dash-mini-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .dash-title,
+    .dash-name {
+      font-size: 1.6rem;
+    }
+
+    .dash-chart {
+      height: 260px;
+    }
+  }
+</style>
+
+<div class="tom-dashboard">
+  <div class="dash-top">
+    <section class="dash-card">
+      <div class="dash-logo"><i class="fas fa-terminal"></i></div>
+      <div class="dash-app-label">{{ Configs.ctf_name }}</div>
+      <h1 class="dash-name">{{ stats.account_name }}</h1>
+
+      <div class="dash-row">
+        <span>Category Ownership</span>
+        <span>{{ '%.2f'|format(stats.machines.percentage) }}%</span>
+      </div>
+      <div class="dash-track"><div class="dash-fill" data-width="{{ stats.machines.percentage }}"></div></div>
+
+      <div class="dash-rank">
+        <div class="v">#{{ stats.global_rank if stats.global_rank else '-' }}</div>
+        <div class="l">Global Ranking</div>
+      </div>
+
+      <div class="dash-mini-grid">
+        <div class="dash-mini">
+          <div class="v">{{ stats.current_score|int }}</div>
+          <div class="l">Points</div>
+        </div>
+        <div class="dash-mini">
+          <div class="v">{{ stats.flags_solved }}</div>
+          <div class="l">Flags</div>
+        </div>
+        <div class="dash-mini">
+          <div class="v">{{ stats.scope|title }}</div>
+          <div class="l">Mode</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dash-card">
+      <div class="dash-row" style="justify-content:flex-end; gap:.6rem; color: var(--dash-muted);">
+        <i class="fas fa-arrow-left"></i><span>Current Season</span><i class="fas fa-arrow-right"></i>
+      </div>
+      <div class="dash-logo" style="color:var(--dash-danger); border-color:rgba(236,19,19,.55);"><i class="fas fa-crosshairs"></i></div>
+      <h1 class="dash-name">{{ stats.account_name }}</h1>
+
+      <div class="dash-row">
+        <span>Challenge Progress</span>
+        <span>{{ '%.0f'|format(stats.challenges.percentage) }}%</span>
+      </div>
+      <div class="dash-track"><div class="dash-fill" data-width="{{ stats.challenges.percentage }}"></div></div>
+
+      <div class="dash-rank">
+        <div class="v">{{ stats.challenges.completed }} / {{ stats.challenges.total }}</div>
+        <div class="l">Challenges Solved</div>
+      </div>
+
+      <div class="dash-mini-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));">
+        <div class="dash-mini">
+          <div class="v">{{ stats.machines.user_flags }}</div>
+          <div class="l">Machine Users</div>
+        </div>
+        <div class="dash-mini">
+          <div class="v">{{ stats.sherlocks.completed }}</div>
+          <div class="l">Sherlock Tasks</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="dash-kpis" id="dashCategoryTabs">
+    <article class="dash-kpi active" data-category="machines">
+      <div class="v">{{ stats.machines.user_flags }} <span style="color:#8ea7cf;">/{{ stats.machines.total }}</span></div>
+      <div class="l">Machines</div>
+      <div class="dash-kpi-detail" data-kpi-detail="machines"></div>
+    </article>
+    <article class="dash-kpi" data-category="sherlocks">
+      <div class="v">{{ stats.sherlocks.completed }} <span style="color:#8ea7cf;">/{{ stats.sherlocks.total }}</span></div>
+      <div class="l">Sherlocks</div>
+      <div class="dash-kpi-detail" data-kpi-detail="sherlocks"></div>
+    </article>
+    <article class="dash-kpi" data-category="challenges">
+      <div class="v">{{ stats.challenges.completed }} <span style="color:#8ea7cf;">/{{ stats.challenges.total }}</span></div>
+      <div class="l">Challenges</div>
+      <div class="dash-kpi-detail" data-kpi-detail="challenges"></div>
+    </article>
+  </div>
+
+  <section class="dash-list" id="categoryProgressPanel">
+    <div class="dash-list-head">
+      <h4 class="dash-list-title" id="listTitle">Machines Progress</h4>
+      <span class="dash-item-sub" id="listCount"></span>
+    </div>
+    <div class="dash-list-grid" id="listContainer"></div>
+  </section>
+
+  <div class="dash-panels">
+    <section class="dash-panel">
+      <div class="dash-panel-head">
+        <div>
+          <h3 class="dash-title" id="timelineTitle">Machines Completed</h3>
+          <div class="dash-sub" id="timelineSub">Boot2Root progress over last 12 months</div>
+        </div>
+        <select class="dash-filter"><option>1Y</option></select>
+      </div>
+      <div class="dash-chart"><canvas id="timelineChart"></canvas></div>
+    </section>
+
+    <section class="dash-panel">
+      <div class="dash-panel-head">
+        <h3 class="dash-title" style="font-size:1.5rem;">Difficulty Completion</h3>
+      </div>
+      <div class="dash-chart"><canvas id="difficultyChart"></canvas></div>
+    </section>
+  </div>
+
+  <div class="dash-lab-counters">
+    <article class="dash-kpi dash-lab-counter active" data-lab-category="Pro Labs">
+      <div class="v">{{ stats.prolabs.categories['Pro Labs'].completed }} <span style="color:#8ea7cf;">/{{ stats.prolabs.categories['Pro Labs'].total }}</span></div>
+      <div class="l">Pro Labs</div>
+    </article>
+    <article class="dash-kpi dash-lab-counter" data-lab-category="Mini Pro Labs">
+      <div class="v">{{ stats.prolabs.categories['Mini Pro Labs'].completed }} <span style="color:#8ea7cf;">/{{ stats.prolabs.categories['Mini Pro Labs'].total }}</span></div>
+      <div class="l">Mini Pro Labs</div>
+    </article>
+  </div>
+
+  <section class="dash-lab-details" id="labDetailsPanel">
+    <div class="dash-lab-details-head">
+      <h5 class="dash-lab-details-title" id="labDetailsTitle">Pro Labs Details</h5>
+      <span class="dash-item-sub" id="labDetailsCount"></span>
+    </div>
+    <div class="dash-lab-details-grid" id="labDetailsGrid"></div>
+  </section>
+</div>
+
+<script id="dashboardData" type="application/json">{{ stats.category_views | tojson }}</script>
+<script id="prolabsData" type="application/json">{{ stats.prolabs.data | tojson }}</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const payloadNode = document.getElementById('dashboardData');
+  const views = payloadNode ? JSON.parse(payloadNode.textContent || '{}') : {};
+  const prolabsNode = document.getElementById('prolabsData');
+  const prolabsData = prolabsNode ? JSON.parse(prolabsNode.textContent || '[]') : [];
+  const tabs = Array.from(document.querySelectorAll('.dash-kpi[data-category]'));
+  const kpiDetailNodes = Array.from(document.querySelectorAll('[data-kpi-detail]'));
+  const labCategoryTabs = Array.from(document.querySelectorAll('.dash-lab-counter[data-lab-category]'));
+  const timelineCanvas = document.getElementById('timelineChart');
+  const difficultyCanvas = document.getElementById('difficultyChart');
+  const timelineTitle = document.getElementById('timelineTitle');
+  const timelineSub = document.getElementById('timelineSub');
+  const listTitle = document.getElementById('listTitle');
+  const listCount = document.getElementById('listCount');
+  const listContainer = document.getElementById('listContainer');
+  const labDetailsTitle = document.getElementById('labDetailsTitle');
+  const labDetailsCount = document.getElementById('labDetailsCount');
+  const labDetailsGrid = document.getElementById('labDetailsGrid');
+  let activeCategory = null;
+
+  document.querySelectorAll('.dash-fill[data-width]').forEach((el) => {
+    const width = Number(el.getAttribute('data-width') || 0);
+    el.style.width = `${Math.max(0, Math.min(100, width))}%`;
+  });
+
+  function drawTimeline(data) {
+    if (!timelineCanvas || !timelineCanvas.getContext) return;
+    const ctx = timelineCanvas.getContext('2d');
+    const host = timelineCanvas.parentElement;
+    if (!host) return;
+    timelineCanvas.style.width = '100%';
+    timelineCanvas.style.height = '100%';
+    const rect = host.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+
+    timelineCanvas.width = rect.width * dpr;
+    timelineCanvas.height = rect.height * dpr;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, timelineCanvas.width, timelineCanvas.height);
+    ctx.scale(dpr, dpr);
+
+    const labels = data.labels || [];
+    const values = data.values || [];
+    const maxVal = Math.max(1, ...values);
+
+    const pad = { l: 20, r: 12, t: 14, b: 24 };
+    const w = rect.width - pad.l - pad.r;
+    const h = rect.height - pad.t - pad.b;
+
+    const xAt = (i) => pad.l + (values.length <= 1 ? 0 : (w * i) / (values.length - 1));
+    const yAt = (v) => pad.t + h - (v / maxVal) * h;
+
+    ctx.clearRect(0, 0, rect.width, rect.height);
+
+    ctx.strokeStyle = 'rgba(236,19,19,0.14)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i += 1) {
+      const y = pad.t + (h * i) / 3;
+      ctx.beginPath();
+      ctx.moveTo(pad.l, y);
+      ctx.lineTo(pad.l + w, y);
+      ctx.stroke();
+    }
+
+    const gradient = ctx.createLinearGradient(0, pad.t, 0, pad.t + h);
+    gradient.addColorStop(0, 'rgba(159,239,0,0.34)');
+    gradient.addColorStop(1, 'rgba(159,239,0,0.03)');
+
+    ctx.beginPath();
+    values.forEach((v, i) => {
+      const x = xAt(i);
+      const y = yAt(v);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.lineTo(xAt(values.length - 1), pad.t + h);
+    ctx.lineTo(xAt(0), pad.t + h);
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    ctx.beginPath();
+    values.forEach((v, i) => {
+      const x = xAt(i);
+      const y = yAt(v);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = '#9fef00';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    values.forEach((v, i) => {
+      const x = xAt(i);
+      const y = yAt(v);
+      ctx.beginPath();
+      ctx.arc(x, y, 5.4, 0, Math.PI * 2);
+      ctx.fillStyle = '#111a2b';
+      ctx.fill();
+      ctx.strokeStyle = '#9fef00';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    });
+
+    ctx.fillStyle = 'rgba(141,160,195,0.88)';
+    ctx.font = '12px Space Grotesk, sans-serif';
+    labels.forEach((label, i) => {
+      ctx.fillText(label, xAt(i) - 10, rect.height - 7);
+    });
+  }
+
+  function drawDifficulty(items) {
+    if (!difficultyCanvas || !difficultyCanvas.getContext) return;
+    const ctx = difficultyCanvas.getContext('2d');
+    const host = difficultyCanvas.parentElement;
+    if (!host) return;
+    difficultyCanvas.style.width = '100%';
+    difficultyCanvas.style.height = '100%';
+    const rect = host.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+
+    difficultyCanvas.width = rect.width * dpr;
+    difficultyCanvas.height = rect.height * dpr;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, difficultyCanvas.width, difficultyCanvas.height);
+    ctx.scale(dpr, dpr);
+
+    ctx.clearRect(0, 0, rect.width, rect.height);
+
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    const maxR = Math.min(rect.width, rect.height) * 0.34;
+    const ringW = 13;
+
+    for (let i = 0; i < 5; i += 1) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, maxR - i * (ringW + 4), 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(236,19,19,0.12)';
+      ctx.lineWidth = ringW;
+      ctx.stroke();
+    }
+
+    const colors = ['#9fef00', '#e2cb55', '#e26666', '#bfc4cf', '#7f8ca5'];
+    items.forEach((item, idx) => {
+      const pct = Math.max(0, Math.min(100, Number(item.percentage || 0)));
+      const radius = maxR - idx * (ringW + 4);
+      const start = -Math.PI / 2;
+      const end = start + ((Math.PI * 2) * pct) / 100;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, start, end);
+      ctx.strokeStyle = colors[idx % colors.length];
+      ctx.lineWidth = ringW;
+      ctx.stroke();
+    });
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+    ctx.fillStyle = '#111a2b';
+    ctx.fill();
+  }
+
+  function renderList(items, title) {
+    listTitle.textContent = title;
+    listCount.textContent = `${items.length} items`;
+
+    if (!items.length) {
+      listContainer.innerHTML = '<div class="dash-empty">No data yet for this category.</div>';
+      return;
+    }
+
+    listContainer.innerHTML = items.slice(0, 12).map((item) => {
+      const pct = Math.max(0, Math.min(100, Number(item.completion || 0)));
+      const avatar = item.logo_image
+        ? `<span class="dash-avatar"><img src="${item.logo_image}" alt="${item.title}"></span>`
+        : `<span class="dash-avatar">${(item.title || '?').slice(0, 2).toUpperCase()}</span>`;
+      return `
+        <div class="dash-item">
+          ${avatar}
+          <div>
+            <p class="dash-item-name">${item.title}</p>
+            <p class="dash-item-sub">${item.subtext || ''}</p>
+            <div class="dash-track" style="margin-top:.25rem;"><div class="dash-fill" style="width:${pct}%"></div></div>
+          </div>
+          <div class="dash-item-pct">${pct.toFixed(0)}%</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function applyCategory(category) {
+    if (activeCategory === category) {
+      return;
+    }
+
+    const view = views[category];
+    if (!view) return;
+
+    tabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.category === category));
+
+    kpiDetailNodes.forEach((node) => {
+      const key = node.getAttribute('data-kpi-detail');
+      const item = views[key];
+      if (!item || !item.counter) {
+        node.textContent = '';
+        return;
+      }
+      node.textContent = `${item.counter.done}/${item.counter.total} • ${item.subtitle || ''}`;
+    });
+
+    timelineTitle.textContent = view.title || 'Progress';
+    timelineSub.textContent = view.subtitle || '';
+
+    drawTimeline(view.timeline || { labels: [], values: [] });
+    drawDifficulty(view.difficulty || []);
+    renderList(view.list || [], `${(category.charAt(0).toUpperCase() + category.slice(1))} Progress`);
+    activeCategory = category;
+  }
+
+  function renderLabDetails(categoryName) {
+    const normalize = (value) => (value || '').toString().trim().toLowerCase();
+    const target = normalize(categoryName);
+    let filtered = prolabsData.filter((item) => normalize(item.category) === target);
+    if (!filtered.length && target === 'pro labs') {
+      filtered = prolabsData;
+    }
+
+    labDetailsTitle.textContent = `${categoryName} Details`;
+    labDetailsCount.textContent = `${filtered.length} labs`;
+
+    if (!filtered.length) {
+      labDetailsGrid.innerHTML = '<div class="dash-empty">No labs in this category yet.</div>';
+      return;
+    }
+
+    labDetailsGrid.innerHTML = filtered.map((item) => {
+      const pct = Math.max(0, Math.min(100, Number(item.completion || 0)));
+      const avatar = item.logo_image
+        ? `<span class="dash-avatar"><img src="${item.logo_image}" alt="${item.title}"></span>`
+        : `<span class="dash-avatar">${(item.title || '?').slice(0, 2).toUpperCase()}</span>`;
+      return `
+        <div class="dash-item">
+          ${avatar}
+          <div>
+            <p class="dash-item-name">${item.title}</p>
+            <p class="dash-item-sub">${item.solved || 0}/${item.total || 0} flags</p>
+            <div class="dash-track" style="margin-top:.25rem;"><div class="dash-fill" style="width:${pct}%"></div></div>
+          </div>
+          <div class="dash-item-pct">${pct.toFixed(0)}%</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => applyCategory(tab.dataset.category));
+  });
+
+  labCategoryTabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      labCategoryTabs.forEach((it) => it.classList.toggle('active', it === tab));
+      renderLabDetails(tab.getAttribute('data-lab-category') || 'Pro Labs');
+    });
+  });
+
+  applyCategory('machines');
+  const normalize = (value) => (value || '').toString().trim().toLowerCase();
+  const countsByCategory = prolabsData.reduce((acc, item) => {
+    const key = normalize(item.category);
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  let initialLabCategory = 'Pro Labs';
+  if ((countsByCategory['pro labs'] || 0) === 0) {
+    const firstWithData = labCategoryTabs.find((tab) => {
+      const name = tab.getAttribute('data-lab-category') || '';
+      return (countsByCategory[normalize(name)] || 0) > 0;
+    });
+    if (firstWithData) {
+      initialLabCategory = firstWithData.getAttribute('data-lab-category') || 'Pro Labs';
+    }
+  }
+
+  labCategoryTabs.forEach((it) => {
+    it.classList.toggle('active', (it.getAttribute('data-lab-category') || '') === initialLabCategory);
+  });
+  renderLabDetails(initialLabCategory);
+});
+</script>
+{% endblock %}

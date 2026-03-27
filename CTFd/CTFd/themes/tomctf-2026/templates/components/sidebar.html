@@ -275,6 +275,7 @@
       </button>
       <div id="competition-panel" class="tom-sidebar-panel">
         <a class="nav-link {% if request.path.startswith('/challenges') %}active{% endif %}" href="{{ url_for('challenges.listing') }}"><i class="fas fa-flag me-2"></i><span class="label">Challenges</span></a>
+        <a class="nav-link {% if request.path.startswith('/dashboard') %}active{% endif %}" href="{{ url_for('prolabs.player_dashboard') }}"><i class="fas fa-chart-line me-2"></i><span class="label">Dashboard</span></a>
 
         {% if Configs.account_visibility != 'admins' and Configs.score_visibility != 'admins' %}
         <a class="nav-link {% if request.path.startswith('/scoreboard') %}active{% endif %}" href="{{ url_for('scoreboard.listing') }}"><i class="fas fa-trophy me-2"></i><span class="label">Scoreboard</span></a>

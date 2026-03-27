@@ -543,14 +543,41 @@
   document.getElementById('submit-user-flag')?.addEventListener('click', () => {
     submitEntry('user-flag', document.getElementById('user-flag-input').value.trim(), document.getElementById('user-flag-feedback'));
   });
+  document.getElementById('user-flag-input')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitEntry('user-flag', document.getElementById('user-flag-input').value.trim(), document.getElementById('user-flag-feedback'));
+    }
+  });
+
   document.getElementById('submit-root-flag')?.addEventListener('click', () => {
     submitEntry('root-flag', document.getElementById('root-flag-input').value.trim(), document.getElementById('root-flag-feedback'));
   });
+  document.getElementById('root-flag-input')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitEntry('root-flag', document.getElementById('root-flag-input').value.trim(), document.getElementById('root-flag-feedback'));
+    }
+  });
+
   document.getElementById('guided-submit-user-flag')?.addEventListener('click', () => {
     submitEntry('user-flag', document.getElementById('guided-user-flag-input').value.trim(), document.getElementById('guided-user-flag-feedback'));
   });
+  document.getElementById('guided-user-flag-input')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitEntry('user-flag', document.getElementById('guided-user-flag-input').value.trim(), document.getElementById('guided-user-flag-feedback'));
+    }
+  });
+
   document.getElementById('guided-submit-root-flag')?.addEventListener('click', () => {
     submitEntry('root-flag', document.getElementById('guided-root-flag-input').value.trim(), document.getElementById('guided-root-flag-feedback'));
+  });
+  document.getElementById('guided-root-flag-input')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitEntry('root-flag', document.getElementById('guided-root-flag-input').value.trim(), document.getElementById('guided-root-flag-feedback'));
+    }
   });
 
   Array.from(document.querySelectorAll('.submit-guided-answer')).forEach((btn) => {

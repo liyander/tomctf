@@ -360,6 +360,7 @@
         }
 
         if (form) {
+          // Handle form submission via submit button and Enter key
           form.addEventListener("submit", async (event) => {
             event.preventDefault();
             const value = (input?.value || "").trim();
@@ -416,6 +417,16 @@
               if (submitBtn) submitBtn.disabled = false;
             }
           });
+
+          // Ensure Enter key in input field submits the form
+          if (input) {
+            input.addEventListener("keypress", (e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                form.dispatchEvent(new Event("submit"));
+              }
+            });
+          }
         }
       });
 

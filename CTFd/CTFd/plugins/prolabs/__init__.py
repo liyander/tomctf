@@ -1,19 +1,20 @@
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Blueprint, abort, redirect, render_template, request, url_for
 from sqlalchemy.exc import IntegrityError
 
 from CTFd.cache import clear_standings
 from CTFd.models import db
-from CTFd.models import Awards
+from CTFd.models import Awards, Challenges, Solves
 from CTFd.plugins import register_admin_plugin_menu_bar
 from CTFd.utils.config.pages import build_markdown
 from CTFd.utils import uploads
 from CTFd.utils import get_config, set_config
 from CTFd.utils.decorators import admins_only, authed_only
 from CTFd.utils.dates import ctftime
+from CTFd.utils.scores import get_standings
 from CTFd.utils.user import (
     get_current_team,
     get_current_user,
@@ -2649,14 +2650,398 @@ def machines_admin_manage():
     )
 
 
+
+
+def _get_dashboard_stats_for_scope():
+    """Build dashboard metrics/charts using real account/team data."""
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        return None
+
+    account_id = user.id
+    account_name = user.name
+    scope_filter = {"user_id": user.id}
+    if scope == "team" and team is not None:
+        account_id = team.id
+        account_name = team.name
+        scope_filter = {"team_id": team.id}
+
+    def _build_months():
+        now = datetime.utcnow()
+        items = []
+        for i in range(11, -1, -1):
+            ref = now - timedelta(days=30 * i)
+            items.append((ref.year, ref.month))
+        return items
+
+    def _build_timeline(dates):
+        months = _build_months()
+        counts = {f"{year:04d}-{month:02d}": 0 for year, month in months}
+        for dt in dates:
+            if not dt:
+                continue
+            key = f"{dt.year:04d}-{dt.month:02d}"
+            if key in counts:
+                counts[key] += 1
+
+        labels = []
+        values = []
+        for year, month in months:
+            key = f"{year:04d}-{month:02d}"
+            labels.append(datetime(year, month, 1).strftime("%b"))
+            values.append(counts.get(key, 0))
+        return {"labels": labels, "values": values}
+
+    difficulty_order = ["Very Easy", "Easy", "Medium", "Hard", "Insane"]
+
+    # Core totals
+    prolab_correct = ProLabSubmission.query.filter_by(status="correct", **scope_filter).count()
+    machine_user_correct = Boot2RootSubmission.query.filter_by(
+        status="correct", entry_id="user-flag", **scope_filter
+    ).count()
+    machine_root_correct = Boot2RootSubmission.query.filter_by(
+        status="correct", entry_id="root-flag", **scope_filter
+    ).count()
+    sherlock_correct = SherlockSubmission.query.filter_by(status="correct", **scope_filter).count()
+    challenge_solves = Solves.query.filter_by(**scope_filter).count()
+
+    total_prolabs = len(get_prolabs())
+    total_machines = len(get_boot2root_machines())
+    total_sherlocks = len(get_sherlocks())
+    total_challenges = Challenges.query.filter_by(state="visible").count()
+
+    current_score = _get_current_account_score()
+
+    # Global rank
+    global_rank = None
+    try:
+        standings = get_standings(admin=True)
+        for idx, standing in enumerate(standings, start=1):
+            if standing.account_id == account_id:
+                global_rank = idx
+                break
+    except Exception:
+        global_rank = None
+
+    # Pro labs list + summary (Fortresses intentionally excluded from summary tiles)
+    prolabs_data = []
+    category_summary = {
+        "Pro Labs": {"completed": 0, "total": 0},
+        "Mini Pro Labs": {"completed": 0, "total": 0},
+    }
+    for lab in get_prolabs():
+        slug = lab.get("slug")
+        category = lab.get("category", "Pro Labs")
+        total_flags = len(lab.get("flags", []))
+        solved_flags = ProLabSubmission.query.filter_by(
+            lab_slug=slug, status="correct", **scope_filter
+        ).count()
+        completion = (solved_flags / total_flags * 100) if total_flags > 0 else 0
+
+        if category in category_summary:
+            category_summary[category]["total"] += 1
+            if completion >= 100:
+                category_summary[category]["completed"] += 1
+
+        prolabs_data.append(
+            {
+                "title": lab.get("title"),
+                "slug": slug,
+                "category": category,
+                "logo_image": lab.get("logo_image", ""),
+                "completion": completion,
+                "solved": solved_flags,
+                "total": total_flags,
+            }
+        )
+    prolabs_data.sort(key=lambda item: item.get("completion", 0), reverse=True)
+
+    # Machines data + graphs
+    machine_rows = Boot2RootSubmission.query.filter_by(
+        status="correct", entry_id="user-flag", **scope_filter
+    ).all()
+    solved_machine_slugs = {row.machine_slug for row in machine_rows}
+
+    machines_data = []
+    machine_difficulty_totals = {name: 0 for name in difficulty_order}
+    machine_difficulty_solved = {name: 0 for name in difficulty_order}
+    for machine in get_boot2root_machines():
+        slug = machine.get("slug")
+        user_solved = slug in solved_machine_slugs
+        root_solved = (
+            Boot2RootSubmission.query.filter_by(
+                machine_slug=slug,
+                entry_id="root-flag",
+                status="correct",
+                **scope_filter,
+            ).first()
+            is not None
+        )
+        completion = 100 if (user_solved and root_solved) else (50 if (user_solved or root_solved) else 0)
+        machines_data.append(
+            {
+                "title": machine.get("title"),
+                "slug": slug,
+                "completion": completion,
+                "subtext": "User + Root" if completion == 100 else "Progress",
+            }
+        )
+
+        difficulty = (machine.get("difficulty") or "Easy").strip()
+        if difficulty in machine_difficulty_totals:
+            machine_difficulty_totals[difficulty] += 1
+            if user_solved:
+                machine_difficulty_solved[difficulty] += 1
+    machines_data.sort(key=lambda item: item.get("completion", 0), reverse=True)
+
+    machine_difficulty_completion = []
+    for name in difficulty_order:
+        total = machine_difficulty_totals[name]
+        solved = machine_difficulty_solved[name]
+        machine_difficulty_completion.append(
+            {
+                "name": name,
+                "solved": solved,
+                "total": total,
+                "percentage": (solved / total * 100) if total > 0 else 0,
+            }
+        )
+
+    # Sherlock data + graphs
+    sherlock_rows = SherlockSubmission.query.filter_by(status="correct", **scope_filter).all()
+    sherlock_dates = [row.date for row in sherlock_rows if row.date]
+
+    sherlocks_data = []
+    sherlock_difficulty_totals = {name: 0 for name in difficulty_order}
+    sherlock_difficulty_solved = {name: 0 for name in difficulty_order}
+    for sherlock in get_sherlocks():
+        slug = sherlock.get("slug")
+        total_tasks = len(sherlock.get("tasks", []))
+        solved_tasks = SherlockSubmission.query.filter_by(
+            sherlock_slug=slug, status="correct", **scope_filter
+        ).count()
+        completion = (solved_tasks / total_tasks * 100) if total_tasks > 0 else 0
+        sherlocks_data.append(
+            {
+                "title": sherlock.get("title"),
+                "slug": slug,
+                "completion": completion,
+                "subtext": f"{solved_tasks}/{total_tasks} tasks",
+            }
+        )
+
+        difficulty = (sherlock.get("difficulty") or "Easy").strip()
+        if difficulty in sherlock_difficulty_totals:
+            sherlock_difficulty_totals[difficulty] += 1
+            if completion >= 100:
+                sherlock_difficulty_solved[difficulty] += 1
+    sherlocks_data.sort(key=lambda item: item.get("completion", 0), reverse=True)
+
+    sherlock_difficulty_completion = []
+    for name in difficulty_order:
+        total = sherlock_difficulty_totals[name]
+        solved = sherlock_difficulty_solved[name]
+        sherlock_difficulty_completion.append(
+            {
+                "name": name,
+                "solved": solved,
+                "total": total,
+                "percentage": (solved / total * 100) if total > 0 else 0,
+            }
+        )
+
+    # Challenge data + graphs
+    visible_challenges = Challenges.query.filter_by(state="visible").all()
+    solve_rows = Solves.query.filter_by(**scope_filter).all()
+    solved_challenge_ids = {row.challenge_id for row in solve_rows if row.challenge_id is not None}
+    challenge_dates = [row.date for row in solve_rows if row.date]
+
+    challenges_data = []
+    challenge_difficulty_totals = {name: 0 for name in difficulty_order}
+    challenge_difficulty_solved = {name: 0 for name in difficulty_order}
+    for chal in visible_challenges:
+        solved = chal.id in solved_challenge_ids
+        challenges_data.append(
+            {
+                "title": chal.name,
+                "slug": str(chal.id),
+                "completion": 100 if solved else 0,
+                "subtext": chal.category or "Challenge",
+            }
+        )
+
+        difficulty = (chal.difficulty or "Easy").strip()
+        if difficulty in challenge_difficulty_totals:
+            challenge_difficulty_totals[difficulty] += 1
+            if solved:
+                challenge_difficulty_solved[difficulty] += 1
+    challenges_data.sort(key=lambda item: item.get("completion", 0), reverse=True)
+
+    challenge_difficulty_completion = []
+    for name in difficulty_order:
+        total = challenge_difficulty_totals[name]
+        solved = challenge_difficulty_solved[name]
+        challenge_difficulty_completion.append(
+            {
+                "name": name,
+                "solved": solved,
+                "total": total,
+                "percentage": (solved / total * 100) if total > 0 else 0,
+            }
+        )
+
+    total_flags_solved = (
+        prolab_correct + machine_user_correct + machine_root_correct + sherlock_correct + challenge_solves
+    )
+
+    # Category switch payload for frontend interactions
+    category_views = {
+        "machines": {
+            "title": "Machines Completed",
+            "subtitle": "Boot2Root progress over last 12 months",
+            "counter": {"done": machine_user_correct, "total": total_machines},
+            "timeline": _build_timeline([row.date for row in machine_rows if row.date]),
+            "difficulty": machine_difficulty_completion,
+            "list": machines_data,
+        },
+        "sherlocks": {
+            "title": "Sherlocks Completed",
+            "subtitle": "Investigation progress over last 12 months",
+            "counter": {"done": sherlock_correct, "total": total_sherlocks},
+            "timeline": _build_timeline(sherlock_dates),
+            "difficulty": sherlock_difficulty_completion,
+            "list": sherlocks_data,
+        },
+        "challenges": {
+            "title": "Challenges Completed",
+            "subtitle": "Challenge solves over last 12 months",
+            "counter": {"done": challenge_solves, "total": total_challenges},
+            "timeline": _build_timeline(challenge_dates),
+            "difficulty": challenge_difficulty_completion,
+            "list": challenges_data,
+        },
+    }
+
+    return {
+        "user": user,
+        "team": team,
+        "scope": scope,
+        "account_name": account_name,
+        "global_rank": global_rank,
+        "current_score": current_score,
+        "flags_solved": total_flags_solved,
+        "prolabs": {
+            "completed": prolab_correct,
+            "total": total_prolabs,
+            "percentage": (prolab_correct / total_prolabs * 100) if total_prolabs > 0 else 0,
+            "data": prolabs_data,
+            "categories": category_summary,
+        },
+        "machines": {
+            "user_flags": machine_user_correct,
+            "root_flags": machine_root_correct,
+            "total": total_machines,
+            "percentage": (machine_user_correct / total_machines * 100) if total_machines > 0 else 0,
+        },
+        "sherlocks": {
+            "completed": sherlock_correct,
+            "total": total_sherlocks,
+            "percentage": (sherlock_correct / total_sherlocks * 100) if total_sherlocks > 0 else 0,
+        },
+        "challenges": {
+            "completed": challenge_solves,
+            "total": total_challenges,
+            "percentage": (challenge_solves / total_challenges * 100) if total_challenges > 0 else 0,
+        },
+        "category_views": category_views,
+    }
+
+
+@prolabs.route("/dashboard", methods=["GET"])
+@authed_only
+def player_dashboard():
+    """Player dashboard showing stats and progress"""
+    stats = _get_dashboard_stats_for_scope()
+    if stats is None:
+        abort(401)
+    
+    return render_template("prolabs/dashboard.html", stats=stats)
+
+
+@prolabs.route("/admin/prolabs/submissions", methods=["GET"])
+@admins_only
+def prolab_admin_submissions():
+    """Display all ProLab submissions."""
+    page = abs(request.args.get("page", 1, type=int))
+    submissions = ProLabSubmission.query.order_by(ProLabSubmission.date.desc()).paginate(
+        page=page, per_page=50, error_out=False
+    )
+    
+    labs = {lab["slug"]: lab["title"] for lab in get_prolabs()}
+    
+    return render_template(
+        "prolabs/admin_submissions.html",
+        submissions=submissions,
+        labs=labs,
+        type="ProLabs",
+        prev_page=request.endpoint and url_for(request.endpoint, page=submissions.prev_num) or "#",
+        next_page=request.endpoint and url_for(request.endpoint, page=submissions.next_num) or "#",
+    )
+
+
+@prolabs.route("/admin/machines/submissions", methods=["GET"])
+@admins_only
+def machines_admin_submissions():
+    """Display all Machine submissions."""
+    page = abs(request.args.get("page", 1, type=int))
+    submissions = Boot2RootSubmission.query.order_by(Boot2RootSubmission.date.desc()).paginate(
+        page=page, per_page=50, error_out=False
+    )
+    
+    machines = {m["slug"]: m["title"] for m in get_boot2root_machines()}
+    
+    return render_template(
+        "machines/admin_submissions.html",
+        submissions=submissions,
+        machines=machines,
+        type="Machines",
+        prev_page=request.endpoint and url_for(request.endpoint, page=submissions.prev_num) or "#",
+        next_page=request.endpoint and url_for(request.endpoint, page=submissions.next_num) or "#",
+    )
+
+
+@prolabs.route("/admin/sherlocks/submissions", methods=["GET"])
+@admins_only
+def sherlocks_admin_submissions():
+    """Display all Sherlock submissions."""
+    page = abs(request.args.get("page", 1, type=int))
+    submissions = SherlockSubmission.query.order_by(SherlockSubmission.date.desc()).paginate(
+        page=page, per_page=50, error_out=False
+    )
+    
+    sherlocks = {s["slug"]: s["title"] for s in get_sherlocks()}
+    
+    return render_template(
+        "sherlocks/admin_submissions.html",
+        submissions=submissions,
+        sherlocks=sherlocks,
+        type="Sherlocks",
+        prev_page=request.endpoint and url_for(request.endpoint, page=submissions.prev_num) or "#",
+        next_page=request.endpoint and url_for(request.endpoint, page=submissions.next_num) or "#",
+    )
+
+
 def load(app):
     with app.app_context():
         db.create_all()
     app.register_blueprint(prolabs)
     register_admin_plugin_menu_bar("Pro Labs", "/admin/prolabs")
     register_admin_plugin_menu_bar("Pro Lab Levels", "/admin/prolabs/levels")
+    register_admin_plugin_menu_bar("Pro Lab Submissions", "/admin/prolabs/submissions")
     register_admin_plugin_menu_bar("Machines", "/admin/machines")
+    register_admin_plugin_menu_bar("Machine Submissions", "/admin/machines/submissions")
     register_admin_plugin_menu_bar("Sherlocks", "/admin/sherlocks")
+    register_admin_plugin_menu_bar("Sherlock Submissions", "/admin/sherlocks/submissions")
 
     @app.context_processor
     def inject_prolab_level_helpers():
