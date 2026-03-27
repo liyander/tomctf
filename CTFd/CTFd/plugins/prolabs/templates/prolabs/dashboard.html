@@ -2,339 +2,103 @@
 
 {% block content %}
 <style>
-  :root {
-    --dash-bg: #090c14;
-    --dash-bg-soft: #0e1422;
-    --dash-card: #111a2b;
-    --dash-border: rgba(236, 19, 19, 0.18);
-    --dash-border-soft: rgba(236, 19, 19, 0.1);
-    --dash-text: #eef2ff;
-    --dash-muted: #8da0c3;
-    --dash-track: #24324a;
-    --dash-danger: #ec1313;
-    --dash-green: #9fef00;
+  .dashboard-wrap {
+    padding: 1.5rem 1rem 2rem;
   }
 
-  html,
-  body.with-sidebar {
-    background:
-      radial-gradient(1000px 480px at -8% -15%, rgba(236, 19, 19, 0.12), transparent 60%),
-      radial-gradient(900px 420px at 110% -20%, rgba(236, 19, 19, 0.1), transparent 62%),
-      linear-gradient(180deg, var(--dash-bg), var(--dash-bg-soft));
-    overflow-x: hidden;
+  .dashboard-card {
+    background: rgba(26, 10, 10, 0.78);
+    border: 1px solid rgba(139, 0, 0, 0.28);
+    border-radius: 1rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   }
 
-  .tom-dashboard {
-    min-height: auto;
-    padding: 1.2rem;
-    background:
-      radial-gradient(1000px 480px at -8% -15%, rgba(236, 19, 19, 0.12), transparent 60%),
-      radial-gradient(900px 420px at 110% -20%, rgba(236, 19, 19, 0.1), transparent 62%),
-      linear-gradient(180deg, var(--dash-bg), var(--dash-bg-soft));
-    color: var(--dash-text);
-  }
-
-  body.with-sidebar,
-  .tom-main-content {
-    background:
-      radial-gradient(1000px 480px at -8% -15%, rgba(236, 19, 19, 0.12), transparent 60%),
-      radial-gradient(900px 420px at 110% -20%, rgba(236, 19, 19, 0.1), transparent 62%),
-      linear-gradient(180deg, var(--dash-bg), var(--dash-bg-soft));
-    overflow-x: hidden;
-  }
-
-  .dash-top {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
-  }
-
-  .dash-card {
-    background: linear-gradient(180deg, rgba(17, 26, 43, 0.94), rgba(15, 23, 37, 0.97));
-    border: 1px solid var(--dash-border-soft);
-    border-radius: 12px;
-    padding: 1rem;
-  }
-
-  .dash-app-label {
-    text-align: center;
-    color: var(--dash-muted);
+  .dash-headline {
+    font-family: "Space Grotesk", sans-serif;
     font-weight: 700;
-    margin-top: 0.25rem;
+    color: #fff;
   }
 
-  .dash-logo {
-    width: 94px;
-    height: 94px;
-    margin: 0 auto 0.5rem;
-    border-radius: 16px;
-    border: 2px solid rgba(236, 19, 19, 0.45);
-    background: rgba(9, 14, 25, 0.8);
-    display: grid;
-    place-items: center;
-    color: var(--dash-green);
-    font-size: 2rem;
-    box-shadow: 0 0 24px rgba(236, 19, 19, 0.22);
+  .dash-subtle {
+    color: rgba(212, 197, 176, 0.72);
   }
 
-  .dash-name {
-    text-align: center;
-    margin: 0.35rem 0 0.9rem;
+  .dash-stat-value {
+    color: #fff;
     font-weight: 800;
-    font-size: 2.1rem;
     line-height: 1;
   }
 
-  .dash-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.35rem;
-    color: #d9e3f9;
-    font-weight: 600;
+  .dash-stat-label {
+    color: rgba(212, 197, 176, 0.72);
+    font-size: 0.82rem;
   }
 
-  .dash-track {
-    height: 7px;
+  .dash-progress {
+    height: 8px;
     border-radius: 999px;
-    background: var(--dash-track);
+    background: rgba(88, 98, 120, 0.45);
     overflow: hidden;
   }
 
-  .dash-fill {
+  .dash-progress > span {
+    display: block;
     height: 100%;
-    border-radius: inherit;
-    background: var(--dash-green);
+    background: linear-gradient(90deg, #89df00, #9fef00);
     box-shadow: 0 0 12px rgba(159, 239, 0, 0.35);
   }
 
-  .dash-rank,
-  .dash-mini {
-    margin-top: 0.8rem;
-    border: 1px solid rgba(236, 19, 19, 0.14);
-    border-radius: 10px;
-    background: rgba(18, 30, 49, 0.65);
-  }
-
-  .dash-rank {
-    padding: 0.9rem;
-  }
-
-  .dash-rank .v {
-    font-size: 1.95rem;
-    font-weight: 800;
-    line-height: 1;
-  }
-
-  .dash-rank .l {
-    color: var(--dash-muted);
-    margin-top: 0.2rem;
-  }
-
-  .dash-mini-grid {
+  .dash-tabs {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.65rem;
-    margin-top: 0.65rem;
+    gap: 0.75rem;
   }
 
-  .dash-mini {
-    padding: 0.7rem;
+  .dash-tab,
+  .dash-lab-tab {
+    border: 1px solid rgba(139, 0, 0, 0.28);
+    background: rgba(17, 20, 29, 0.9);
+    border-radius: 0.85rem;
+    color: rgba(212, 197, 176, 0.9);
+    text-align: left;
+    padding: 0.85rem 0.95rem;
+    transition: border-color 0.2s ease, background 0.2s ease;
   }
 
-  .dash-mini .v {
-    font-size: 1.7rem;
-    line-height: 1;
-    font-weight: 800;
+  .dash-tab:hover,
+  .dash-lab-tab:hover {
+    border-color: rgba(236, 19, 19, 0.5);
   }
 
-  .dash-mini .l {
-    color: var(--dash-muted);
+  .dash-tab.active,
+  .dash-lab-tab.active {
+    border-color: rgba(236, 19, 19, 0.65);
+    background: rgba(139, 0, 0, 0.2);
   }
 
-  .dash-kpis {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
+  .dash-tab .dash-stat-value,
+  .dash-lab-tab .dash-stat-value {
+    font-size: 1.6rem;
   }
 
-  .dash-kpi {
-    background: linear-gradient(180deg, rgba(17, 26, 43, 0.94), rgba(15, 23, 37, 0.97));
-    border: 1px solid var(--dash-border-soft);
-    border-radius: 12px;
-    padding: 0.95rem 1rem;
-    cursor: pointer;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    user-select: none;
-    position: relative;
-  }
-
-  .dash-kpi:hover {
-    border-color: rgba(236, 19, 19, 0.28);
-  }
-
-  .dash-kpi.active {
-    border-color: rgba(236, 19, 19, 0.46);
-    box-shadow: 0 0 20px rgba(236, 19, 19, 0.15);
-  }
-
-  .dash-kpi .v {
-    font-size: 2rem;
-    font-weight: 800;
-    line-height: 1;
-  }
-
-  .dash-kpi .l {
-    color: var(--dash-muted);
-    margin-top: 0.22rem;
-    font-size: 1rem;
-  }
-
-  .dash-kpi-detail {
-    margin-top: 0.4rem;
-    font-size: 0.82rem;
-    color: var(--dash-muted);
-    min-height: 1.2rem;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-
-  .dash-kpi.active .dash-kpi-detail {
-    opacity: 1;
-  }
-
-  .dash-panels {
-    display: grid;
-    grid-template-columns: 1.65fr 1fr;
-    gap: 1rem;
-    margin-bottom: 1rem;
-  }
-
-  .dash-panel {
-    background: linear-gradient(180deg, rgba(17, 26, 43, 0.94), rgba(15, 23, 37, 0.97));
-    border: 1px solid var(--dash-border-soft);
-    border-radius: 12px;
-    padding: 1rem;
-  }
-
-  .dash-panel-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.6rem;
-  }
-
-  .dash-title {
-    margin: 0;
-    font-size: 1.95rem;
-    line-height: 1;
-    font-weight: 800;
-  }
-
-  .dash-sub {
-    color: var(--dash-muted);
-    margin-top: 0.2rem;
-    font-size: 0.94rem;
-  }
-
-  .dash-filter {
-    border: 1px solid rgba(236, 19, 19, 0.3);
-    background: rgba(8, 14, 24, 0.85);
-    color: #f1f5ff;
-    border-radius: 8px;
-    padding: 0.45rem 0.7rem;
-    min-width: 80px;
-  }
-
-  .dash-chart {
-    width: 100%;
-    height: 320px;
-    border: 1px solid rgba(236, 19, 19, 0.12);
-    border-radius: 8px;
-    background: rgba(8, 16, 28, 0.5);
-    padding: 0.8rem;
-  }
-
-  .dash-lab-counters {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
-  }
-
-  .dash-lab-counter {
-    cursor: pointer;
-  }
-
-  .dash-lab-counter.active {
-    border-color: rgba(236, 19, 19, 0.46);
-    box-shadow: 0 0 20px rgba(236, 19, 19, 0.15);
-  }
-
-  .dash-lab-details {
-    margin-bottom: 1rem;
-    padding: 0.9rem;
-    border: 1px solid rgba(236, 19, 19, 0.15);
-    border-radius: 12px;
-    background: rgba(13, 22, 36, 0.65);
-  }
-
-  .dash-lab-details-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.7rem;
-  }
-
-  .dash-lab-details-title {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 700;
-  }
-
-  .dash-lab-details-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.65rem 1rem;
-  }
-
-  .dash-list {
-    background: linear-gradient(180deg, rgba(17, 26, 43, 0.94), rgba(15, 23, 37, 0.97));
-    border: 1px solid var(--dash-border-soft);
-    border-radius: 12px;
-    padding: 1rem;
-  }
-
-  #categoryProgressPanel {
-    margin-bottom: 1rem;
-  }
-
-  .dash-list-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.7rem;
-  }
-
-  .dash-list-title {
-    margin: 0;
-    font-size: 1.3rem;
-    font-weight: 700;
+  .dash-tab-detail {
+    min-height: 1rem;
+    font-size: 0.78rem;
+    color: rgba(212, 197, 176, 0.62);
+    margin-top: 0.25rem;
   }
 
   .dash-list-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem 1.3rem;
+    gap: 0.85rem 1rem;
   }
 
   .dash-item {
     display: grid;
     grid-template-columns: 40px 1fr auto;
     align-items: center;
-    column-gap: 0.65rem;
+    column-gap: 0.7rem;
   }
 
   .dash-avatar,
@@ -345,196 +109,223 @@
   }
 
   .dash-avatar {
-    border: 1px solid rgba(236, 19, 19, 0.2);
-    background: rgba(28, 42, 66, 0.85);
-    color: #d8e3f9;
+    border: 1px solid rgba(139, 0, 0, 0.4);
+    background: rgba(19, 24, 36, 0.95);
+    color: #fff;
+    font-size: 0.74rem;
+    font-weight: 700;
     display: grid;
     place-items: center;
-    font-size: 0.78rem;
-    font-weight: 700;
     overflow: hidden;
   }
 
   .dash-item-name {
     margin: 0;
+    color: #fff;
     font-weight: 700;
-    font-size: 1rem;
   }
 
   .dash-item-sub {
-    margin: 0.05rem 0 0;
-    color: var(--dash-muted);
+    margin: 0.06rem 0 0;
+    color: rgba(212, 197, 176, 0.72);
     font-size: 0.82rem;
   }
 
   .dash-item-pct {
-    color: #93abd0;
+    color: #d8dce8;
     font-weight: 700;
-    font-size: 0.93rem;
+    font-size: 0.9rem;
+  }
+
+  .dash-chart {
+    width: 100%;
+    height: 320px;
+    border-radius: 0.8rem;
+    border: 1px solid rgba(139, 0, 0, 0.24);
+    background: rgba(12, 17, 28, 0.78);
+    padding: 0.8rem;
+  }
+
+  .dash-select {
+    border: 1px solid rgba(139, 0, 0, 0.35);
+    background: rgba(14, 17, 24, 0.95);
+    color: #fff;
+    border-radius: 0.65rem;
+    padding: 0.4rem 0.65rem;
   }
 
   .dash-empty {
-    color: var(--dash-muted);
-    padding: 0.5rem 0;
+    color: rgba(212, 197, 176, 0.7);
+    padding: 0.3rem 0;
   }
 
-  @media (max-width: 1200px) {
-    .dash-panels {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  @media (max-width: 992px) {
-    .dash-top,
-    .dash-kpis,
-    .dash-lab-counters,
-    .dash-lab-details-grid,
+  @media (max-width: 1199px) {
     .dash-list-grid,
-    .dash-mini-grid {
+    .dash-tabs {
       grid-template-columns: 1fr;
-    }
-
-    .dash-title,
-    .dash-name {
-      font-size: 1.6rem;
     }
 
     .dash-chart {
-      height: 260px;
+      height: 270px;
     }
   }
 </style>
 
-<div class="tom-dashboard">
-  <div class="dash-top">
-    <section class="dash-card">
-      <div class="dash-logo"><i class="fas fa-terminal"></i></div>
-      <div class="dash-app-label">{{ Configs.ctf_name }}</div>
-      <h1 class="dash-name">{{ stats.account_name }}</h1>
-
-      <div class="dash-row">
-        <span>Category Ownership</span>
-        <span>{{ '%.2f'|format(stats.machines.percentage) }}%</span>
-      </div>
-      <div class="dash-track"><div class="dash-fill" data-width="{{ stats.machines.percentage }}"></div></div>
-
-      <div class="dash-rank">
-        <div class="v">#{{ stats.global_rank if stats.global_rank else '-' }}</div>
-        <div class="l">Global Ranking</div>
-      </div>
-
-      <div class="dash-mini-grid">
-        <div class="dash-mini">
-          <div class="v">{{ stats.current_score|int }}</div>
-          <div class="l">Points</div>
+<section class="container-fluid dashboard-wrap">
+  <div class="row g-3 mb-3">
+    <div class="col-xl-6">
+      <section class="dashboard-card p-3 p-lg-4 h-100">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <div class="text-uppercase small fw-semibold text-danger mb-1">{{ Configs.ctf_name }}</div>
+            <h1 class="dash-headline h3 mb-0">{{ stats.account_name }}</h1>
+          </div>
+          <div class="text-end">
+            <div class="dash-subtle small">Global Rank</div>
+            <div class="dash-stat-value" style="font-size:1.7rem;">#{{ stats.global_rank if stats.global_rank else '-' }}</div>
+          </div>
         </div>
-        <div class="dash-mini">
-          <div class="v">{{ stats.flags_solved }}</div>
-          <div class="l">Flags</div>
-        </div>
-        <div class="dash-mini">
-          <div class="v">{{ stats.scope|title }}</div>
-          <div class="l">Mode</div>
-        </div>
-      </div>
-    </section>
 
-    <section class="dash-card">
-      <div class="dash-row" style="justify-content:flex-end; gap:.6rem; color: var(--dash-muted);">
-        <i class="fas fa-arrow-left"></i><span>Current Season</span><i class="fas fa-arrow-right"></i>
-      </div>
-      <div class="dash-logo" style="color:var(--dash-danger); border-color:rgba(236,19,19,.55);"><i class="fas fa-crosshairs"></i></div>
-      <h1 class="dash-name">{{ stats.account_name }}</h1>
-
-      <div class="dash-row">
-        <span>Challenge Progress</span>
-        <span>{{ '%.0f'|format(stats.challenges.percentage) }}%</span>
-      </div>
-      <div class="dash-track"><div class="dash-fill" data-width="{{ stats.challenges.percentage }}"></div></div>
-
-      <div class="dash-rank">
-        <div class="v">{{ stats.challenges.completed }} / {{ stats.challenges.total }}</div>
-        <div class="l">Challenges Solved</div>
-      </div>
-
-      <div class="dash-mini-grid" style="grid-template-columns:repeat(2,minmax(0,1fr));">
-        <div class="dash-mini">
-          <div class="v">{{ stats.machines.user_flags }}</div>
-          <div class="l">Machine Users</div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="dash-subtle">Category Ownership</span>
+          <strong class="text-light">{{ '%.2f'|format(stats.machines.percentage) }}%</strong>
         </div>
-        <div class="dash-mini">
-          <div class="v">{{ stats.sherlocks.completed }}</div>
-          <div class="l">Sherlock Tasks</div>
+        <div class="dash-progress"><span data-width="{{ stats.machines.percentage }}"></span></div>
+
+        <div class="row g-2 mt-3">
+          <div class="col-4">
+            <div class="dashboard-card p-2 h-100">
+              <div class="dash-stat-value">{{ stats.current_score|int }}</div>
+              <div class="dash-stat-label">Points</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="dashboard-card p-2 h-100">
+              <div class="dash-stat-value">{{ stats.flags_solved }}</div>
+              <div class="dash-stat-label">Flags</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="dashboard-card p-2 h-100">
+              <div class="dash-stat-value" style="font-size:1.1rem;">{{ stats.scope|title }}</div>
+              <div class="dash-stat-label">Mode</div>
+            </div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
+
+    <div class="col-xl-6">
+      <section class="dashboard-card p-3 p-lg-4 h-100">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <div>
+            <div class="dash-subtle small">Season Overview</div>
+            <h2 class="dash-headline h4 mb-0">Progress Snapshot</h2>
+          </div>
+          <i class="fas fa-crosshairs text-danger fs-4"></i>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="dash-subtle">Challenge Progress</span>
+          <strong class="text-light">{{ '%.0f'|format(stats.challenges.percentage) }}%</strong>
+        </div>
+        <div class="dash-progress"><span data-width="{{ stats.challenges.percentage }}"></span></div>
+
+        <div class="row g-2 mt-3">
+          <div class="col-6">
+            <div class="dashboard-card p-2 h-100">
+              <div class="dash-stat-value">{{ stats.challenges.completed }} / {{ stats.challenges.total }}</div>
+              <div class="dash-stat-label">Challenges Solved</div>
+            </div>
+          </div>
+          <div class="col-3">
+            <div class="dashboard-card p-2 h-100">
+              <div class="dash-stat-value">{{ stats.machines.user_flags }}</div>
+              <div class="dash-stat-label">Users</div>
+            </div>
+          </div>
+          <div class="col-3">
+            <div class="dashboard-card p-2 h-100">
+              <div class="dash-stat-value">{{ stats.sherlocks.completed }}</div>
+              <div class="dash-stat-label">Tasks</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
   </div>
 
-  <div class="dash-kpis" id="dashCategoryTabs">
-    <article class="dash-kpi active" data-category="machines">
-      <div class="v">{{ stats.machines.user_flags }} <span style="color:#8ea7cf;">/{{ stats.machines.total }}</span></div>
-      <div class="l">Machines</div>
-      <div class="dash-kpi-detail" data-kpi-detail="machines"></div>
-    </article>
-    <article class="dash-kpi" data-category="sherlocks">
-      <div class="v">{{ stats.sherlocks.completed }} <span style="color:#8ea7cf;">/{{ stats.sherlocks.total }}</span></div>
-      <div class="l">Sherlocks</div>
-      <div class="dash-kpi-detail" data-kpi-detail="sherlocks"></div>
-    </article>
-    <article class="dash-kpi" data-category="challenges">
-      <div class="v">{{ stats.challenges.completed }} <span style="color:#8ea7cf;">/{{ stats.challenges.total }}</span></div>
-      <div class="l">Challenges</div>
-      <div class="dash-kpi-detail" data-kpi-detail="challenges"></div>
-    </article>
-  </div>
+  <section class="dashboard-card p-3 mb-3">
+    <div class="dash-tabs" id="dashCategoryTabs">
+      <button type="button" class="dash-tab active" data-category="machines">
+        <div class="dash-stat-value">{{ stats.machines.user_flags }} <span class="dash-subtle">/{{ stats.machines.total }}</span></div>
+        <div class="dash-stat-label">Machines</div>
+        <div class="dash-tab-detail" data-kpi-detail="machines"></div>
+      </button>
+      <button type="button" class="dash-tab" data-category="sherlocks">
+        <div class="dash-stat-value">{{ stats.sherlocks.completed }} <span class="dash-subtle">/{{ stats.sherlocks.total }}</span></div>
+        <div class="dash-stat-label">Sherlocks</div>
+        <div class="dash-tab-detail" data-kpi-detail="sherlocks"></div>
+      </button>
+      <button type="button" class="dash-tab" data-category="challenges">
+        <div class="dash-stat-value">{{ stats.challenges.completed }} <span class="dash-subtle">/{{ stats.challenges.total }}</span></div>
+        <div class="dash-stat-label">Challenges</div>
+        <div class="dash-tab-detail" data-kpi-detail="challenges"></div>
+      </button>
+    </div>
+  </section>
 
-  <section class="dash-list" id="categoryProgressPanel">
-    <div class="dash-list-head">
-      <h4 class="dash-list-title" id="listTitle">Machines Progress</h4>
-      <span class="dash-item-sub" id="listCount"></span>
+  <section class="dashboard-card p-3 mb-3" id="categoryProgressPanel">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h4 class="dash-headline h5 mb-0" id="listTitle">Machines Progress</h4>
+      <span class="dash-subtle" id="listCount"></span>
     </div>
     <div class="dash-list-grid" id="listContainer"></div>
   </section>
 
-  <div class="dash-panels">
-    <section class="dash-panel">
-      <div class="dash-panel-head">
-        <div>
-          <h3 class="dash-title" id="timelineTitle">Machines Completed</h3>
-          <div class="dash-sub" id="timelineSub">Boot2Root progress over last 12 months</div>
+  <div class="row g-3 mb-3">
+    <div class="col-xl-8">
+      <section class="dashboard-card p-3 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div>
+            <h3 class="dash-headline h3 mb-0" id="timelineTitle">Machines Completed</h3>
+            <div class="dash-subtle" id="timelineSub">Boot2Root progress over last 12 months</div>
+          </div>
+          <select class="dash-select" aria-label="Timeline Range"><option>1Y</option></select>
         </div>
-        <select class="dash-filter"><option>1Y</option></select>
-      </div>
-      <div class="dash-chart"><canvas id="timelineChart"></canvas></div>
-    </section>
-
-    <section class="dash-panel">
-      <div class="dash-panel-head">
-        <h3 class="dash-title" style="font-size:1.5rem;">Difficulty Completion</h3>
-      </div>
-      <div class="dash-chart"><canvas id="difficultyChart"></canvas></div>
-    </section>
-  </div>
-
-  <div class="dash-lab-counters">
-    <article class="dash-kpi dash-lab-counter active" data-lab-category="Pro Labs">
-      <div class="v">{{ stats.prolabs.categories['Pro Labs'].completed }} <span style="color:#8ea7cf;">/{{ stats.prolabs.categories['Pro Labs'].total }}</span></div>
-      <div class="l">Pro Labs</div>
-    </article>
-    <article class="dash-kpi dash-lab-counter" data-lab-category="Mini Pro Labs">
-      <div class="v">{{ stats.prolabs.categories['Mini Pro Labs'].completed }} <span style="color:#8ea7cf;">/{{ stats.prolabs.categories['Mini Pro Labs'].total }}</span></div>
-      <div class="l">Mini Pro Labs</div>
-    </article>
-  </div>
-
-  <section class="dash-lab-details" id="labDetailsPanel">
-    <div class="dash-lab-details-head">
-      <h5 class="dash-lab-details-title" id="labDetailsTitle">Pro Labs Details</h5>
-      <span class="dash-item-sub" id="labDetailsCount"></span>
+        <div class="dash-chart"><canvas id="timelineChart"></canvas></div>
+      </section>
     </div>
-    <div class="dash-lab-details-grid" id="labDetailsGrid"></div>
+
+    <div class="col-xl-4">
+      <section class="dashboard-card p-3 h-100">
+        <h3 class="dash-headline h3 mb-2">Difficulty Completion</h3>
+        <div class="dash-chart"><canvas id="difficultyChart"></canvas></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="dashboard-card p-3 mb-3">
+    <div class="dash-tabs" id="dashLabTabs">
+      <button type="button" class="dash-lab-tab active" data-lab-category="Pro Labs">
+        <div class="dash-stat-value">{{ stats.prolabs.categories['Pro Labs'].completed }} <span class="dash-subtle">/{{ stats.prolabs.categories['Pro Labs'].total }}</span></div>
+        <div class="dash-stat-label">Pro Labs</div>
+      </button>
+      <button type="button" class="dash-lab-tab" data-lab-category="Mini Pro Labs">
+        <div class="dash-stat-value">{{ stats.prolabs.categories['Mini Pro Labs'].completed }} <span class="dash-subtle">/{{ stats.prolabs.categories['Mini Pro Labs'].total }}</span></div>
+        <div class="dash-stat-label">Mini Pro Labs</div>
+      </button>
+    </div>
   </section>
-</div>
+
+  <section class="dashboard-card p-3" id="labDetailsPanel">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h5 class="dash-headline h5 mb-0" id="labDetailsTitle">Pro Labs Details</h5>
+      <span class="dash-subtle" id="labDetailsCount"></span>
+    </div>
+    <div class="dash-list-grid" id="labDetailsGrid"></div>
+  </section>
+</section>
 
 <script id="dashboardData" type="application/json">{{ stats.category_views | tojson }}</script>
 <script id="prolabsData" type="application/json">{{ stats.prolabs.data | tojson }}</script>
@@ -544,9 +335,9 @@ document.addEventListener('DOMContentLoaded', function () {
   const views = payloadNode ? JSON.parse(payloadNode.textContent || '{}') : {};
   const prolabsNode = document.getElementById('prolabsData');
   const prolabsData = prolabsNode ? JSON.parse(prolabsNode.textContent || '[]') : [];
-  const tabs = Array.from(document.querySelectorAll('.dash-kpi[data-category]'));
+  const tabs = Array.from(document.querySelectorAll('.dash-tab[data-category]'));
   const kpiDetailNodes = Array.from(document.querySelectorAll('[data-kpi-detail]'));
-  const labCategoryTabs = Array.from(document.querySelectorAll('.dash-lab-counter[data-lab-category]'));
+  const labCategoryTabs = Array.from(document.querySelectorAll('.dash-lab-tab[data-lab-category]'));
   const timelineCanvas = document.getElementById('timelineChart');
   const difficultyCanvas = document.getElementById('difficultyChart');
   const timelineTitle = document.getElementById('timelineTitle');
@@ -559,7 +350,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const labDetailsGrid = document.getElementById('labDetailsGrid');
   let activeCategory = null;
 
-  document.querySelectorAll('.dash-fill[data-width]').forEach((el) => {
+  document.querySelectorAll('[data-width]').forEach((el) => {
     const width = Number(el.getAttribute('data-width') || 0);
     el.style.width = `${Math.max(0, Math.min(100, width))}%`;
   });
@@ -569,13 +360,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const ctx = timelineCanvas.getContext('2d');
     const host = timelineCanvas.parentElement;
     if (!host) return;
-    timelineCanvas.style.width = '100%';
-    timelineCanvas.style.height = '100%';
     const rect = host.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
 
     timelineCanvas.width = rect.width * dpr;
     timelineCanvas.height = rect.height * dpr;
+    timelineCanvas.style.width = '100%';
+    timelineCanvas.style.height = '100%';
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, timelineCanvas.width, timelineCanvas.height);
     ctx.scale(dpr, dpr);
@@ -591,9 +382,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const xAt = (i) => pad.l + (values.length <= 1 ? 0 : (w * i) / (values.length - 1));
     const yAt = (v) => pad.t + h - (v / maxVal) * h;
 
-    ctx.clearRect(0, 0, rect.width, rect.height);
-
-    ctx.strokeStyle = 'rgba(236,19,19,0.14)';
+    ctx.strokeStyle = 'rgba(236,19,19,0.16)';
     ctx.lineWidth = 1;
     for (let i = 0; i < 4; i += 1) {
       const y = pad.t + (h * i) / 3;
@@ -604,8 +393,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     const gradient = ctx.createLinearGradient(0, pad.t, 0, pad.t + h);
-    gradient.addColorStop(0, 'rgba(159,239,0,0.34)');
-    gradient.addColorStop(1, 'rgba(159,239,0,0.03)');
+    gradient.addColorStop(0, 'rgba(159,239,0,0.28)');
+    gradient.addColorStop(1, 'rgba(159,239,0,0.02)');
 
     ctx.beginPath();
     values.forEach((v, i) => {
@@ -635,15 +424,15 @@ document.addEventListener('DOMContentLoaded', function () {
       const x = xAt(i);
       const y = yAt(v);
       ctx.beginPath();
-      ctx.arc(x, y, 5.4, 0, Math.PI * 2);
-      ctx.fillStyle = '#111a2b';
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#111';
       ctx.fill();
       ctx.strokeStyle = '#9fef00';
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 2;
       ctx.stroke();
     });
 
-    ctx.fillStyle = 'rgba(141,160,195,0.88)';
+    ctx.fillStyle = 'rgba(212,197,176,0.66)';
     ctx.font = '12px Space Grotesk, sans-serif';
     labels.forEach((label, i) => {
       ctx.fillText(label, xAt(i) - 10, rect.height - 7);
@@ -655,18 +444,16 @@ document.addEventListener('DOMContentLoaded', function () {
     const ctx = difficultyCanvas.getContext('2d');
     const host = difficultyCanvas.parentElement;
     if (!host) return;
-    difficultyCanvas.style.width = '100%';
-    difficultyCanvas.style.height = '100%';
     const rect = host.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
 
     difficultyCanvas.width = rect.width * dpr;
     difficultyCanvas.height = rect.height * dpr;
+    difficultyCanvas.style.width = '100%';
+    difficultyCanvas.style.height = '100%';
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, difficultyCanvas.width, difficultyCanvas.height);
     ctx.scale(dpr, dpr);
-
-    ctx.clearRect(0, 0, rect.width, rect.height);
 
     const cx = rect.width / 2;
     const cy = rect.height / 2;
@@ -676,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function () {
     for (let i = 0; i < 5; i += 1) {
       ctx.beginPath();
       ctx.arc(cx, cy, maxR - i * (ringW + 4), 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(236,19,19,0.12)';
+      ctx.strokeStyle = 'rgba(236,19,19,0.14)';
       ctx.lineWidth = ringW;
       ctx.stroke();
     }
@@ -696,7 +483,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     ctx.beginPath();
     ctx.arc(cx, cy, 18, 0, Math.PI * 2);
-    ctx.fillStyle = '#111a2b';
+    ctx.fillStyle = '#111';
     ctx.fill();
   }
 
@@ -720,7 +507,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <div>
             <p class="dash-item-name">${item.title}</p>
             <p class="dash-item-sub">${item.subtext || ''}</p>
-            <div class="dash-track" style="margin-top:.25rem;"><div class="dash-fill" style="width:${pct}%"></div></div>
+            <div class="dash-progress" style="margin-top:.25rem;"><span style="width:${pct}%"></span></div>
           </div>
           <div class="dash-item-pct">${pct.toFixed(0)}%</div>
         </div>
@@ -745,7 +532,7 @@ document.addEventListener('DOMContentLoaded', function () {
         node.textContent = '';
         return;
       }
-      node.textContent = `${item.counter.done}/${item.counter.total} • ${item.subtitle || ''}`;
+      node.textContent = `${item.counter.done}/${item.counter.total} - ${item.subtitle || ''}`;
     });
 
     timelineTitle.textContent = view.title || 'Progress';
@@ -784,7 +571,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <div>
             <p class="dash-item-name">${item.title}</p>
             <p class="dash-item-sub">${item.solved || 0}/${item.total || 0} flags</p>
-            <div class="dash-track" style="margin-top:.25rem;"><div class="dash-fill" style="width:${pct}%"></div></div>
+            <div class="dash-progress" style="margin-top:.25rem;"><span style="width:${pct}%"></span></div>
           </div>
           <div class="dash-item-pct">${pct.toFixed(0)}%</div>
         </div>
