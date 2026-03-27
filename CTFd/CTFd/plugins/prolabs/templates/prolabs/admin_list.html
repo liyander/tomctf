@@ -1,0 +1,56 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+  <div class="container">
+    <h1>Pro Labs Admin</h1>
+    <p>Select a lab to open the full editor in a new tab.</p>
+    {% if request.args.get('saved') %}
+      <div class="alert alert-success mt-3">Pro labs updated successfully.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <a class="btn btn-primary" href="{{ url_for('prolabs.prolab_admin_manage') }}">Open Full ProLabs Editor</a>
+    <a class="btn btn-outline-secondary" href="{{ url_for('prolabs.prolab_levels_admin') }}">Manage Levels</a>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><strong>Pro Labs</strong></div>
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Slug</th>
+            <th>Category</th>
+            <th>Difficulty</th>
+            <th>Required Score</th>
+            <th style="width: 160px;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for lab in labs %}
+          <tr>
+            <td>{{ lab.title }}</td>
+            <td>{{ lab.slug }}</td>
+            <td>{{ lab.category }}</td>
+            <td>{{ lab.difficulty }}</td>
+            <td>{{ lab.required_level|default(0) }}</td>
+            <td>
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('prolabs.prolab_admin_manage') }}#lab-{{ lab.slug }}">Open Editor</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">No Pro Labs configured.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

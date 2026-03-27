@@ -43,10 +43,11 @@
 <div class="jumbotron">
   <div class="container">
     <h1>Pro Red Team Labs</h1>
-    <p>Manage list entries shown on the public Pro Red Team Labs pages.</p>
+    <p>Manage Pro Lab entries. You can open this page from the list view directly to a specific lab.</p>
     {% if request.args.get('saved') %}
       <div class="alert alert-success mt-3">Pro labs updated successfully.</div>
     {% endif %}
+    <a class="btn btn-outline-secondary mt-2" href="{{ url_for('prolabs.prolab_admin_list') }}">Back to Pro Labs List</a>
   </div>
 </div>
 
@@ -61,7 +62,7 @@
 
     <div id="labs-wrapper" class="d-flex flex-column" style="gap: 1rem;">
       {% for lab in labs %}
-      <div class="card lab-card">
+      <div class="card lab-card" id="lab-{{ lab.slug or loop.index0 }}">
         <div class="card-header d-flex justify-content-between align-items-center">
           <strong>Lab {{ loop.index }}</strong>
           <button type="button" class="btn btn-sm btn-outline-danger remove-lab">Remove</button>

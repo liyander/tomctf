@@ -149,7 +149,7 @@
       <!-- Left Sidebar - Category Filter -->
       <div class="col-lg-2 col-md-3">
         <div class="category-sidebar sticky-top" style="top: 90px;">
-          <div class="card border-0 rounded-3" style="background: rgba(26,10,10,0.85); border: 1px solid rgba(139,0,0,0.3) !important; backdrop-filter: blur(10px);">
+          <div class="card border-0 rounded-3" style="background: rgba(26,10,10,0.85); border: 1px solid rgba(139,0,0,0.3) !important;">
             <div class="card-header border-0 py-3" style="background: rgba(139,0,0,0.15) !important; border-bottom: 1px solid rgba(139,0,0,0.2) !important;">
               <h6 class="card-title mb-0 fw-bold" style="font-family: 'Space Grotesk', sans-serif; color: #ec1313; letter-spacing: 1px; text-transform: uppercase; font-size: 0.8rem;">
                 <i class="fas fa-filter me-2"></i>
@@ -349,7 +349,7 @@
       <div class="col-lg-3 col-md-3">
         <div class="user-sidebar sticky-top" style="top: 90px;">
           <!-- User Stats Card -->
-            <div class="card border-0 rounded-3 mb-3" style="background: rgba(26,10,10,0.85); border: 1px solid rgba(139,0,0,0.3) !important; backdrop-filter: blur(10px);" x-data="UserStats" x-init="loadUserStats()">
+            <div class="card border-0 rounded-3 mb-3" style="background: rgba(26,10,10,0.85); border: 1px solid rgba(139,0,0,0.3) !important;" x-data="UserStats" x-init="loadUserStats()">
               <div class="card-header text-center py-3 user-header" style="background: linear-gradient(135deg, #8b0000, #ec1313) !important; border-bottom: 1px solid rgba(139,0,0,0.3) !important;">
                 <h6 class="mb-1 fw-bold" style="font-family: 'Space Grotesk', sans-serif; color: #fff;">{{ User.name }}</h6>
                 <small style="color: rgba(255,255,255,0.7);">{% trans %}Competitor{% endtrans %}</small>
@@ -394,7 +394,7 @@
           </div>
 
           <!-- Activity & Notifications Card -->
-          <div class="card border-0 rounded-3" style="background: rgba(26,10,10,0.85); border: 1px solid rgba(139,0,0,0.3) !important; backdrop-filter: blur(10px);" x-data="ActivityFeed" x-init="loadActivityData()">
+          <div class="card border-0 rounded-3" style="background: rgba(26,10,10,0.85); border: 1px solid rgba(139,0,0,0.3) !important;" x-data="ActivityFeed" x-init="loadActivityData()">
             <div class="card-header border-0 py-3" style="background: transparent !important; border-bottom: 1px solid rgba(139,0,0,0.2) !important;">
               <!-- Tab Navigation -->
               <nav class="nav nav-pills nav-fill" role="tablist">
@@ -998,13 +998,13 @@
           // åˆå§‹åŒ–CTFdé€šçŸ¥ç³»ç»Ÿ
           this.initCTFdNotificationSystem();
           
-          // Set up auto-refresh every 30 seconds
+          // Set up auto-refresh every 60 seconds
           setInterval(() => {
             this.loadNotifications();
             if (this.activeTab === 'activity') {
               this.loadRecentSolves();
             }
-          }, 30000);
+          }, 60000);
         },
         
         // åˆå§‹åŒ–CTFdé€šçŸ¥ç³»ç»Ÿ

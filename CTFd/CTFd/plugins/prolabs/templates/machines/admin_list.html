@@ -1,0 +1,55 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+  <div class="container">
+    <h1>Machines Admin</h1>
+    <p>Select a machine to open the full machine editor in a new tab.</p>
+    {% if request.args.get('saved') %}
+      <div class="alert alert-success mt-3">Machines updated successfully.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <a class="btn btn-primary" href="{{ url_for('prolabs.machines_admin_manage') }}">Open Full Machines Editor</a>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><strong>Boot2Root Machines</strong></div>
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Slug</th>
+            <th>Difficulty</th>
+            <th>OS</th>
+            <th>Docker</th>
+            <th style="width: 160px;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for machine in machines %}
+          <tr>
+            <td>{{ machine.title }}</td>
+            <td>{{ machine.slug }}</td>
+            <td>{{ machine.difficulty }}</td>
+            <td>{{ machine.os }}</td>
+            <td>{{ 'Enabled' if machine.docker_enabled else 'Disabled' }}</td>
+            <td>
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('prolabs.machines_admin_manage') }}#machine-{{ machine.slug }}">Open Editor</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4">No machines configured.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

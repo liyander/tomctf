@@ -860,9 +860,16 @@ def prolab_submit_flag(slug):
     }
 
 
-@prolabs.route("/admin/prolabs", methods=["GET", "POST"])
+@prolabs.route("/admin/prolabs", methods=["GET"])
 @admins_only
-def prolab_admin():
+def prolab_admin_list():
+    labs = get_prolabs()
+    return render_template("prolabs/admin_list.html", labs=labs)
+
+
+@prolabs.route("/admin/prolabs/manage", methods=["GET", "POST"])
+@admins_only
+def prolab_admin_manage():
     level_rules = get_level_rules()
     if request.method == "POST":
         slugs = request.form.getlist("slug[]")
@@ -952,7 +959,7 @@ def prolab_admin():
             labs = DEFAULT_PROLABS
 
         set_config("pro_red_team_labs", json.dumps(labs))
-        return redirect(url_for("prolabs.prolab_admin", saved=1))
+        return redirect(url_for("prolabs.prolab_admin_manage", saved=1))
 
     labs = get_prolabs()
     return render_template("prolabs/admin.html", labs=labs, levels=level_rules)
@@ -2219,9 +2226,16 @@ def sherlocks_submit(slug):
     }
 
 
-@prolabs.route("/admin/sherlocks", methods=["GET", "POST"])
+@prolabs.route("/admin/sherlocks", methods=["GET"])
 @admins_only
-def sherlocks_admin():
+def sherlocks_admin_list():
+    sherlocks = get_sherlocks()
+    return render_template("sherlocks/admin_list.html", sherlocks=sherlocks)
+
+
+@prolabs.route("/admin/sherlocks/manage", methods=["GET", "POST"])
+@admins_only
+def sherlocks_admin_manage():
     if request.method == "POST":
         slugs = request.form.getlist("slug[]")
         titles = request.form.getlist("title[]")
@@ -2287,7 +2301,7 @@ def sherlocks_admin():
             sherlocks = DEFAULT_SHERLOCKS
 
         set_config(SHERLOCKS_CONFIG_KEY, json.dumps(sherlocks))
-        return redirect(url_for("prolabs.sherlocks_admin", saved=1))
+        return redirect(url_for("prolabs.sherlocks_admin_manage", saved=1))
 
     sherlocks = get_sherlocks()
     docker_images, docker_images_error = _get_available_docker_images()
@@ -2299,9 +2313,16 @@ def sherlocks_admin():
     )
 
 
-@prolabs.route("/admin/machines", methods=["GET", "POST"])
+@prolabs.route("/admin/machines", methods=["GET"])
 @admins_only
-def machines_admin():
+def machines_admin_list():
+    machines = get_boot2root_machines()
+    return render_template("machines/admin_list.html", machines=machines)
+
+
+@prolabs.route("/admin/machines/manage", methods=["GET", "POST"])
+@admins_only
+def machines_admin_manage():
     if request.method == "POST":
         slugs = request.form.getlist("slug[]")
         titles = request.form.getlist("title[]")
@@ -2407,7 +2428,7 @@ def machines_admin():
             machines = DEFAULT_BOOT2ROOT_MACHINES
 
         set_config(MACHINES_CONFIG_KEY, json.dumps(machines))
-        return redirect(url_for("prolabs.machines_admin", saved=1))
+        return redirect(url_for("prolabs.machines_admin_manage", saved=1))
 
     machines = get_boot2root_machines()
     docker_images, docker_images_error = _get_available_docker_images()
