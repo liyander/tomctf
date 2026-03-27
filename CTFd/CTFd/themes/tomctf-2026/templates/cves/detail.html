@@ -90,6 +90,36 @@
       background: linear-gradient(120deg, #ef1f1f, #b90f0f) !important;
       border-color: rgba(255, 150, 150, 0.62) !important;
     }
+    .cve-submit-panel.accepted-flash {
+      animation: cveAcceptedGlow 0.9s ease;
+    }
+    .cve-submit-panel .btn-primary.accepted-pulse {
+      animation: cveAcceptedPulse 0.65s ease;
+      background: linear-gradient(120deg, #1ea95f, #11824a) !important;
+      border-color: rgba(130, 234, 170, 0.62) !important;
+    }
+    @keyframes cveAcceptedGlow {
+      0% {
+        box-shadow: 0 0 0 rgba(70, 224, 132, 0);
+      }
+      40% {
+        box-shadow: 0 0 0.35rem rgba(70, 224, 132, 0.35), 0 0 1.1rem rgba(70, 224, 132, 0.28);
+      }
+      100% {
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+      }
+    }
+    @keyframes cveAcceptedPulse {
+      0% {
+        transform: scale(1);
+      }
+      35% {
+        transform: scale(1.03);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
     .cve-status {
       background: rgba(255, 255, 255, 0.05);
       border: 1px dashed rgba(255, 255, 255, 0.2);
@@ -231,6 +261,8 @@
     var form = document.getElementById('cveSubmitForm');
     var msg = document.getElementById('submitMsg');
     var input = document.getElementById('flagInput');
+    var submitPanel = document.querySelector('.cve-submit-panel');
+    var submitBtn = form ? form.querySelector('button[type="submit"]') : null;
 
     function clearCountdown() {
       if (countdownInterval) {
@@ -357,20 +389,44 @@
 
     function showMessage(text, ok) {
       if (!msg) return;
-      msg.textContent = text;
+      msg.textContent = (ok ? 'Accepted: ' : '') + text;
       msg.className = ok ? 'mt-3 small text-success' : 'mt-3 small text-danger';
+    }
+
+    function playAcceptedEffect() {
+      if (submitPanel) {
+        submitPanel.classList.remove('accepted-flash');
+        void submitPanel.offsetWidth;
+        submitPanel.classList.add('accepted-flash');
+      }
+      if (submitBtn) {
+        submitBtn.classList.remove('accepted-pulse');
+        void submitBtn.offsetWidth;
+        submitBtn.classList.add('accepted-pulse');
+      }
     }
 
     function submitFlag() {
       if (!form) return;
-      var body = new URLSearchParams(new FormData(form));
+      var answer = (input && input.value ? input.value : '').trim();
+      if (!answer) {
+        showMessage('Please enter a flag', false);
+        return;
+      }
+
+      var payload = {
+        entry_id: 'main-flag',
+        answer: answer
+      };
+
       fetch("{{ url_for('prolabs.cves_submit', slug=cve.slug) }}", {
         method: 'POST',
-        body: body,
         credentials: 'same-origin',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-        }
+          'Content-Type': 'application/json',
+          'CSRF-Token': window.init?.csrfNonce || ''
+        },
+        body: JSON.stringify(payload)
       })
         .then(function (r) { return r.json(); })
         .then(function (data) {
@@ -382,6 +438,7 @@
           var message = (data.data && data.data.message) || 'Submitted';
           showMessage(message, status === 'correct' || status === 'already_solved');
           if (status === 'correct' || status === 'already_solved') {
+            playAcceptedEffect();
             form.querySelector('button').disabled = true;
             input.disabled = true;
           }
