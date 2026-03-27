@@ -134,6 +134,25 @@ class SherlockSubmission(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+class CVESubmission(db.Model):
+    __tablename__ = "cve_submissions"
+    __table_args__ = (
+        db.UniqueConstraint("cve_slug", "entry_id", "user_id"),
+        db.UniqueConstraint("cve_slug", "entry_id", "team_id"),
+        {},
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    cve_slug = db.Column(db.String(128), index=True, nullable=False)
+    entry_id = db.Column(db.String(128), index=True, nullable=False)
+    provided = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(32), nullable=False, default="incorrect")
+    ip = db.Column(db.String(46), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    team_id = db.Column(db.Integer, db.ForeignKey("teams.id", ondelete="CASCADE"), nullable=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 MACHINES_CONFIG_KEY = "boot2root_machines"
 
 DEFAULT_BOOT2ROOT_MACHINES = [
@@ -192,6 +211,34 @@ DEFAULT_SHERLOCKS = [
                 "hint": "Look for repeated failed password attempts.",
                 "answer": "127.0.0.1",
                 "points": 20,
+            }
+        ],
+    }
+]
+
+
+CVES_CONFIG_KEY = "prolab_cves"
+
+DEFAULT_CVES = [
+    {
+        "slug": "apache-log4shell",
+        "title": "Apache Log4Shell",
+        "cve_id": "CVE-2021-44228",
+        "severity": "Critical",
+        "category": "Remote Code Execution",
+        "cvss": 10.0,
+        "release_date": "10 Dec 2021",
+        "short_description": "Unauthenticated JNDI lookup abuse in Log4j can lead to remote code execution.",
+        "description": "## Overview\nLog4Shell allows attackers to trigger remote code execution through crafted log messages.\n\n## Lab Objective\nIdentify impact points and submit the CVE flag.",
+        "flag": "",
+        "points": 40,
+        "docker_enabled": False,
+        "docker_image": "",
+        "docker_expiry": 0,
+        "references": [
+            {
+                "title": "NVD Entry",
+                "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-44228",
             }
         ],
     }
@@ -1321,6 +1368,200 @@ def _find_sherlock_task(sherlock, entry_id):
     return None
 
 
+def _normalize_cve_references(raw_refs):
+    if isinstance(raw_refs, str):
+        try:
+            raw_refs = json.loads(raw_refs)
+        except Exception:
+            raw_refs = []
+
+    if not isinstance(raw_refs, list):
+        return []
+
+    refs = []
+    for item in raw_refs:
+        if not isinstance(item, dict):
+            continue
+        title = (item.get("title") or "").strip()
+        url = (item.get("url") or "").strip()
+        if not title and not url:
+            continue
+        refs.append({"title": title or url, "url": url})
+    return refs
+
+
+def _normalize_cve(raw, index):
+    title = (raw.get("title") or f"CVE Item {index + 1}").strip()
+    slug = _slugify(raw.get("slug") or title) or f"cve-{index + 1}"
+    cve_id = (raw.get("cve_id") or "").strip()
+    severity = (raw.get("severity") or "Medium").strip()
+    category = (raw.get("category") or "Web").strip()
+    release_date = (raw.get("release_date") or "").strip()
+    short_description = (raw.get("short_description") or "").strip()
+    description = (raw.get("description") or "").strip()
+
+    return {
+        "slug": slug,
+        "title": title,
+        "cve_id": cve_id,
+        "severity": severity,
+        "category": category,
+        "cvss": _safe_float(raw.get("cvss", 0), 0.0),
+        "release_date": release_date,
+        "short_description": short_description,
+        "description": description,
+        "description_html": build_markdown(description, sanitize=True),
+        "flag": (raw.get("flag") or "").strip(),
+        "points": _safe_points(raw.get("points", 0)),
+        "docker_enabled": _as_bool(raw.get("docker_enabled", False)),
+        "docker_image": (raw.get("docker_image") or "").strip(),
+        "docker_expiry": _safe_int(raw.get("docker_expiry", 0), 0),
+        "references": _normalize_cve_references(raw.get("references", [])),
+    }
+
+
+def get_cves():
+    configured = get_config(CVES_CONFIG_KEY)
+    if not configured:
+        return [_normalize_cve(item, index) for index, item in enumerate(DEFAULT_CVES)]
+
+    try:
+        data = json.loads(configured)
+        if not isinstance(data, list):
+            raise ValueError("Expected list")
+    except Exception:
+        data = DEFAULT_CVES
+
+    cves = []
+    for index, item in enumerate(data):
+        if isinstance(item, dict):
+            cves.append(_normalize_cve(item, index))
+
+    if not cves:
+        cves = [_normalize_cve(item, index) for index, item in enumerate(DEFAULT_CVES)]
+    return cves
+
+
+def _get_cve_submissions(cve_slug):
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        return {}
+
+    query = CVESubmission.query.filter_by(cve_slug=cve_slug, status="correct")
+    if scope == "team":
+        query = query.filter_by(team_id=team.id)
+    else:
+        query = query.filter_by(user_id=user.id)
+
+    return {row.entry_id: row for row in query.all()}
+
+
+def _get_cve_container_entry(slug, cve, deps, user, team, scope):
+    image = cve.get("docker_image")
+    if not image:
+        return None
+
+    challenge_key = f"cve:{slug}"
+    query = deps["DockerChallengeTracker"].query.filter_by(
+        docker_image=image,
+        challenge=challenge_key,
+    )
+    if scope == "team" and team is not None:
+        query = query.filter_by(team_id=team.id)
+    else:
+        query = query.filter_by(user_id=user.id)
+    return query.first()
+
+
+def _clean_expired_cve_container(slug, cve, deps, docker_config, user, team, scope):
+    entry = _get_cve_container_entry(slug, cve, deps, user, team, scope)
+    if entry is None:
+        return None
+
+    now = int(datetime.utcnow().timestamp())
+    if entry.revert_time and int(entry.revert_time) <= now:
+        try:
+            deps["delete_container"](docker_config, entry.instance_id, ports_str=entry.ports)
+        except Exception:
+            pass
+        deps["DockerChallengeTracker"].query.filter_by(id=entry.id).delete()
+        db.session.commit()
+        return None
+
+    return entry
+
+
+def _build_cve_docker_status(slug, cve):
+    max_timer = MACHINE_TIMER_DEFAULT
+    base = {
+        "enabled": bool(cve.get("docker_enabled")),
+        "configured": False,
+        "authenticated": False,
+        "running": False,
+        "docker_image": cve.get("docker_image", ""),
+        "host": "",
+        "ports": [],
+        "revert_time": None,
+        "max_timer": max_timer,
+        "can_extend": False,
+        "current_tier": 0,
+        "message": "Docker is disabled for this CVE.",
+    }
+
+    if not base["enabled"]:
+        return base
+
+    if not cve.get("docker_image"):
+        base["message"] = "No Docker image configured by admins."
+        return base
+
+    deps = _get_docker_challenge_dependencies()
+    if deps is None:
+        base["message"] = "Docker plugin is unavailable."
+        return base
+
+    docker_config = deps["DockerConfig"].query.filter_by(id=1).first()
+    if docker_config is None or not docker_config.hostname:
+        base["message"] = "Docker host is not configured."
+        return base
+
+    max_timer = _resolve_machine_timer_cap(cve, docker_config)
+    base["max_timer"] = max_timer
+
+    base["configured"] = True
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        base["message"] = "Log in to spawn a CVE instance."
+        return base
+
+    base["authenticated"] = True
+    entry = _clean_expired_cve_container(slug, cve, deps, docker_config, user, team, scope)
+    if entry is None:
+        base["message"] = "No active container instance."
+        return base
+
+    host = docker_config.display_host or str(docker_config.hostname).split(":")[0]
+    ports = [p for p in (entry.ports or "").split(",") if p]
+    tiers = _timer_tiers_for_cap(max_timer)
+    current_tier = 0
+    if entry.revert_time and entry.timestamp:
+        current_tier = max(0, int(entry.revert_time) - int(entry.timestamp))
+    can_extend = any(tier > current_tier for tier in tiers)
+
+    base.update(
+        {
+            "running": True,
+            "host": host,
+            "ports": ports,
+            "revert_time": entry.revert_time,
+            "current_tier": current_tier,
+            "can_extend": can_extend,
+            "message": "Container is running.",
+        }
+    )
+    return base
+
+
 def _get_sherlock_progress(sherlock):
     tasks = sherlock.get("tasks", [])
     total = len(tasks)
@@ -1954,6 +2195,328 @@ def machines_submit(slug):
             "data": {
                 "status": "already_solved",
                 "message": "Correct but you already solved this",
+                "total_score": _get_current_account_score(),
+            },
+        }
+
+    if is_correct:
+        if points > 0:
+            clear_standings()
+        return {
+            "success": True,
+            "data": {
+                "status": "correct",
+                "message": f"Correct (+{points} pts)" if points > 0 else "Correct",
+                "points": points,
+                "total_score": _get_current_account_score(),
+            },
+        }
+
+    return {
+        "success": True,
+        "data": {
+            "status": "incorrect",
+            "message": "Incorrect",
+            "total_score": _get_current_account_score(),
+        },
+    }
+
+
+@prolabs.route("/cves", methods=["GET"])
+@authed_only
+def cves_listing():
+    cves = get_cves()
+    for item in cves:
+        solved = _get_cve_submissions(item["slug"])
+        item["solved"] = "main-flag" in solved
+        item["status"] = "Resolved" if item["solved"] else "Unresolved"
+    return render_template("cves/list.html", cves=cves)
+
+
+@prolabs.route("/cves/<slug>", methods=["GET"])
+@authed_only
+def cves_detail(slug):
+    cves = get_cves()
+    cve = next((item for item in cves if item["slug"] == slug), None)
+    if not cve:
+        abort(404)
+
+    solved = _get_cve_submissions(slug)
+    cve["solved"] = "main-flag" in solved
+    cve["docker_status"] = _build_cve_docker_status(slug, cve)
+    return render_template("cves/detail.html", cve=cve)
+
+
+@prolabs.route("/api/v1/cves/<slug>/container", methods=["GET", "POST"])
+@authed_only
+def cves_container(slug):
+    cves = get_cves()
+    cve = next((item for item in cves if item["slug"] == slug), None)
+    if not cve:
+        return {"success": False, "errors": {"message": "CVE not found"}}, 404
+
+    action = "status"
+    if request.method == "POST":
+        req = request.form or request.get_json(silent=True) or {}
+        action = (req.get("action") or "status").strip().lower()
+    else:
+        action = (request.args.get("action") or "status").strip().lower()
+
+    if action not in {"status", "start", "stop", "extend"}:
+        return {"success": False, "errors": {"message": "Unsupported action"}}, 400
+
+    if not cve.get("docker_enabled"):
+        return {"success": False, "errors": {"message": "Docker is disabled for this CVE"}}, 400
+    if not cve.get("docker_image"):
+        return {"success": False, "errors": {"message": "No Docker image configured for this CVE"}}, 400
+
+    deps = _get_docker_challenge_dependencies()
+    if deps is None:
+        return {"success": False, "errors": {"message": "Docker plugin is unavailable"}}, 503
+
+    docker_config = deps["DockerConfig"].query.filter_by(id=1).first()
+    if docker_config is None or not docker_config.hostname:
+        return {"success": False, "errors": {"message": "Docker host is not configured"}}, 403
+
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        return {"success": False, "errors": {"message": "Authentication required"}}, 403
+
+    existing = _clean_expired_cve_container(slug, cve, deps, docker_config, user, team, scope)
+
+    if action == "status":
+        return {"success": True, "data": _build_cve_docker_status(slug, cve)}
+
+    if action == "extend":
+        if existing is None:
+            return {"success": False, "errors": {"message": "No running container to extend."}}, 400
+
+        max_timer = _resolve_machine_timer_cap(cve, docker_config)
+        tiers = _timer_tiers_for_cap(max_timer)
+        current_tier = (
+            max(0, int(existing.revert_time) - int(existing.timestamp))
+            if existing.revert_time and existing.timestamp
+            else tiers[0]
+        )
+        next_tier = next((tier for tier in tiers if tier > current_tier), None)
+        if next_tier is None:
+            return {
+                "success": False,
+                "errors": {"message": "Maximum allowed timer has been reached for this CVE."},
+                "data": _build_cve_docker_status(slug, cve),
+            }, 400
+
+        base_ts = int(existing.timestamp) if existing.timestamp else int(datetime.utcnow().timestamp())
+        existing.revert_time = base_ts + next_tier
+        db.session.commit()
+        return {
+            "success": True,
+            "data": _build_cve_docker_status(slug, cve),
+            "message": f"Container extended to {next_tier // 60} minutes.",
+        }
+
+    if action == "stop":
+        if existing is None:
+            return {
+                "success": True,
+                "data": _build_cve_docker_status(slug, cve),
+                "message": "No running container to stop.",
+            }
+
+        try:
+            deps["delete_container"](docker_config, existing.instance_id, ports_str=existing.ports)
+            deps["DockerChallengeTracker"].query.filter_by(id=existing.id).delete()
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            return {"success": False, "errors": {"message": "Failed to stop container"}}, 500
+
+        return {
+            "success": True,
+            "data": _build_cve_docker_status(slug, cve),
+            "message": "Container stopped.",
+        }
+
+    did_revert = False
+    if existing is not None:
+        try:
+            deps["delete_container"](docker_config, existing.instance_id, ports_str=existing.ports)
+            deps["DockerChallengeTracker"].query.filter_by(id=existing.id).delete()
+            db.session.commit()
+            did_revert = True
+        except Exception:
+            db.session.rollback()
+            return {"success": False, "errors": {"message": "Failed to revert existing container"}}, 500
+
+    repositories = []
+    try:
+        repositories = deps["get_repositories"](docker_config, tags=True) or []
+    except Exception:
+        repositories = []
+
+    image_name = cve.get("docker_image")
+    if repositories:
+        image_repo = image_name.split(":", 1)[0]
+        if image_name not in repositories and image_repo not in repositories:
+            return {
+                "success": False,
+                "errors": {"message": f"Docker image {image_name} is not available on the host"},
+            }, 403
+
+    if scope == "team" and team is not None:
+        running_count = deps["DockerChallengeTracker"].query.filter_by(team_id=team.id).count()
+    else:
+        running_count = deps["DockerChallengeTracker"].query.filter_by(user_id=user.id).count()
+
+    if running_count >= 3:
+        return {
+            "success": False,
+            "errors": {
+                "message": f"You already have {running_count} running containers. Stop one before spawning a new instance.",
+            },
+        }, 403
+
+    create_result = deps["create_container"](
+        docker_config,
+        image_name,
+        team.name if scope == "team" and team is not None else user.name,
+        deps["get_unavailable_ports"](docker_config),
+    )
+    if not create_result or not create_result[0] or "Id" not in create_result[0]:
+        return {
+            "success": False,
+            "errors": {"message": "Failed to create Docker container. Verify Docker host and image settings."},
+        }, 500
+
+    port_bindings = json.loads(create_result[1]).get("HostConfig", {}).get("PortBindings", {})
+    host_ports = []
+    for bindings in port_bindings.values():
+        if not bindings:
+            continue
+        host_port = bindings[0].get("HostPort")
+        if host_port:
+            host_ports.append(host_port)
+
+    for host_port in host_ports:
+        try:
+            deps["add_port_forward"](host_port, docker_config.display_host)
+        except Exception:
+            continue
+
+    now = int(datetime.utcnow().timestamp())
+    max_timer = _resolve_machine_timer_cap(cve, docker_config)
+    tiers = _timer_tiers_for_cap(max_timer)
+    initial_timer = tiers[0]
+    challenge_key = f"cve:{slug}"
+    tracker = deps["DockerChallengeTracker"](
+        team_id=team.id if scope == "team" and team is not None else None,
+        user_id=user.id if scope != "team" else None,
+        docker_image=image_name,
+        timestamp=now,
+        revert_time=now + initial_timer,
+        instance_id=create_result[0]["Id"],
+        ports=",".join(host_ports),
+        host=(docker_config.display_host or str(docker_config.hostname).split(":")[0]),
+        challenge=challenge_key,
+    )
+    db.session.add(tracker)
+    db.session.commit()
+
+    return {
+        "success": True,
+        "data": _build_cve_docker_status(slug, cve),
+        "message": (
+            f"Container reverted. Timer set to {initial_timer // 60} minutes."
+            if did_revert
+            else f"Container started. Timer set to {initial_timer // 60} minutes."
+        ),
+    }
+
+
+@prolabs.route("/api/v1/cves/<slug>/submit", methods=["POST"])
+@authed_only
+def cves_submit(slug):
+    req = request.form or request.get_json(silent=True) or {}
+    entry_id = (req.get("entry_id") or "main-flag").strip()
+    answer = (req.get("answer") or "").strip()
+
+    if not answer:
+        return {"success": False, "errors": {"message": "Missing answer"}}, 400
+
+    cves = get_cves()
+    cve = next((item for item in cves if item["slug"] == slug), None)
+    if not cve:
+        return {"success": False, "errors": {"message": "CVE not found"}}, 404
+
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        return {"success": False, "errors": {"message": "Authentication required"}}, 403
+
+    if not (ctftime() or is_admin()):
+        return {"success": False, "errors": {"message": "Submissions are closed"}}, 403
+
+    scoped_query = CVESubmission.query.filter_by(cve_slug=slug, entry_id=entry_id)
+    if scope == "team":
+        scoped_query = scoped_query.filter_by(team_id=team.id)
+    else:
+        scoped_query = scoped_query.filter_by(user_id=user.id)
+
+    existing = scoped_query.first()
+    if existing is not None and existing.status == "correct":
+        return {
+            "success": True,
+            "data": {
+                "status": "already_solved",
+                "message": "Correct but you already solved this CVE",
+                "total_score": _get_current_account_score(),
+            },
+        }
+
+    expected = cve.get("flag", "")
+    is_correct = expected and answer == expected
+    points = _safe_points(cve.get("points", 0))
+
+    if existing is None:
+        row = CVESubmission(
+            cve_slug=slug,
+            entry_id=entry_id,
+            provided=answer,
+            status="correct" if is_correct else "incorrect",
+            ip=get_ip(req=request),
+            user_id=user.id,
+            team_id=team.id if team else None,
+        )
+        db.session.add(row)
+    else:
+        existing.provided = answer
+        existing.status = "correct" if is_correct else "incorrect"
+        existing.ip = get_ip(req=request)
+        existing.user_id = user.id
+        existing.team_id = team.id if team else None
+        existing.date = datetime.utcnow()
+
+    if is_correct and points > 0:
+        db.session.add(
+            Awards(
+                user_id=user.id,
+                team_id=team.id if team else None,
+                name=f"{cve['title']} - Flag"[:80],
+                description=f"Solved {cve.get('cve_id') or cve['title']}",
+                value=points,
+                category="CVE Labs",
+                icon="fas fa-bug",
+            )
+        )
+
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return {
+            "success": True,
+            "data": {
+                "status": "already_solved",
+                "message": "Correct but you already solved this CVE",
                 "total_score": _get_current_account_score(),
             },
         }
@@ -2650,6 +3213,147 @@ def machines_admin_manage():
     )
 
 
+@prolabs.route("/admin/cves", methods=["GET"])
+@admins_only
+def cves_admin_list():
+    cves = get_cves()
+    return render_template("cves/admin_list.html", cves=cves)
+
+
+@prolabs.route("/admin/cves/add", methods=["GET", "POST"])
+@admins_only
+def cves_admin_add():
+    docker_images, docker_images_error = _get_available_docker_images()
+
+    if request.method == "POST":
+        title = (request.form.get("title") or "").strip()
+        if not title:
+            return render_template(
+                "cves/add.html",
+                error="Title is required",
+                docker_images=docker_images,
+                docker_images_error=docker_images_error,
+            )
+
+        base_slug = _slugify((request.form.get("slug") or "").strip() or title) or "cve"
+        cves = _load_raw_config_list(CVES_CONFIG_KEY, DEFAULT_CVES)
+        existing_slugs = {_slugify((item or {}).get("slug", "")) for item in cves if isinstance(item, dict)}
+        slug = _ensure_unique_slug(base_slug, existing_slugs)
+
+        template = json.loads(json.dumps(DEFAULT_CVES[0] if DEFAULT_CVES else {}))
+        template["slug"] = slug
+        template["title"] = title
+        template["cve_id"] = (request.form.get("cve_id") or "").strip()
+        template["severity"] = (request.form.get("severity") or "Medium").strip()
+        template["category"] = (request.form.get("category") or "Web").strip()
+        template["cvss"] = _safe_float(request.form.get("cvss"), 0.0)
+        template["release_date"] = (request.form.get("release_date") or "").strip()
+        template["short_description"] = (request.form.get("short_description") or "").strip()
+        template["description"] = (request.form.get("description") or "").strip()
+        template["flag"] = (request.form.get("flag") or "").strip()
+        template["points"] = _safe_points(request.form.get("points") or 0)
+        template["docker_enabled"] = _as_bool(request.form.get("docker_enabled"))
+        template["docker_image"] = (request.form.get("docker_image") or "").strip()
+        template["docker_expiry"] = _safe_int(request.form.get("docker_expiry"), 0)
+        template["references"] = _normalize_cve_references(request.form.get("references") or "[]")
+
+        cves.append(template)
+        set_config(CVES_CONFIG_KEY, json.dumps(cves))
+        return redirect(url_for("prolabs.cves_admin_manage", saved=1, _anchor=f"cve-{slug}"))
+
+    return render_template(
+        "cves/add.html",
+        docker_images=docker_images,
+        docker_images_error=docker_images_error,
+    )
+
+
+@prolabs.route("/admin/cves/manage", methods=["GET", "POST"])
+@admins_only
+def cves_admin_manage():
+    if request.method == "POST":
+        slugs = request.form.getlist("slug[]")
+        titles = request.form.getlist("title[]")
+        cve_ids = request.form.getlist("cve_id[]")
+        severities = request.form.getlist("severity[]")
+        categories = request.form.getlist("category[]")
+        cvss_values = request.form.getlist("cvss[]")
+        release_dates = request.form.getlist("release_date[]")
+        short_descriptions = request.form.getlist("short_description[]")
+        descriptions = request.form.getlist("description[]")
+        flags = request.form.getlist("flag[]")
+        points_values = request.form.getlist("points[]")
+        docker_enabled_values = request.form.getlist("docker_enabled[]")
+        docker_image_values = request.form.getlist("docker_image[]")
+        docker_expiry_values = request.form.getlist("docker_expiry[]")
+        references_values = request.form.getlist("references[]")
+
+        row_count = max(
+            len(slugs),
+            len(titles),
+            len(cve_ids),
+            len(severities),
+            len(categories),
+            len(cvss_values),
+            len(descriptions),
+            len(flags),
+            len(points_values),
+        )
+
+        cves = []
+        for i in range(row_count):
+            title = (titles[i] if i < len(titles) else "").strip()
+            if not title:
+                continue
+
+            slug = _slugify((slugs[i] if i < len(slugs) else "").strip() or title)
+            cves.append(
+                {
+                    "slug": slug,
+                    "title": title,
+                    "cve_id": (cve_ids[i] if i < len(cve_ids) else "").strip(),
+                    "severity": (severities[i] if i < len(severities) else "Medium").strip(),
+                    "category": (categories[i] if i < len(categories) else "Web").strip(),
+                    "cvss": _safe_float(cvss_values[i] if i < len(cvss_values) else 0, 0.0),
+                    "release_date": (release_dates[i] if i < len(release_dates) else "").strip(),
+                    "short_description": (
+                        short_descriptions[i] if i < len(short_descriptions) else ""
+                    ).strip(),
+                    "description": (descriptions[i] if i < len(descriptions) else "").strip(),
+                    "flag": (flags[i] if i < len(flags) else "").strip(),
+                    "points": _safe_points(points_values[i] if i < len(points_values) else 0),
+                    "docker_enabled": _as_bool(
+                        docker_enabled_values[i] if i < len(docker_enabled_values) else False
+                    ),
+                    "docker_image": (
+                        docker_image_values[i] if i < len(docker_image_values) else ""
+                    ).strip(),
+                    "docker_expiry": _safe_int(
+                        docker_expiry_values[i] if i < len(docker_expiry_values) else 0,
+                        0,
+                    ),
+                    "references": _normalize_cve_references(
+                        references_values[i] if i < len(references_values) else "[]"
+                    ),
+                }
+            )
+
+        if not cves:
+            cves = DEFAULT_CVES
+
+        set_config(CVES_CONFIG_KEY, json.dumps(cves))
+        return redirect(url_for("prolabs.cves_admin_manage", saved=1))
+
+    cves = get_cves()
+    docker_images, docker_images_error = _get_available_docker_images()
+    return render_template(
+        "cves/admin.html",
+        cves=cves,
+        docker_images=docker_images,
+        docker_images_error=docker_images_error,
+    )
+
+
 
 
 def _get_dashboard_stats_for_scope():
@@ -3031,6 +3735,27 @@ def sherlocks_admin_submissions():
     )
 
 
+@prolabs.route("/admin/cves/submissions", methods=["GET"])
+@admins_only
+def cves_admin_submissions():
+    """Display all CVE submissions."""
+    page = abs(request.args.get("page", 1, type=int))
+    submissions = CVESubmission.query.order_by(CVESubmission.date.desc()).paginate(
+        page=page, per_page=50, error_out=False
+    )
+
+    cves = {c["slug"]: c["title"] for c in get_cves()}
+
+    return render_template(
+        "cves/admin_submissions.html",
+        submissions=submissions,
+        cves=cves,
+        type="CVEs",
+        prev_page=request.endpoint and url_for(request.endpoint, page=submissions.prev_num) or "#",
+        next_page=request.endpoint and url_for(request.endpoint, page=submissions.next_num) or "#",
+    )
+
+
 def load(app):
     with app.app_context():
         db.create_all()
@@ -3042,6 +3767,8 @@ def load(app):
     register_admin_plugin_menu_bar("Machine Submissions", "/admin/machines/submissions")
     register_admin_plugin_menu_bar("Sherlocks", "/admin/sherlocks")
     register_admin_plugin_menu_bar("Sherlock Submissions", "/admin/sherlocks/submissions")
+    register_admin_plugin_menu_bar("CVEs", "/admin/cves")
+    register_admin_plugin_menu_bar("CVE Submissions", "/admin/cves/submissions")
 
     @app.context_processor
     def inject_prolab_level_helpers():

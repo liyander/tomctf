@@ -52,10 +52,10 @@
                         <td>
                             {% if sub.team_id %}
                                 <i class="fas fa-users"></i>
-                                <a href="{{ url_for('admin.admin_teams', team_id=sub.team_id) }}">{{ sub.team.name if sub.team else 'N/A' }}</a>
+                                <a href="{{ url_for('admin.teams_detail', team_id=sub.team_id) }}">{{ sub.team.name if sub.team else 'N/A' }}</a>
                             {% elif sub.user_id %}
                                 <i class="fas fa-user"></i>
-                                <a href="{{ url_for('admin.admin_users', user_id=sub.user_id) }}">{{ sub.user.name if sub.user else 'N/A' }}</a>
+                                <a href="{{ url_for('admin.users_detail', user_id=sub.user_id) }}">{{ sub.user.name if sub.user else 'N/A' }}</a>
                             {% else %}
                                 N/A
                             {% endif %}

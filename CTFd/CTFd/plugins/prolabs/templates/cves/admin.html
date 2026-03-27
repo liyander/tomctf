@@ -1,0 +1,153 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+  <div class="container">
+    <h1>Manage CVEs</h1>
+    <p>Edit existing CVE labs.</p>
+    <a class="btn btn-secondary" href="{{ url_for('prolabs.cves_admin_add') }}">Add CVE</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <div>
+      <strong>Docker setup reference:</strong>
+      Configure the Docker host first, then attach image tags to CVEs below.
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin_docker_config.docker_config') }}">Docker Config</a>
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin_docker_status.docker_admin') }}">Docker Status</a>
+    </div>
+  </div>
+
+  {% if docker_images_error %}
+  <div class="alert alert-warning">{{ docker_images_error }}</div>
+  {% endif %}
+
+  {% if request.args.get('saved') %}
+  <div class="alert alert-success">CVE configuration saved.</div>
+  {% endif %}
+
+  <form method="POST" id="cve-manage-form">
+    <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+    {% for cve in cves %}
+    <div class="card mb-3" id="cve-{{ cve.slug }}">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>{{ cve.title }}</strong>
+        <button type="button" class="btn btn-sm btn-outline-danger js-remove">Remove</button>
+      </div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group col-md-4">
+            <label>Slug</label>
+            <input class="form-control" type="text" name="slug[]" value="{{ cve.slug }}">
+          </div>
+          <div class="form-group col-md-4">
+            <label>Title</label>
+            <input class="form-control" type="text" name="title[]" value="{{ cve.title }}">
+          </div>
+          <div class="form-group col-md-4">
+            <label>CVE ID</label>
+            <input class="form-control" type="text" name="cve_id[]" value="{{ cve.cve_id }}">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-3">
+            <label>Severity</label>
+            <input class="form-control" type="text" name="severity[]" value="{{ cve.severity }}">
+          </div>
+          <div class="form-group col-md-3">
+            <label>Category</label>
+            <input class="form-control" type="text" name="category[]" value="{{ cve.category }}">
+          </div>
+          <div class="form-group col-md-3">
+            <label>CVSS</label>
+            <input class="form-control" type="number" min="0" max="10" step="0.1" name="cvss[]" value="{{ cve.cvss }}">
+          </div>
+          <div class="form-group col-md-3">
+            <label>Release Date</label>
+            <input class="form-control" type="text" name="release_date[]" value="{{ cve.release_date }}">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Short Description</label>
+          <textarea class="form-control" rows="2" name="short_description[]">{{ cve.short_description }}</textarea>
+        </div>
+        <div class="form-group">
+          <label>Description (Markdown)</label>
+          <textarea class="form-control" rows="8" name="description[]">{{ cve.description }}</textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-8">
+            <label>Flag</label>
+            <input class="form-control" type="text" name="flag[]" value="{{ cve.flag }}">
+          </div>
+          <div class="form-group col-md-4">
+            <label>Points</label>
+            <input class="form-control" type="number" min="0" name="points[]" value="{{ cve.points }}">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-2">
+            <label>Docker Enabled</label>
+            <select class="form-control" name="docker_enabled[]">
+              <option value="0" {% if not cve.docker_enabled %}selected{% endif %}>Disabled</option>
+              <option value="1" {% if cve.docker_enabled %}selected{% endif %}>Enabled</option>
+            </select>
+          </div>
+          <div class="form-group col-md-7">
+            <label>Docker Image</label>
+            <select class="form-control" name="docker_image[]">
+              <option value="">Select Docker image tag</option>
+              {% for image in docker_images %}
+                <option value="{{ image }}" {% if cve.docker_image == image %}selected{% endif %}>{{ image }}</option>
+              {% endfor %}
+              {% if cve.docker_image and cve.docker_image not in docker_images %}
+                <option value="{{ cve.docker_image }}" selected>{{ cve.docker_image }} (current)</option>
+              {% endif %}
+            </select>
+          </div>
+          <div class="form-group col-md-3">
+            <label>Timer Cap</label>
+            <select class="form-control" name="docker_expiry[]">
+              <option value="0" {% if (cve.docker_expiry|int) == 0 %}selected{% endif %}>Use Docker Global</option>
+              <option value="1800" {% if (cve.docker_expiry|int) == 1800 %}selected{% endif %}>30 mins</option>
+              <option value="3600" {% if (cve.docker_expiry|int) == 3600 %}selected{% endif %}>60 mins</option>
+              <option value="7200" {% if (cve.docker_expiry|int) == 7200 %}selected{% endif %}>120 mins</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>References (JSON array)</label>
+          <textarea class="form-control" rows="4" name="references[]">{{ cve.references | tojson }}</textarea>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+    <div class="mb-4">
+      <button type="submit" class="btn btn-primary">Save Configuration</button>
+      <a class="btn btn-light" href="{{ url_for('prolabs.cves_admin_list') }}">Back</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  (function () {
+    document.querySelectorAll('.js-remove').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var card = btn.closest('.card');
+        if (card) {
+          card.remove();
+        }
+      });
+    });
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+  <div class="container">
+    <h1>CVEs</h1>
+    <p>Manage CVE labs shown to players.</p>
+    <a class="btn btn-primary" href="{{ url_for('prolabs.cves_admin_add') }}">Add CVE</a>
+    <a class="btn btn-secondary" href="{{ url_for('prolabs.cves_admin_manage') }}">Manage All</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-striped mb-0">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th>CVE ID</th>
+              <th>Severity</th>
+              <th>Category</th>
+              <th>Points</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cve in cves %}
+            <tr>
+              <td>{{ cve.title }}</td>
+              <td>{{ cve.cve_id or '-' }}</td>
+              <td>{{ cve.severity or '-' }}</td>
+              <td>{{ cve.category or '-' }}</td>
+              <td>{{ cve.points or 0 }}</td>
+              <td>
+                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('prolabs.cves_admin_manage') }}#cve-{{ cve.slug }}">Edit</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

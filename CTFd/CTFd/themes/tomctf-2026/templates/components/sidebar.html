@@ -283,6 +283,7 @@
 
         <a class="nav-link {% if request.path.startswith('/pro-red-team-labs') %}active{% endif %}" href="{{ url_for('prolabs.prolab_listing') }}"><i class="fas fa-user-secret me-2"></i><span class="label">Pro Red Team Labs</span></a>
         <a class="nav-link {% if request.path.startswith('/machines') %}active{% endif %}" href="{{ url_for('prolabs.machines_listing') }}"><i class="fas fa-server me-2"></i><span class="label">Machines</span></a>
+        <a class="nav-link {% if request.path.startswith('/cves') %}active{% endif %}" href="{{ url_for('prolabs.cves_listing') }}"><i class="fas fa-bug me-2"></i><span class="label">CVEs</span></a>
         <a class="nav-link {% if request.path.startswith('/sherlocks') %}active{% endif %}" href="{{ url_for('prolabs.sherlocks_listing') }}"><i class="fas fa-shield-alt me-2"></i><span class="label">Sherlocks</span></a>
       </div>
 
