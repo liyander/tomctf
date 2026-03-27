@@ -41,7 +41,7 @@
     <input type="hidden" name="nonce" value="{{ Session.nonce }}">
 
     <div class="mb-3">
-      <button type="button" class="btn btn-outline-primary" id="add-sherlock">Add Sherlock</button>
+      <a class="btn btn-outline-primary" href="{{ url_for('prolabs.sherlocks_admin_add') }}">Add Sherlock</a>
       <button type="submit" class="btn btn-primary">Save Changes</button>
     </div>
 

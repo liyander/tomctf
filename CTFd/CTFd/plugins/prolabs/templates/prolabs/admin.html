@@ -56,7 +56,7 @@
     <input type="hidden" name="nonce" value="{{ Session.nonce }}">
 
     <div class="mb-3">
-      <button type="button" class="btn btn-outline-primary" id="add-lab">Add Lab</button>
+      <a class="btn btn-outline-primary" href="{{ url_for('prolabs.prolab_admin_add') }}">Add Lab</a>
       <button type="submit" class="btn btn-primary">Save Changes</button>
     </div>
 
@@ -360,11 +360,13 @@
       });
     };
 
-    addButton.addEventListener("click", () => {
-      const card = createLabCard();
-      wrapper.appendChild(card);
-      refreshCheckboxIndices();
-    });
+    if (addButton) {
+      addButton.addEventListener("click", () => {
+        const card = createLabCard();
+        wrapper.appendChild(card);
+        refreshCheckboxIndices();
+      });
+    }
 
     wrapper.addEventListener("click", (event) => {
       if (event.target.classList.contains("remove-lab")) {

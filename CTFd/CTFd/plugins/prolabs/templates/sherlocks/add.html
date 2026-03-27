@@ -1,0 +1,83 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+  <div class="container">
+    <h1>Add Sherlock</h1>
+    <p>Create a new sherlock entry in a separate page.</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+
+  {% if docker_images_error %}
+    <div class="alert alert-warning">{{ docker_images_error }}</div>
+  {% endif %}
+
+  <form method="POST">
+    <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+
+    <div class="card">
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <label>Title</label>
+            <input class="form-control" name="title" required>
+          </div>
+          <div class="form-group col-md-6">
+            <label>Slug (optional)</label>
+            <input class="form-control" name="slug" placeholder="auto-generated-from-title">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-4">
+            <label>Difficulty</label>
+            <input class="form-control" name="difficulty" value="Very Easy">
+          </div>
+          <div class="form-group col-md-4">
+            <label>Category</label>
+            <input class="form-control" name="category" value="DFIR">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-2">
+            <label>Docker Enabled</label>
+            <select class="form-control" name="docker_enabled">
+              <option value="0" selected>Disabled</option>
+              <option value="1">Enabled</option>
+            </select>
+          </div>
+          <div class="form-group col-md-7">
+            <label>Docker Image</label>
+            <select class="form-control" name="docker_image">
+              <option value="">Select Docker image tag</option>
+              {% for image in docker_images %}
+                <option value="{{ image }}">{{ image }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group col-md-3">
+            <label>Timer Cap</label>
+            <select class="form-control" name="docker_expiry">
+              <option value="0" selected>Use Docker Global</option>
+              <option value="1800">30 mins</option>
+              <option value="3600">60 mins</option>
+              <option value="7200">120 mins</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-3 d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Create Sherlock</button>
+      <a class="btn btn-outline-secondary" href="{{ url_for('prolabs.sherlocks_admin_list') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

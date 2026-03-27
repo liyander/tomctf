@@ -680,6 +680,97 @@ def get_prolabs():
     return labs
 
 
+def _load_raw_config_list(config_key, default_items):
+    configured = get_config(config_key)
+    if not configured:
+        return json.loads(json.dumps(default_items))
+
+    try:
+        data = json.loads(configured)
+        if isinstance(data, list):
+            return data
+    except Exception:
+        pass
+
+    return json.loads(json.dumps(default_items))
+
+
+def _ensure_unique_slug(slug, existing_slugs):
+    if slug not in existing_slugs:
+        return slug
+
+    index = 2
+    candidate = f"{slug}-{index}"
+    while candidate in existing_slugs:
+        index += 1
+        candidate = f"{slug}-{index}"
+    return candidate
+
+
+@prolabs.route("/admin/prolabs/add", methods=["GET", "POST"])
+@admins_only
+def prolab_admin_add():
+    if request.method == "POST":
+        title = (request.form.get("title") or "").strip()
+        if not title:
+            level_rules = get_level_rules()
+            return render_template("prolabs/add.html", error="Title is required", levels=level_rules)
+
+        base_slug = _slugify((request.form.get("slug") or "").strip() or title) or "prolab"
+        labs = _load_raw_config_list("pro_red_team_labs", DEFAULT_PROLABS)
+        existing_slugs = {_slugify((item or {}).get("slug", "")) for item in labs if isinstance(item, dict)}
+        slug = _ensure_unique_slug(base_slug, existing_slugs)
+
+        raw_machines = (request.form.get("machines") or "[]").strip()
+        machines = []
+        try:
+            parsed_machines = json.loads(raw_machines or "[]")
+            if isinstance(parsed_machines, list):
+                for machine_index, machine in enumerate(parsed_machines):
+                    if not isinstance(machine, dict):
+                        continue
+                    normalized_machine = _normalize_machine(machine, machine_index)
+                    if normalized_machine["name"]:
+                        machines.append(normalized_machine)
+        except Exception:
+            machines = []
+
+        flags = _build_display_flags([], machines)
+
+        template = json.loads(json.dumps(DEFAULT_PROLABS[0] if DEFAULT_PROLABS else {}))
+        template["slug"] = slug
+        template["title"] = title
+        template["category"] = (request.form.get("category") or template.get("category") or "Pro Labs").strip()
+        template["difficulty"] = (request.form.get("difficulty") or template.get("difficulty") or "Intermediate").strip()
+        template["is_free"] = _as_bool(request.form.get("is_free") or "0")
+        template["cover_image"] = (request.form.get("cover_image") or template.get("cover_image") or "").strip()
+        template["logo_image"] = (request.form.get("logo_image") or template.get("logo_image") or "").strip()
+        template["entry_ip"] = (request.form.get("entry_ip") or template.get("entry_ip") or "").strip()
+        template["introduction"] = (request.form.get("introduction") or template.get("introduction") or "").strip()
+        template["pro_lab_info"] = (
+            (request.form.get("pro_lab_info") or "").strip() or template.get("pro_lab_info") or DEFAULT_PRO_LAB_INFO_TEXT
+        )
+        template["changelog"] = (
+            (request.form.get("changelog") or "").strip() or template.get("changelog") or DEFAULT_CHANGELOG_TEXT
+        )
+        template["creator"] = (request.form.get("creator") or template.get("creator") or "Unknown").strip()
+        template["required_level"] = _safe_int(request.form.get("required_level"), 0)
+        template["machines"] = machines
+        template["flags"] = flags
+        template["topics"] = []
+        template["badges"] = []
+        template["progress"] = 0
+        template["rating"] = 5
+        template["rating_count"] = 0
+
+        labs.append(template)
+        set_config("pro_red_team_labs", json.dumps(labs))
+        return redirect(url_for("prolabs.prolab_admin_manage", saved=1, _anchor=f"lab-{slug}"))
+
+    level_rules = get_level_rules()
+    return render_template("prolabs/add.html", levels=level_rules)
+
+
 @prolabs.route("/pro-red-team-labs", methods=["GET"])
 @authed_only
 def prolab_listing():
@@ -2233,6 +2324,46 @@ def sherlocks_admin_list():
     return render_template("sherlocks/admin_list.html", sherlocks=sherlocks)
 
 
+@prolabs.route("/admin/sherlocks/add", methods=["GET", "POST"])
+@admins_only
+def sherlocks_admin_add():
+    if request.method == "POST":
+        title = (request.form.get("title") or "").strip()
+        if not title:
+            docker_images, docker_images_error = _get_available_docker_images()
+            return render_template(
+                "sherlocks/add.html",
+                error="Title is required",
+                docker_images=docker_images,
+                docker_images_error=docker_images_error,
+            )
+
+        base_slug = _slugify((request.form.get("slug") or "").strip() or title) or "sherlock"
+        sherlocks = _load_raw_config_list(SHERLOCKS_CONFIG_KEY, DEFAULT_SHERLOCKS)
+        existing_slugs = {_slugify((item or {}).get("slug", "")) for item in sherlocks if isinstance(item, dict)}
+        slug = _ensure_unique_slug(base_slug, existing_slugs)
+
+        template = json.loads(json.dumps(DEFAULT_SHERLOCKS[0] if DEFAULT_SHERLOCKS else {}))
+        template["slug"] = slug
+        template["title"] = title
+        template["difficulty"] = (request.form.get("difficulty") or template.get("difficulty") or "Very Easy").strip()
+        template["category"] = (request.form.get("category") or template.get("category") or "DFIR").strip()
+        template["docker_enabled"] = _as_bool(request.form.get("docker_enabled") or "0")
+        template["docker_image"] = (request.form.get("docker_image") or "").strip()
+        template["docker_expiry"] = _safe_int(request.form.get("docker_expiry"), 0)
+
+        sherlocks.append(template)
+        set_config(SHERLOCKS_CONFIG_KEY, json.dumps(sherlocks))
+        return redirect(url_for("prolabs.sherlocks_admin_manage", saved=1, _anchor=f"sherlock-{slug}"))
+
+    docker_images, docker_images_error = _get_available_docker_images()
+    return render_template(
+        "sherlocks/add.html",
+        docker_images=docker_images,
+        docker_images_error=docker_images_error,
+    )
+
+
 @prolabs.route("/admin/sherlocks/manage", methods=["GET", "POST"])
 @admins_only
 def sherlocks_admin_manage():
@@ -2318,6 +2449,84 @@ def sherlocks_admin_manage():
 def machines_admin_list():
     machines = get_boot2root_machines()
     return render_template("machines/admin_list.html", machines=machines)
+
+
+@prolabs.route("/admin/machines/add", methods=["GET", "POST"])
+@admins_only
+def machines_admin_add():
+    if request.method == "POST":
+        title = (request.form.get("title") or "").strip()
+        if not title:
+            docker_images, docker_images_error = _get_available_docker_images()
+            return render_template(
+                "machines/add.html",
+                error="Title is required",
+                docker_images=docker_images,
+                docker_images_error=docker_images_error,
+            )
+
+        base_slug = _slugify((request.form.get("slug") or "").strip() or title) or "machine"
+        machines = _load_raw_config_list(MACHINES_CONFIG_KEY, DEFAULT_BOOT2ROOT_MACHINES)
+        existing_slugs = {_slugify((item or {}).get("slug", "")) for item in machines if isinstance(item, dict)}
+        slug = _ensure_unique_slug(base_slug, existing_slugs)
+
+        template = json.loads(json.dumps(DEFAULT_BOOT2ROOT_MACHINES[0] if DEFAULT_BOOT2ROOT_MACHINES else {}))
+        guided_raw = (request.form.get("guided_questions") or "[]").strip()
+        try:
+            parsed_guided = json.loads(guided_raw)
+        except Exception:
+            parsed_guided = []
+
+        uploaded_files = request.files.getlist("walkthrough_files[]")
+        uploaded_rows = []
+        for file_obj in uploaded_files:
+            if not file_obj or not getattr(file_obj, "filename", ""):
+                continue
+            safe_name = re.sub(r"[^a-zA-Z0-9._-]+", "-", file_obj.filename)
+            unique_name = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}-{safe_name}"
+            location = f"machines/{slug}-{unique_name}"
+            try:
+                uploaded = uploads.upload_file(file=file_obj, location=location)
+                uploaded_rows.append(
+                    {
+                        "name": file_obj.filename,
+                        "location": uploaded.location,
+                    }
+                )
+            except Exception:
+                continue
+
+        template["slug"] = slug
+        template["title"] = title
+        template["difficulty"] = (request.form.get("difficulty") or template.get("difficulty") or "Easy").strip()
+        template["os"] = (request.form.get("os") or template.get("os") or "Linux").strip()
+        template["release_date"] = (request.form.get("release_date") or template.get("release_date") or "").strip()
+        template["rating"] = _safe_float(request.form.get("rating"), _safe_float(template.get("rating"), 0.0))
+        template["rating_count"] = _safe_int(request.form.get("rating_count"), _safe_int(template.get("rating_count"), 0))
+        template["user_solves"] = _safe_int(request.form.get("user_solves"), _safe_int(template.get("user_solves"), 0))
+        template["root_solves"] = _safe_int(request.form.get("root_solves"), _safe_int(template.get("root_solves"), 0))
+        template["user_points"] = _safe_points(request.form.get("user_points") or template.get("user_points", 50))
+        template["root_points"] = _safe_points(request.form.get("root_points") or template.get("root_points", 100))
+        template["user_flag"] = (request.form.get("user_flag") or "").strip()
+        template["root_flag"] = (request.form.get("root_flag") or "").strip()
+        template["machine_info"] = (request.form.get("machine_info") or template.get("machine_info") or "").strip()
+        template["walkthrough"] = (request.form.get("walkthrough") or template.get("walkthrough") or "").strip()
+        template["guided_questions"] = _normalize_guided_questions(parsed_guided)
+        template["walkthrough_files"] = uploaded_rows
+        template["docker_enabled"] = _as_bool(request.form.get("docker_enabled") or "0")
+        template["docker_image"] = (request.form.get("docker_image") or "").strip()
+        template["docker_expiry"] = _safe_int(request.form.get("docker_expiry"), 0)
+
+        machines.append(template)
+        set_config(MACHINES_CONFIG_KEY, json.dumps(machines))
+        return redirect(url_for("prolabs.machines_admin_manage", saved=1, _anchor=f"machine-{slug}"))
+
+    docker_images, docker_images_error = _get_available_docker_images()
+    return render_template(
+        "machines/add.html",
+        docker_images=docker_images,
+        docker_images_error=docker_images_error,
+    )
 
 
 @prolabs.route("/admin/machines/manage", methods=["GET", "POST"])

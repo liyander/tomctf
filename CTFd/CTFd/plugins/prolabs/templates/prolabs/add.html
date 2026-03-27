@@ -1,0 +1,245 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<style>
+  .prolabs-admin .lab-card {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  }
+
+  .prolabs-admin .machine-table {
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+
+  .prolabs-admin .machine-table thead th {
+    background: #f8fafc;
+    color: #2f3742;
+    font-size: 0.95rem;
+    vertical-align: middle;
+    border-color: #d8dee8;
+  }
+
+  .prolabs-admin .machine-table td {
+    vertical-align: middle;
+    background: #ffffff;
+    border-color: #d8dee8;
+  }
+
+  .prolabs-admin .machine-table .form-control,
+  .prolabs-admin .machine-table .form-select {
+    border-radius: 0.35rem;
+    border-color: #c8d1de;
+    color: #1f2937;
+  }
+</style>
+
+<div class="prolabs-admin">
+<div class="jumbotron">
+  <div class="container">
+    <h1>Add Pro Lab</h1>
+    <p>Create a new Pro Lab using the full editor fields.</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+  {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+  {% endif %}
+
+  <form method="POST" id="prolab-add-form">
+    <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+
+    <div class="card lab-card">
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group col-md-4">
+            <label>Title</label>
+            <input class="form-control" name="title" required>
+          </div>
+          <div class="form-group col-md-4">
+            <label>Slug (optional)</label>
+            <input class="form-control" name="slug" placeholder="auto-generated-from-title">
+          </div>
+          <div class="form-group col-md-4">
+            <label>Category</label>
+            <input class="form-control" name="category" value="Pro Labs" placeholder="Pro Labs">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-2">
+            <label>Category</label>
+            <input class="form-control" name="category" value="Pro Labs" placeholder="Pro Labs">
+          </div>
+          <div class="form-group col-md-2">
+            <label>Difficulty</label>
+            <input class="form-control" name="difficulty" value="Intermediate">
+          </div>
+          <div class="form-group col-md-2">
+            <label>Required Level (Min Score)</label>
+            <input type="number" min="0" step="1" class="form-control" name="required_level" value="0">
+          </div>
+          <div class="form-group col-md-2">
+            <label>Entry IP</label>
+            <input class="form-control" name="entry_ip" placeholder="10.10.10.10">
+          </div>
+          <div class="form-group col-md-2">
+            <label>Creator</label>
+            <input class="form-control" name="creator" placeholder="xct">
+          </div>
+          <div class="form-group col-md-2">
+            <label>Free Lab</label>
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" name="is_free" value="1">
+              <label class="form-check-label">Free Access</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <label>Cover Image URL</label>
+            <input class="form-control" name="cover_image" placeholder="https://...">
+          </div>
+          <div class="form-group col-md-6">
+            <label>Logo Image URL</label>
+            <input class="form-control" name="logo_image" placeholder="https://...">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Introduction <small class="text-muted">(supports markdown)</small></label>
+          <textarea class="form-control markdown" rows="4" name="introduction" placeholder="Lab intro (Markdown supported)"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Pro Lab Info <small class="text-muted">(supports markdown)</small></label>
+          <textarea class="form-control markdown" rows="4" name="pro_lab_info" placeholder="Additional Pro Lab information"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Changelog <small class="text-muted">(supports markdown)</small></label>
+          <textarea class="form-control markdown" rows="6" name="changelog" placeholder="Changes made to this Pro Lab"></textarea>
+        </div>
+
+        <hr>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="mb-0">Machines and Flags</h5>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="add-machine-row">Add Machine</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered mb-0 machine-table" id="machines-table">
+            <thead>
+              <tr>
+                <th style="min-width: 180px;">Machine Name</th>
+                <th style="min-width: 120px;">OS</th>
+                <th style="min-width: 220px;">User Flag</th>
+                <th style="min-width: 120px;">User Points</th>
+                <th style="min-width: 220px;">Admin Flag</th>
+                <th style="min-width: 120px;">Admin Points</th>
+                <th style="width: 70px;">Action</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <input type="hidden" id="machines-json" name="machines" value="[]">
+      </div>
+    </div>
+
+    <div class="mt-3 d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Create Pro Lab</button>
+      <a class="btn btn-outline-secondary" href="{{ url_for('prolabs.prolab_admin_list') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+ </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const form = document.getElementById('prolab-add-form');
+  const tableBody = document.querySelector('#machines-table tbody');
+  const addMachineBtn = document.getElementById('add-machine-row');
+  const machinesJson = document.getElementById('machines-json');
+
+  const machineRowTemplate = () => {
+    const tr = document.createElement('tr');
+    tr.className = 'machine-row';
+    tr.innerHTML = `
+      <td><input type="text" class="form-control form-control-sm machine-name" placeholder="MYTHICAL-DC01"></td>
+      <td>
+        <select class="form-select form-select-sm machine-os">
+          <option value="Windows">Windows</option>
+          <option value="Linux" selected>Linux</option>
+          <option value="FreeBSD">FreeBSD</option>
+        </select>
+      </td>
+      <td><input type="text" class="form-control form-control-sm machine-user-flag" placeholder="HTB{...}"></td>
+      <td><input type="number" min="0" step="1" class="form-control form-control-sm machine-user-points" placeholder="0"></td>
+      <td><input type="text" class="form-control form-control-sm machine-admin-flag" placeholder="HTB{...}"></td>
+      <td><input type="number" min="0" step="1" class="form-control form-control-sm machine-admin-points" placeholder="0"></td>
+      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger remove-machine-row">X</button></td>
+    `;
+    return tr;
+  };
+
+  const serializeMachines = () => {
+    const rows = Array.from(document.querySelectorAll('.machine-row'));
+    const machines = rows
+      .map((row) => {
+        const name = (row.querySelector('.machine-name')?.value || '').trim();
+        if (!name) return null;
+        const os = (row.querySelector('.machine-os')?.value || 'Linux').trim();
+        const userFlag = (row.querySelector('.machine-user-flag')?.value || '').trim();
+        const userPoints = Number.parseInt((row.querySelector('.machine-user-points')?.value || '0').trim(), 10);
+        const adminFlag = (row.querySelector('.machine-admin-flag')?.value || '').trim();
+        const adminPoints = Number.parseInt((row.querySelector('.machine-admin-points')?.value || '0').trim(), 10);
+
+        return {
+          name,
+          os,
+          flags: {
+            user: {
+              value: userFlag,
+              points: Number.isFinite(userPoints) && userPoints >= 0 ? userPoints : 0,
+            },
+            admin: {
+              value: adminFlag,
+              points: Number.isFinite(adminPoints) && adminPoints >= 0 ? adminPoints : 0,
+            },
+          },
+        };
+      })
+      .filter(Boolean);
+
+    machinesJson.value = JSON.stringify(machines);
+  };
+
+  addMachineBtn?.addEventListener('click', () => {
+    tableBody?.appendChild(machineRowTemplate());
+  });
+
+  tableBody?.addEventListener('click', (event) => {
+    if (event.target.classList.contains('remove-machine-row')) {
+      event.target.closest('.machine-row')?.remove();
+      if (!tableBody.querySelector('.machine-row')) {
+        tableBody.appendChild(machineRowTemplate());
+      }
+    }
+  });
+
+  form?.addEventListener('submit', () => {
+    serializeMachines();
+  });
+
+  if (tableBody && !tableBody.querySelector('.machine-row')) {
+    tableBody.appendChild(machineRowTemplate());
+  }
+})();
+</script>
+{% endblock %}

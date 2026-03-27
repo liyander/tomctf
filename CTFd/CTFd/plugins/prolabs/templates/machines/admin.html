@@ -42,7 +42,7 @@
     <input type="hidden" name="nonce" value="{{ Session.nonce }}">
 
     <div class="mb-3">
-      <button type="button" class="btn btn-outline-primary" id="add-machine">Add Machine</button>
+      <a class="btn btn-outline-primary" href="{{ url_for('prolabs.machines_admin_add') }}">Add Machine</a>
       <button type="submit" class="btn btn-primary">Save Changes</button>
     </div>
 
@@ -303,10 +303,12 @@
     if (hidden) hidden.value = JSON.stringify(questions);
   };
 
-  addBtn.addEventListener('click', () => {
-    wrapper.appendChild(machineCard());
-    renumberWalkthroughInputs();
-  });
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      wrapper.appendChild(machineCard());
+      renumberWalkthroughInputs();
+    });
+  }
 
   wrapper.addEventListener('click', (e) => {
     if (e.target.classList.contains('remove-machine')) {
