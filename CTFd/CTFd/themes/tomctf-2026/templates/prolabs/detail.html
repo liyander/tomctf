@@ -166,7 +166,7 @@
         </div>
         <div class="card-body">
           <h4 class="mb-3">Introduction</h4>
-          <div class="intro-markdown">{{ lab.introduction_html | safe }}</div>
+          <div class="intro-markdown markdown-body">{{ lab.introduction_html | safe }}</div>
           {% if lab.topics %}
             <p class="mb-2"><strong>This Red Team Operator lab will expose players to:</strong></p>
             <ul class="mb-0">
@@ -287,7 +287,7 @@
       <div class="card prolab-card rounded-4 mb-3 shadow-sm">
         <div class="card-body">
           
-          <div class="intro-markdown">{{ lab.pro_lab_info_html | safe }}</div>
+          <div class="intro-markdown markdown-body">{{ lab.pro_lab_info_html | safe }}</div>
         </div>
       </div>
     </div>
@@ -296,7 +296,7 @@
       <div class="card prolab-card rounded-4 mb-3 shadow-sm">
         <div class="card-body">
           
-          <div class="intro-markdown">{{ lab.changelog_html | safe }}</div>
+          <div class="intro-markdown markdown-body">{{ lab.changelog_html | safe }}</div>
         </div>
       </div>
     </div>

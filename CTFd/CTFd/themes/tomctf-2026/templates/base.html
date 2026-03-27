@@ -17,6 +17,226 @@
     {{ Assets.css("assets/scss/main.scss") }}
   {% endblock %}
 
+  <style>
+    :root {
+      --tom-md-text: rgba(239, 243, 248, 0.94);
+      --tom-md-muted: rgba(207, 216, 230, 0.74);
+      --tom-md-border: rgba(255, 255, 255, 0.14);
+      --tom-md-code-bg: rgba(8, 12, 20, 0.88);
+      --tom-md-inline-code-bg: rgba(236, 19, 19, 0.15);
+      --tom-md-quote-border: rgba(236, 19, 19, 0.5);
+      --tom-md-link: #ff8e8e;
+      --tom-md-link-hover: #ffb4b4;
+    }
+
+    .markdown-body,
+    .challenge-desc,
+    .prose,
+    .intro-markdown {
+      color: var(--tom-md-text);
+      line-height: 1.72;
+      font-size: 0.98rem;
+      overflow-wrap: anywhere;
+    }
+
+    .markdown-body > :first-child,
+    .challenge-desc > :first-child,
+    .prose > :first-child,
+    .intro-markdown > :first-child {
+      margin-top: 0;
+    }
+
+    .markdown-body > :last-child,
+    .challenge-desc > :last-child,
+    .prose > :last-child,
+    .intro-markdown > :last-child {
+      margin-bottom: 0;
+    }
+
+    .markdown-body h1,
+    .markdown-body h2,
+    .markdown-body h3,
+    .markdown-body h4,
+    .markdown-body h5,
+    .markdown-body h6,
+    .challenge-desc h1,
+    .challenge-desc h2,
+    .challenge-desc h3,
+    .challenge-desc h4,
+    .challenge-desc h5,
+    .challenge-desc h6,
+    .prose h1,
+    .prose h2,
+    .prose h3,
+    .prose h4,
+    .prose h5,
+    .prose h6,
+    .intro-markdown h1,
+    .intro-markdown h2,
+    .intro-markdown h3,
+    .intro-markdown h4,
+    .intro-markdown h5,
+    .intro-markdown h6 {
+      color: #ffffff;
+      font-family: "Space Grotesk", var(--bs-font-sans-serif);
+      font-weight: 700;
+      margin-top: 1.15rem;
+      margin-bottom: 0.65rem;
+      line-height: 1.3;
+    }
+
+    .markdown-body p,
+    .challenge-desc p,
+    .prose p,
+    .intro-markdown p {
+      color: var(--tom-md-text);
+      margin-bottom: 0.82rem;
+    }
+
+    .markdown-body ul,
+    .markdown-body ol,
+    .challenge-desc ul,
+    .challenge-desc ol,
+    .prose ul,
+    .prose ol,
+    .intro-markdown ul,
+    .intro-markdown ol {
+      padding-left: 1.28rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .markdown-body li,
+    .challenge-desc li,
+    .prose li,
+    .intro-markdown li {
+      margin-bottom: 0.34rem;
+      color: var(--tom-md-text);
+    }
+
+    .markdown-body a,
+    .challenge-desc a,
+    .prose a,
+    .intro-markdown a {
+      color: var(--tom-md-link);
+      text-decoration: underline !important;
+      text-underline-offset: 0.15em;
+      text-decoration-thickness: 1.5px;
+    }
+
+    .markdown-body a:hover,
+    .challenge-desc a:hover,
+    .prose a:hover,
+    .intro-markdown a:hover {
+      color: var(--tom-md-link-hover);
+    }
+
+    .markdown-body code,
+    .challenge-desc code,
+    .prose code,
+    .intro-markdown code {
+      background: var(--tom-md-inline-code-bg);
+      color: #ffd6d6;
+      border: 1px solid rgba(236, 19, 19, 0.26);
+      border-radius: 0.4rem;
+      padding: 0.14rem 0.42rem;
+      font-size: 0.92em;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    .markdown-body pre,
+    .challenge-desc pre,
+    .prose pre,
+    .intro-markdown pre {
+      background: var(--tom-md-code-bg);
+      border: 1px solid var(--tom-md-border);
+      border-radius: 0.75rem;
+      padding: 0.88rem;
+      margin: 0.95rem 0;
+      overflow-x: auto;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .markdown-body pre code,
+    .challenge-desc pre code,
+    .prose pre code,
+    .intro-markdown pre code {
+      background: transparent;
+      border: 0;
+      color: #f4f6fa;
+      padding: 0;
+      font-size: 0.9rem;
+      white-space: pre;
+    }
+
+    .markdown-body blockquote,
+    .challenge-desc blockquote,
+    .prose blockquote,
+    .intro-markdown blockquote {
+      border-left: 3px solid var(--tom-md-quote-border);
+      background: rgba(236, 19, 19, 0.08);
+      border-radius: 0.45rem;
+      margin: 0.95rem 0;
+      padding: 0.52rem 0.85rem;
+      color: var(--tom-md-muted);
+    }
+
+    .markdown-body table,
+    .challenge-desc table,
+    .prose table,
+    .intro-markdown table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.9rem 0;
+      border: 1px solid var(--tom-md-border);
+      border-radius: 0.7rem;
+      overflow: hidden;
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    .markdown-body thead,
+    .challenge-desc thead,
+    .prose thead,
+    .intro-markdown thead {
+      background: rgba(236, 19, 19, 0.12);
+    }
+
+    .markdown-body th,
+    .markdown-body td,
+    .challenge-desc th,
+    .challenge-desc td,
+    .prose th,
+    .prose td,
+    .intro-markdown th,
+    .intro-markdown td {
+      border-bottom: 1px solid var(--tom-md-border);
+      padding: 0.5rem 0.65rem;
+      text-align: left;
+      vertical-align: top;
+      min-width: 120px;
+    }
+
+    .markdown-body hr,
+    .challenge-desc hr,
+    .prose hr,
+    .intro-markdown hr {
+      border: 0;
+      border-top: 1px solid var(--tom-md-border);
+      margin: 1rem 0;
+    }
+
+    .markdown-body img,
+    .challenge-desc img,
+    .prose img,
+    .intro-markdown img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 0.55rem;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+    }
+  </style>
+
   {{ Plugins.styles }}
 
   <script type="text/javascript">

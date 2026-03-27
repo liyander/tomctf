@@ -180,7 +180,7 @@
           {% if cve.short_description %}
           <p class="mb-3">{{ cve.short_description }}</p>
           {% endif %}
-          <div class="prose">{{ cve.description_html | safe }}</div>
+          <div class="prose markdown-body">{{ cve.description_html | safe }}</div>
         </div>
       </div>
 
