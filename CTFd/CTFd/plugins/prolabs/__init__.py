@@ -3407,11 +3407,15 @@ def _get_dashboard_stats_for_scope():
         status="correct", entry_id="root-flag", **scope_filter
     ).count()
     sherlock_correct = SherlockSubmission.query.filter_by(status="correct", **scope_filter).count()
+    cve_correct = CVESubmission.query.filter_by(
+        status="correct", entry_id="main-flag", **scope_filter
+    ).count()
     challenge_solves = Solves.query.filter_by(**scope_filter).count()
 
     total_prolabs = len(get_prolabs())
     total_machines = len(get_boot2root_machines())
     total_sherlocks = len(get_sherlocks())
+    total_cves = len(get_cves())
     total_challenges = Challenges.query.filter_by(state="visible").count()
 
     current_score = _get_current_account_score()
@@ -3432,6 +3436,7 @@ def _get_dashboard_stats_for_scope():
     category_summary = {
         "Pro Labs": {"completed": 0, "total": 0},
         "Mini Pro Labs": {"completed": 0, "total": 0},
+        "CVEs": {"completed": 0, "total": 0},
     }
     for lab in get_prolabs():
         slug = lab.get("slug")
@@ -3459,6 +3464,61 @@ def _get_dashboard_stats_for_scope():
             }
         )
     prolabs_data.sort(key=lambda item: item.get("completion", 0), reverse=True)
+
+    # CVE data + graphs (merged into category views and lab row)
+    cve_rows = CVESubmission.query.filter_by(
+        status="correct", entry_id="main-flag", **scope_filter
+    ).all()
+    cve_dates = [row.date for row in cve_rows if row.date]
+    solved_cve_slugs = {row.cve_slug for row in cve_rows if row.cve_slug}
+
+    cves_data = []
+    cve_severity_order = ["Critical", "High", "Medium", "Low"]
+    cve_difficulty_totals = {name: 0 for name in cve_severity_order}
+    cve_difficulty_solved = {name: 0 for name in cve_severity_order}
+    for cve in get_cves():
+        slug = cve.get("slug")
+        solved = slug in solved_cve_slugs
+        severity = (cve.get("severity") or "Medium").strip().title()
+        if severity not in cve_difficulty_totals:
+            severity = "Medium"
+
+        cves_data.append(
+            {
+                "title": cve.get("title"),
+                "slug": slug,
+                "completion": 100 if solved else 0,
+                "subtext": cve.get("cve_id") or severity,
+                "logo_image": "",
+                "category": "CVEs",
+                "solved": 1 if solved else 0,
+                "total": 1,
+            }
+        )
+
+        cve_difficulty_totals[severity] += 1
+        if solved:
+            cve_difficulty_solved[severity] += 1
+
+        category_summary["CVEs"]["total"] += 1
+        if solved:
+            category_summary["CVEs"]["completed"] += 1
+
+    cves_data.sort(key=lambda item: item.get("completion", 0), reverse=True)
+    prolabs_data.extend(cves_data)
+
+    cve_difficulty_completion = []
+    for name in cve_severity_order:
+        total = cve_difficulty_totals[name]
+        solved = cve_difficulty_solved[name]
+        cve_difficulty_completion.append(
+            {
+                "name": name,
+                "solved": solved,
+                "total": total,
+                "percentage": (solved / total * 100) if total > 0 else 0,
+            }
+        )
 
     # Machines data + graphs
     machine_rows = Boot2RootSubmission.query.filter_by(
@@ -3595,7 +3655,12 @@ def _get_dashboard_stats_for_scope():
         )
 
     total_flags_solved = (
-        prolab_correct + machine_user_correct + machine_root_correct + sherlock_correct + challenge_solves
+        prolab_correct
+        + machine_user_correct
+        + machine_root_correct
+        + sherlock_correct
+        + cve_correct
+        + challenge_solves
     )
 
     # Category switch payload for frontend interactions
@@ -3623,6 +3688,14 @@ def _get_dashboard_stats_for_scope():
             "timeline": _build_timeline(challenge_dates),
             "difficulty": challenge_difficulty_completion,
             "list": challenges_data,
+        },
+        "cves": {
+            "title": "CVEs Completed",
+            "subtitle": "CVE solves over last 12 months",
+            "counter": {"done": cve_correct, "total": total_cves},
+            "timeline": _build_timeline(cve_dates),
+            "difficulty": cve_difficulty_completion,
+            "list": cves_data,
         },
     }
 
@@ -3656,6 +3729,11 @@ def _get_dashboard_stats_for_scope():
             "completed": challenge_solves,
             "total": total_challenges,
             "percentage": (challenge_solves / total_challenges * 100) if total_challenges > 0 else 0,
+        },
+        "cves": {
+            "completed": cve_correct,
+            "total": total_cves,
+            "percentage": (cve_correct / total_cves * 100) if total_cves > 0 else 0,
         },
         "category_views": category_views,
     }

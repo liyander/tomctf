@@ -108,6 +108,12 @@
     border-radius: 999px;
   }
 
+  .dash-avatar img {
+    display: block;
+    object-fit: cover;
+    object-position: center;
+  }
+
   .dash-avatar {
     border: 1px solid rgba(139, 0, 0, 0.4);
     background: rgba(19, 24, 36, 0.95);
@@ -172,6 +178,49 @@
 </style>
 
 <section class="container-fluid dashboard-wrap">
+  <section class="dashboard-card p-3 mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+      <h4 class="dash-headline h5 mb-0">Available Red and Blue Team Operations</h4>
+      
+    </div>
+    <div class="dash-tabs" id="dashCategoryTabs">
+      <button type="button" class="dash-tab active" data-category="machines">
+        <div class="dash-stat-value">{{ stats.machines.user_flags }} <span class="dash-subtle">/{{ stats.machines.total }}</span></div>
+        <div class="dash-stat-label">Machines</div>
+        <div class="dash-tab-detail" data-kpi-detail="machines"></div>
+      </button>
+      <button type="button" class="dash-tab" data-category="sherlocks">
+        <div class="dash-stat-value">{{ stats.sherlocks.completed }} <span class="dash-subtle">/{{ stats.sherlocks.total }}</span></div>
+        <div class="dash-stat-label">Sherlocks</div>
+        <div class="dash-tab-detail" data-kpi-detail="sherlocks"></div>
+      </button>
+      <button type="button" class="dash-tab" data-category="challenges">
+        <div class="dash-stat-value">{{ stats.challenges.completed }} <span class="dash-subtle">/{{ stats.challenges.total }}</span></div>
+        <div class="dash-stat-label">Challenges</div>
+        <div class="dash-tab-detail" data-kpi-detail="challenges"></div>
+      </button>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mt-3 mb-2 flex-wrap gap-2">
+      <h5 class="dash-headline h6 mb-0">Lab Tracks</h5>
+      <span class="dash-subtle small">Pro Labs, Mini Pro Labs, CVEs</span>
+    </div>
+    <div class="dash-tabs" id="dashLabTabs">
+      <button type="button" class="dash-lab-tab active" data-lab-category="Pro Labs">
+        <div class="dash-stat-value">{{ stats.prolabs.categories['Pro Labs'].completed }} <span class="dash-subtle">/{{ stats.prolabs.categories['Pro Labs'].total }}</span></div>
+        <div class="dash-stat-label">Pro Labs</div>
+      </button>
+      <button type="button" class="dash-lab-tab" data-lab-category="Mini Pro Labs">
+        <div class="dash-stat-value">{{ stats.prolabs.categories['Mini Pro Labs'].completed }} <span class="dash-subtle">/{{ stats.prolabs.categories['Mini Pro Labs'].total }}</span></div>
+        <div class="dash-stat-label">Mini Pro Labs</div>
+      </button>
+      <button type="button" class="dash-lab-tab" data-lab-category="CVEs">
+        <div class="dash-stat-value">{{ stats.prolabs.categories['CVEs'].completed }} <span class="dash-subtle">/{{ stats.prolabs.categories['CVEs'].total }}</span></div>
+        <div class="dash-stat-label">CVEs</div>
+      </button>
+    </div>
+  </section>
+
   <div class="row g-3 mb-3">
     <div class="col-xl-6">
       <section class="dashboard-card p-3 p-lg-4 h-100">
@@ -255,26 +304,6 @@
     </div>
   </div>
 
-  <section class="dashboard-card p-3 mb-3">
-    <div class="dash-tabs" id="dashCategoryTabs">
-      <button type="button" class="dash-tab active" data-category="machines">
-        <div class="dash-stat-value">{{ stats.machines.user_flags }} <span class="dash-subtle">/{{ stats.machines.total }}</span></div>
-        <div class="dash-stat-label">Machines</div>
-        <div class="dash-tab-detail" data-kpi-detail="machines"></div>
-      </button>
-      <button type="button" class="dash-tab" data-category="sherlocks">
-        <div class="dash-stat-value">{{ stats.sherlocks.completed }} <span class="dash-subtle">/{{ stats.sherlocks.total }}</span></div>
-        <div class="dash-stat-label">Sherlocks</div>
-        <div class="dash-tab-detail" data-kpi-detail="sherlocks"></div>
-      </button>
-      <button type="button" class="dash-tab" data-category="challenges">
-        <div class="dash-stat-value">{{ stats.challenges.completed }} <span class="dash-subtle">/{{ stats.challenges.total }}</span></div>
-        <div class="dash-stat-label">Challenges</div>
-        <div class="dash-tab-detail" data-kpi-detail="challenges"></div>
-      </button>
-    </div>
-  </section>
-
   <section class="dashboard-card p-3 mb-3" id="categoryProgressPanel">
     <div class="d-flex justify-content-between align-items-center mb-2">
       <h4 class="dash-headline h5 mb-0" id="listTitle">Machines Progress</h4>
@@ -304,19 +333,6 @@
       </section>
     </div>
   </div>
-
-  <section class="dashboard-card p-3 mb-3">
-    <div class="dash-tabs" id="dashLabTabs">
-      <button type="button" class="dash-lab-tab active" data-lab-category="Pro Labs">
-        <div class="dash-stat-value">{{ stats.prolabs.categories['Pro Labs'].completed }} <span class="dash-subtle">/{{ stats.prolabs.categories['Pro Labs'].total }}</span></div>
-        <div class="dash-stat-label">Pro Labs</div>
-      </button>
-      <button type="button" class="dash-lab-tab" data-lab-category="Mini Pro Labs">
-        <div class="dash-stat-value">{{ stats.prolabs.categories['Mini Pro Labs'].completed }} <span class="dash-subtle">/{{ stats.prolabs.categories['Mini Pro Labs'].total }}</span></div>
-        <div class="dash-stat-label">Mini Pro Labs</div>
-      </button>
-    </div>
-  </section>
 
   <section class="dashboard-card p-3" id="labDetailsPanel">
     <div class="d-flex justify-content-between align-items-center mb-2">
