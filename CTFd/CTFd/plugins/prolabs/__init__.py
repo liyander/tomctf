@@ -258,6 +258,7 @@ DEFAULT_ADVERSARY_OPERATIONS = [
         "docker_enabled": False,
         "docker_image": "",
         "docker_expiry": 0,
+        "docker_port": 0,
         "rating": 4.5,
         "rating_count": 128,
         "solves": 1420,
@@ -1475,6 +1476,7 @@ def _normalize_adversary_operation(raw, index):
         "docker_enabled": _as_bool(raw.get("docker_enabled", False)),
         "docker_image": (raw.get("docker_image") or "").strip(),
         "docker_expiry": _safe_int(raw.get("docker_expiry", 0), 0),
+        "docker_port": _safe_int(raw.get("docker_port", 0), 0),
         "rating": _safe_float(raw.get("rating", 0), 0.0),
         "rating_count": _safe_int(raw.get("rating_count", 0), 0),
         "solves": _safe_int(raw.get("solves", 0), 0),
@@ -1802,6 +1804,7 @@ def _get_docker_challenge_dependencies():
             add_port_forward,
             create_container,
             delete_container,
+            do_request,
             get_repositories,
             get_unavailable_ports,
         )
@@ -1814,6 +1817,7 @@ def _get_docker_challenge_dependencies():
         "add_port_forward": add_port_forward,
         "create_container": create_container,
         "delete_container": delete_container,
+        "do_request": do_request,
         "get_repositories": get_repositories,
         "get_unavailable_ports": get_unavailable_ports,
     }
@@ -2162,6 +2166,26 @@ def _build_adversary_operation_docker_status(slug, operation):
         base["message"] = "No active container instance."
         return base
 
+    if not (entry.ports or "").strip():
+        try:
+            inspect_response = deps["do_request"](docker_config, f"/containers/{entry.instance_id}/json")
+            if inspect_response is not None and not isinstance(inspect_response, list):
+                inspect_data = inspect_response.json()
+                bindings_map = inspect_data.get("NetworkSettings", {}).get("Ports", {}) or {}
+                discovered_ports = []
+                for bindings in bindings_map.values():
+                    if not bindings:
+                        continue
+                    for binding in bindings:
+                        host_port = binding.get("HostPort")
+                        if host_port:
+                            discovered_ports.append(str(host_port))
+                if discovered_ports:
+                    entry.ports = ",".join(sorted(set(discovered_ports)))
+                    db.session.commit()
+        except Exception:
+            db.session.rollback()
+
     host = docker_config.display_host or str(docker_config.hostname).split(":")[0]
     ports = [p for p in (entry.ports or "").split(",") if p]
     tiers = _timer_tiers_for_cap(max_timer)
@@ -2181,6 +2205,18 @@ def _build_adversary_operation_docker_status(slug, operation):
             "message": "Container is running.",
         }
     )
+    if base["running"] and not base["ports"]:
+        configured_port = _safe_int(operation.get("docker_port", 0), 0)
+        if configured_port > 0:
+            base["message"] = (
+                "Container is running but no public port is mapped yet. "
+                "Revert/start again to apply the configured Docker port."
+            )
+        else:
+            base["message"] = (
+                "Container is running but no public port mapping was detected. "
+                "Set Docker Container Port in admin and start again."
+            )
     return base
 
 
@@ -3383,6 +3419,7 @@ def adversary_operations_container(slug):
         image_name,
         team.name if scope == "team" and team is not None else user.name,
         deps["get_unavailable_ports"](docker_config),
+        fallback_container_port=(_safe_int(operation.get("docker_port", 0), 0) or None),
     )
     if not create_result or not create_result[0] or "Id" not in create_result[0]:
         return {
@@ -3736,6 +3773,7 @@ def adversary_operations_admin_add():
         template["docker_enabled"] = _as_bool(request.form.get("docker_enabled") or "0")
         template["docker_image"] = (request.form.get("docker_image") or "").strip()
         template["docker_expiry"] = _safe_int(request.form.get("docker_expiry"), 0)
+        template["docker_port"] = _safe_int(request.form.get("docker_port"), 0)
 
         operations.append(template)
         set_config(ADVERSARY_OPERATIONS_CONFIG_KEY, json.dumps(operations))
@@ -3769,6 +3807,7 @@ def adversary_operations_admin_manage():
         docker_enabled_values = request.form.getlist("docker_enabled[]")
         docker_images = request.form.getlist("docker_image[]")
         docker_expiry_values = request.form.getlist("docker_expiry[]")
+        docker_port_values = request.form.getlist("docker_port[]")
         ratings = request.form.getlist("rating[]")
         rating_counts = request.form.getlist("rating_count[]")
         solves = request.form.getlist("solves[]")
@@ -3785,6 +3824,7 @@ def adversary_operations_admin_manage():
             len(tasks_values),
             len(docker_enabled_values),
             len(docker_images),
+            len(docker_port_values),
         )
 
         operations = []
@@ -3817,6 +3857,10 @@ def adversary_operations_admin_manage():
                     "docker_image": (docker_images[i] if i < len(docker_images) else "").strip(),
                     "docker_expiry": _safe_int(
                         docker_expiry_values[i] if i < len(docker_expiry_values) else 0,
+                        0,
+                    ),
+                    "docker_port": _safe_int(
+                        docker_port_values[i] if i < len(docker_port_values) else 0,
                         0,
                     ),
                     "rating": float(ratings[i]) if i < len(ratings) and ratings[i] else 0,

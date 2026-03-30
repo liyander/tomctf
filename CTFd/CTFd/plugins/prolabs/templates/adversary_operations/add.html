@@ -76,7 +76,11 @@
               {% endfor %}
             </select>
           </div>
-          <div class="form-group col-md-3">
+          <div class="form-group col-md-2">
+            <label>Container Port</label>
+            <input class="form-control" type="number" min="1" max="65535" name="docker_port" placeholder="e.g. 8080">
+          </div>
+          <div class="form-group col-md-1">
             <label>Timer Cap</label>
             <select class="form-control" name="docker_expiry">
               <option value="0" selected>Use Docker Global</option>

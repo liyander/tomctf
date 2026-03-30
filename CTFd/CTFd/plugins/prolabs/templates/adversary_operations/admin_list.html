@@ -31,6 +31,7 @@
             <th>Logo</th>
             <th>Docker</th>
             <th>Image</th>
+            <th>Port</th>
             <th style="width: 160px;">Action</th>
           </tr>
         </thead>
@@ -45,13 +46,14 @@
             <td>{% if operation.logo_image %}<span class="badge badge-success">Configured</span>{% else %}<span class="badge badge-secondary">Missing</span>{% endif %}</td>
             <td>{% if operation.docker_enabled %}<span class="badge badge-success">Enabled</span>{% else %}<span class="badge badge-secondary">Disabled</span>{% endif %}</td>
             <td>{{ operation.docker_image or '-' }}</td>
+            <td>{% if operation.docker_port %}{{ operation.docker_port }}{% else %}-{% endif %}</td>
             <td>
               <a class="btn btn-sm btn-outline-primary" href="{{ url_for('prolabs.adversary_operations_admin_manage') }}#adversary-operation-{{ operation.slug }}">Open Editor</a>
             </td>
           </tr>
           {% else %}
           <tr>
-            <td colspan="9" class="text-center text-muted py-4">No operations configured.</td>
+            <td colspan="10" class="text-center text-muted py-4">No operations configured.</td>
           </tr>
           {% endfor %}
         </tbody>
