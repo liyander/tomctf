@@ -1,0 +1,55 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+  <div class="container">
+    <h1>Player Dashboards</h1>
+    <p>Select a player to view their individual dashboard and progress.</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-striped mb-0">
+          <thead>
+            <tr>
+              <th style="width: 90px;">ID</th>
+              <th>Player</th>
+              <th style="width: 140px;">Score</th>
+              <th style="width: 140px;">Rank</th>
+              <th style="width: 170px;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for player in players %}
+            <tr>
+              <td>{{ player.id }}</td>
+              <td>{{ player.name }}</td>
+              <td>{{ player.score }}</td>
+              <td>
+                {% if player.rank %}
+                  #{{ player.rank }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td>
+                <a class="btn btn-sm btn-primary" href="{{ url_for('prolabs.admin_player_dashboard_detail', user_id=player.id) }}">
+                  Open Dashboard
+                </a>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">No players found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

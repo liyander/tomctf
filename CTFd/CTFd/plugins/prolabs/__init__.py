@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from CTFd.cache import clear_standings
 from CTFd.models import db
-from CTFd.models import Awards, Challenges, Solves
+from CTFd.models import Awards, Challenges, Solves, Users
 from CTFd.plugins import register_admin_plugin_menu_bar
 from CTFd.utils.config.pages import build_markdown
 from CTFd.utils import uploads
@@ -3462,9 +3462,15 @@ def cves_admin_manage():
 
 
 
-def _get_dashboard_stats_for_scope():
+def _get_dashboard_stats_for_scope(target_user=None):
     """Build dashboard metrics/charts using real account/team data."""
-    user, team, scope = _get_current_account_scope()
+    if target_user is not None:
+        user = target_user
+        team = None
+        scope = "user"
+    else:
+        user, team, scope = _get_current_account_scope()
+
     if user is None:
         return None
 
@@ -3524,7 +3530,10 @@ def _get_dashboard_stats_for_scope():
     total_cves = len(get_cves())
     total_challenges = Challenges.query.filter_by(state="visible").count()
 
-    current_score = _get_current_account_score()
+    if target_user is not None:
+        current_score = max(0, _safe_int(get_user_score(user.id), 0))
+    else:
+        current_score = _get_current_account_score()
 
     # Global rank
     global_rank = None
@@ -3856,6 +3865,49 @@ def player_dashboard():
     return render_template("prolabs/dashboard.html", stats=stats)
 
 
+@prolabs.route("/admin/player-dashboard", methods=["GET"])
+@admins_only
+def admin_player_dashboard_list():
+    users = Users.query.order_by(Users.id.asc()).all()
+
+    rank_map = {}
+    try:
+        standings = get_standings(admin=True)
+        for idx, standing in enumerate(standings, start=1):
+            rank_map[standing.account_id] = idx
+    except Exception:
+        rank_map = {}
+
+    players = []
+    for user in users:
+        score = max(0, _safe_int(get_user_score(user.id), 0))
+        players.append(
+            {
+                "id": user.id,
+                "name": user.name,
+                "score": score,
+                "rank": rank_map.get(user.id),
+            }
+        )
+
+    players.sort(key=lambda item: (-item["score"], item["name"].lower()))
+    return render_template("prolabs/admin_player_dashboard_list.html", players=players)
+
+
+@prolabs.route("/admin/player-dashboard/<int:user_id>", methods=["GET"])
+@admins_only
+def admin_player_dashboard_detail(user_id):
+    user = Users.query.filter_by(id=user_id).first()
+    if user is None:
+        abort(404)
+
+    stats = _get_dashboard_stats_for_scope(target_user=user)
+    if stats is None:
+        abort(404)
+
+    return render_template("prolabs/dashboard.html", stats=stats, admin_view=True)
+
+
 @prolabs.route("/admin/prolabs/submissions", methods=["GET"])
 @admins_only
 def prolab_admin_submissions():
@@ -3953,6 +4005,7 @@ def load(app):
     register_admin_plugin_menu_bar("Sherlock Submissions", "/admin/sherlocks/submissions")
     register_admin_plugin_menu_bar("CVEs", "/admin/cves")
     register_admin_plugin_menu_bar("CVE Submissions", "/admin/cves/submissions")
+    register_admin_plugin_menu_bar("Player Dashboards", "/admin/player-dashboard")
 
     @app.context_processor
     def inject_prolab_level_helpers():

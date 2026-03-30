@@ -178,6 +178,16 @@
 </style>
 
 <section class="container-fluid dashboard-wrap">
+  {% if admin_view %}
+  <section class="dashboard-card p-3 mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h4 class="dash-headline h6 mb-1">Admin Player Dashboard View</h4>
+      <div class="dash-subtle small">Viewing progress for {{ stats.account_name }}</div>
+    </div>
+    <a class="btn btn-sm btn-outline-light" href="{{ url_for('prolabs.admin_player_dashboard_list') }}">Back to Player List</a>
+  </section>
+  {% endif %}
+
   <section class="dashboard-card p-3 mb-3">
     <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
       <h4 class="dash-headline h5 mb-0">Available Red and Blue Team Operations</h4>
