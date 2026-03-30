@@ -31,7 +31,13 @@ OS_CHOICES = {
     "windows": "Windows",
     "linux": "Linux",
     "freebsd": "FreeBSD",
+    "freebasd": "FreeBSD",
+    "solaris": "Solaris",
 }
+
+MACHINE_DIFFICULTY_OPTIONS = ["Easy", "Medium", "Hard", "Insane"]
+MACHINE_OS_OPTIONS = ["Linux", "Windows", "FreeBSD", "Solaris"]
+SHERLOCK_DIFFICULTY_OPTIONS = ["Very Easy", "Easy", "Medium", "Hard", "Insane"]
 
 LEVELS_CONFIG_KEY = "prolab_levels"
 
@@ -318,6 +324,32 @@ def _slugify(value):
 def _normalize_os(value):
     os_name = (value or "").strip().lower()
     return OS_CHOICES.get(os_name, "Linux")
+
+
+def _normalize_machine_difficulty(value):
+    raw_value = (value or "").strip().lower()
+    mapping = {
+        "easy": "Easy",
+        "medium": "Medium",
+        "intermediate": "Medium",
+        "hard": "Hard",
+        "insane": "Insane",
+    }
+    return mapping.get(raw_value, "Easy")
+
+
+def _normalize_sherlock_difficulty(value):
+    raw_value = (value or "").strip().lower()
+    mapping = {
+        "very easy": "Very Easy",
+        "easy": "Easy",
+        "medium": "Medium",
+        "intermediate": "Medium",
+        "hard": "Hard",
+        "insane": "Insane",
+        "advanced": "Hard",
+    }
+    return mapping.get(raw_value, "Very Easy")
 
 
 def _safe_points(value):
@@ -1229,8 +1261,8 @@ def _normalize_walkthrough_files(raw_files):
 def _normalize_boot2root_machine(raw, index):
     title = (raw.get("title") or f"Machine {index + 1}").strip()
     slug = _slugify(raw.get("slug") or title) or f"machine-{index + 1}"
-    difficulty = (raw.get("difficulty") or "Easy").strip()
-    os_name = (raw.get("os") or "Linux").strip()
+    difficulty = _normalize_machine_difficulty(raw.get("difficulty"))
+    os_name = _normalize_os(raw.get("os"))
     release_date = (raw.get("release_date") or "").strip()
     machine_info = (raw.get("machine_info") or "").strip()
     walkthrough = (raw.get("walkthrough") or "").strip()
@@ -1350,7 +1382,7 @@ def _normalize_sherlock(raw, index):
     return {
         "slug": slug,
         "title": title,
-        "difficulty": (raw.get("difficulty") or "Very Easy").strip(),
+        "difficulty": _normalize_sherlock_difficulty(raw.get("difficulty")),
         "category": (raw.get("category") or "DFIR").strip(),
         "rating": _safe_float(raw.get("rating", 0), 0.0),
         "rating_count": _safe_int(raw.get("rating_count", 0), 0),
@@ -2940,6 +2972,7 @@ def sherlocks_admin_add():
                 error="Title is required",
                 docker_images=docker_images,
                 docker_images_error=docker_images_error,
+                difficulty_options=SHERLOCK_DIFFICULTY_OPTIONS,
             )
 
         base_slug = _slugify((request.form.get("slug") or "").strip() or title) or "sherlock"
@@ -2950,7 +2983,9 @@ def sherlocks_admin_add():
         template = json.loads(json.dumps(DEFAULT_SHERLOCKS[0] if DEFAULT_SHERLOCKS else {}))
         template["slug"] = slug
         template["title"] = title
-        template["difficulty"] = (request.form.get("difficulty") or template.get("difficulty") or "Very Easy").strip()
+        template["difficulty"] = _normalize_sherlock_difficulty(
+            request.form.get("difficulty") or template.get("difficulty")
+        )
         template["category"] = (request.form.get("category") or template.get("category") or "DFIR").strip()
         template["docker_enabled"] = _as_bool(request.form.get("docker_enabled") or "0")
         template["docker_image"] = (request.form.get("docker_image") or "").strip()
@@ -2965,6 +3000,7 @@ def sherlocks_admin_add():
         "sherlocks/add.html",
         docker_images=docker_images,
         docker_images_error=docker_images_error,
+        difficulty_options=SHERLOCK_DIFFICULTY_OPTIONS,
     )
 
 
@@ -3013,7 +3049,9 @@ def sherlocks_admin_manage():
                 {
                     "slug": slug,
                     "title": title,
-                    "difficulty": (difficulties[i] if i < len(difficulties) else "Very Easy").strip(),
+                    "difficulty": _normalize_sherlock_difficulty(
+                        difficulties[i] if i < len(difficulties) else "Very Easy"
+                    ),
                     "category": (categories[i] if i < len(categories) else "DFIR").strip(),
                     "rating": float(ratings[i]) if i < len(ratings) and ratings[i] else 0,
                     "rating_count": _safe_int(rating_counts[i] if i < len(rating_counts) else 0, 0),
@@ -3045,6 +3083,7 @@ def sherlocks_admin_manage():
         sherlocks=sherlocks,
         docker_images=docker_images,
         docker_images_error=docker_images_error,
+        difficulty_options=SHERLOCK_DIFFICULTY_OPTIONS,
     )
 
 
@@ -3067,6 +3106,8 @@ def machines_admin_add():
                 error="Title is required",
                 docker_images=docker_images,
                 docker_images_error=docker_images_error,
+                difficulty_options=MACHINE_DIFFICULTY_OPTIONS,
+                os_options=MACHINE_OS_OPTIONS,
             )
 
         base_slug = _slugify((request.form.get("slug") or "").strip() or title) or "machine"
@@ -3102,8 +3143,10 @@ def machines_admin_add():
 
         template["slug"] = slug
         template["title"] = title
-        template["difficulty"] = (request.form.get("difficulty") or template.get("difficulty") or "Easy").strip()
-        template["os"] = (request.form.get("os") or template.get("os") or "Linux").strip()
+        template["difficulty"] = _normalize_machine_difficulty(
+            request.form.get("difficulty") or template.get("difficulty")
+        )
+        template["os"] = _normalize_os(request.form.get("os") or template.get("os"))
         template["release_date"] = (request.form.get("release_date") or template.get("release_date") or "").strip()
         template["rating"] = _safe_float(request.form.get("rating"), _safe_float(template.get("rating"), 0.0))
         template["rating_count"] = _safe_int(request.form.get("rating_count"), _safe_int(template.get("rating_count"), 0))
@@ -3130,6 +3173,8 @@ def machines_admin_add():
         "machines/add.html",
         docker_images=docker_images,
         docker_images_error=docker_images_error,
+        difficulty_options=MACHINE_DIFFICULTY_OPTIONS,
+        os_options=MACHINE_OS_OPTIONS,
     )
 
 
@@ -3211,8 +3256,10 @@ def machines_admin_manage():
             machine = {
                 "slug": slug,
                 "title": title,
-                "difficulty": (difficulties[i] if i < len(difficulties) else "Easy").strip(),
-                "os": (os_values[i] if i < len(os_values) else "Linux").strip(),
+                "difficulty": _normalize_machine_difficulty(
+                    difficulties[i] if i < len(difficulties) else "Easy"
+                ),
+                "os": _normalize_os(os_values[i] if i < len(os_values) else "Linux"),
                 "rating": float(ratings[i]) if i < len(ratings) and ratings[i] else 0,
                 "rating_count": _safe_int(rating_counts[i] if i < len(rating_counts) else 0, 0),
                 "user_solves": _safe_int(user_solves[i] if i < len(user_solves) else 0, 0),
@@ -3250,6 +3297,8 @@ def machines_admin_manage():
         machines=machines,
         docker_images=docker_images,
         docker_images_error=docker_images_error,
+        difficulty_options=MACHINE_DIFFICULTY_OPTIONS,
+        os_options=MACHINE_OS_OPTIONS,
     )
 
 

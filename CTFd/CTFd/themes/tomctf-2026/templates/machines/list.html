@@ -113,6 +113,15 @@
   </style>
 
   <div class="machines-list-hero">
+    {% set ns = namespace(difficulties=[], os_values=[]) %}
+    {% for m in machines %}
+      {% if m.difficulty and m.difficulty not in ns.difficulties %}
+        {% set ns.difficulties = ns.difficulties + [m.difficulty] %}
+      {% endif %}
+      {% if m.os and m.os not in ns.os_values %}
+        {% set ns.os_values = ns.os_values + [m.os] %}
+      {% endif %}
+    {% endfor %}
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
       <div>
         <h1 class="mb-1">Machines</h1>
@@ -132,8 +141,8 @@
           <option value="Unowned">Unowned</option>
         </select>
       </div>
-      <div class="col-lg-2"><select id="difficulty-filter" class="form-select machines-filter-control"><option value="">All Difficulties</option>{% for m in machines %}<option value="{{ m.difficulty }}">{{ m.difficulty }}</option>{% endfor %}</select></div>
-      <div class="col-lg-2"><select id="os-filter" class="form-select machines-filter-control"><option value="">All OS</option>{% for m in machines %}<option value="{{ m.os }}">{{ m.os }}</option>{% endfor %}</select></div>
+      <div class="col-lg-2"><select id="difficulty-filter" class="form-select machines-filter-control"><option value="">All Difficulties</option>{% for value in ns.difficulties %}<option value="{{ value }}">{{ value }}</option>{% endfor %}</select></div>
+      <div class="col-lg-2"><select id="os-filter" class="form-select machines-filter-control"><option value="">All OS</option>{% for value in ns.os_values %}<option value="{{ value }}">{{ value }}</option>{% endfor %}</select></div>
     </div>
   </div>
 

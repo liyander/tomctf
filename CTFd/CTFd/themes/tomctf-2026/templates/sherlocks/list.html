@@ -104,6 +104,15 @@
   </style>
 
   <div class="sherlocks-hero">
+    {% set ns = namespace(difficulties=[], categories=[]) %}
+    {% for s in sherlocks %}
+      {% if s.difficulty and s.difficulty not in ns.difficulties %}
+        {% set ns.difficulties = ns.difficulties + [s.difficulty] %}
+      {% endif %}
+      {% if s.category and s.category not in ns.categories %}
+        {% set ns.categories = ns.categories + [s.category] %}
+      {% endif %}
+    {% endfor %}
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
       <div>
         <h1 class="mb-1">Sherlocks</h1>
@@ -115,8 +124,8 @@
     <div class="row g-2 align-items-center">
       <div class="col-lg-4"><input id="sherlock-search" class="form-control sherlock-filter" placeholder="Search Sherlocks..."></div>
       <div class="col-lg-2"><select id="sherlock-status" class="form-select sherlock-filter"><option value="">Status - Both</option><option value="Started">Started</option><option value="Unstarted">Unstarted</option></select></div>
-      <div class="col-lg-2"><select id="sherlock-difficulty" class="form-select sherlock-filter"><option value="">All Difficulties</option>{% for s in sherlocks %}<option value="{{ s.difficulty }}">{{ s.difficulty }}</option>{% endfor %}</select></div>
-      <div class="col-lg-2"><select id="sherlock-category" class="form-select sherlock-filter"><option value="">All Categories</option>{% for s in sherlocks %}<option value="{{ s.category }}">{{ s.category }}</option>{% endfor %}</select></div>
+      <div class="col-lg-2"><select id="sherlock-difficulty" class="form-select sherlock-filter"><option value="">All Difficulties</option>{% for value in ns.difficulties %}<option value="{{ value }}">{{ value }}</option>{% endfor %}</select></div>
+      <div class="col-lg-2"><select id="sherlock-category" class="form-select sherlock-filter"><option value="">All Categories</option>{% for value in ns.categories %}<option value="{{ value }}">{{ value }}</option>{% endfor %}</select></div>
     </div>
   </div>
 

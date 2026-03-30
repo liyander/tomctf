@@ -56,7 +56,14 @@
           <div class="form-row">
             <div class="form-group col-md-3"><label>Slug</label><input class="form-control" name="slug[]" value="{{ sherlock.slug }}"></div>
             <div class="form-group col-md-3"><label>Title</label><input class="form-control" name="title[]" value="{{ sherlock.title }}" required></div>
-            <div class="form-group col-md-2"><label>Difficulty</label><input class="form-control" name="difficulty[]" value="{{ sherlock.difficulty }}"></div>
+            <div class="form-group col-md-2">
+              <label>Difficulty</label>
+              <select class="form-control custom-select" name="difficulty[]">
+                {% for option in difficulty_options %}
+                  <option value="{{ option }}" {% if sherlock.difficulty == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+              </select>
+            </div>
             <div class="form-group col-md-2"><label>Category</label><input class="form-control" name="category[]" value="{{ sherlock.category }}"></div>
             <div class="form-group col-md-2"><label>Release Date</label><input class="form-control" name="release_date[]" value="{{ sherlock.release_date }}"></div>
           </div>
@@ -163,7 +170,14 @@
         <div class="form-row">
           <div class="form-group col-md-3"><label>Slug</label><input class="form-control" name="slug[]"></div>
           <div class="form-group col-md-3"><label>Title</label><input class="form-control" name="title[]" required></div>
-          <div class="form-group col-md-2"><label>Difficulty</label><input class="form-control" name="difficulty[]" value="Very Easy"></div>
+          <div class="form-group col-md-2">
+            <label>Difficulty</label>
+            <select class="form-control custom-select" name="difficulty[]">
+              {% for option in difficulty_options %}
+                <option value="{{ option }}" {% if option == 'Very Easy' %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
+          </div>
           <div class="form-group col-md-2"><label>Category</label><input class="form-control" name="category[]" value="DFIR"></div>
           <div class="form-group col-md-2"><label>Release Date</label><input class="form-control" name="release_date[]"></div>
         </div>

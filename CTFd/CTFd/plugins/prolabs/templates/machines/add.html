@@ -33,14 +33,18 @@
           </div>
           <div class="form-group col-md-2">
             <label>Difficulty</label>
-            <input class="form-control" name="difficulty" value="Easy">
+            <select class="form-control custom-select" name="difficulty">
+              {% for option in difficulty_options %}
+                <option value="{{ option }}" {% if option == 'Easy' %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
           </div>
           <div class="form-group col-md-2">
             <label>OS</label>
-            <select class="form-control" name="os">
-              <option value="Linux" selected>Linux</option>
-              <option value="Windows">Windows</option>
-              <option value="FreeBSD">FreeBSD</option>
+            <select class="form-control custom-select" name="os">
+              {% for option in os_options %}
+                <option value="{{ option }}" {% if option == 'Linux' %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
             </select>
           </div>
           <div class="form-group col-md-2">

@@ -65,11 +65,19 @@
             </div>
             <div class="form-group col-md-2">
               <label>Difficulty</label>
-              <input class="form-control" name="difficulty[]" value="{{ machine.difficulty }}">
+              <select class="form-control custom-select" name="difficulty[]">
+                {% for option in difficulty_options %}
+                  <option value="{{ option }}" {% if machine.difficulty == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+              </select>
             </div>
             <div class="form-group col-md-2">
               <label>OS</label>
-              <input class="form-control" name="os[]" value="{{ machine.os }}">
+              <select class="form-control custom-select" name="os[]">
+                {% for option in os_options %}
+                  <option value="{{ option }}" {% if machine.os == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+              </select>
             </div>
             <div class="form-group col-md-2">
               <label>Release Date</label>
@@ -233,8 +241,22 @@
         <div class="form-row">
           <div class="form-group col-md-3"><label>Slug</label><input class="form-control" name="slug[]"></div>
           <div class="form-group col-md-3"><label>Title</label><input class="form-control" name="title[]" required></div>
-          <div class="form-group col-md-2"><label>Difficulty</label><input class="form-control" name="difficulty[]" value="Easy"></div>
-          <div class="form-group col-md-2"><label>OS</label><input class="form-control" name="os[]" value="Linux"></div>
+          <div class="form-group col-md-2">
+            <label>Difficulty</label>
+            <select class="form-control custom-select" name="difficulty[]">
+              {% for option in difficulty_options %}
+                <option value="{{ option }}" {% if option == 'Easy' %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group col-md-2">
+            <label>OS</label>
+            <select class="form-control custom-select" name="os[]">
+              {% for option in os_options %}
+                <option value="{{ option }}" {% if option == 'Linux' %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
+          </div>
           <div class="form-group col-md-2"><label>Release Date</label><input class="form-control" name="release_date[]"></div>
         </div>
         <div class="form-row">
