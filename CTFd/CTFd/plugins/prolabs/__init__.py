@@ -76,6 +76,9 @@ DEFAULT_PRO_LAB_INFO_TEXT = (
     "- C2 Operations"
 )
 
+PROLAB_CATEGORY_OPTIONS = ["Pro Labs", "Mini Pro Labs"]
+PROLAB_DIFFICULTY_OPTIONS = ["Easy", "Intermediate", "Hard", "APT Level"]
+
 
 class ProLabSubmission(db.Model):
     __tablename__ = "prolab_submissions"
@@ -592,12 +595,32 @@ def _build_display_flags(raw_flags, machines):
     return display_flags
 
 
+def _normalize_prolab_category(value):
+    raw_value = (value or "").strip().lower()
+    if raw_value == "mini pro labs":
+        return "Mini Pro Labs"
+    return "Pro Labs"
+
+
+def _normalize_prolab_difficulty(value):
+    raw_value = (value or "").strip().lower()
+    mapping = {
+        "easy": "Easy",
+        "intermediate": "Intermediate",
+        "hard": "Hard",
+        "advanced": "Hard",
+        "apt level": "APT Level",
+        "apt": "APT Level",
+    }
+    return mapping.get(raw_value, "Intermediate")
+
+
 def _normalize_lab(raw, fallback_index, level_rules=None):
     title = (raw.get("title") or f"Lab {fallback_index + 1}").strip()
     slug = _slugify(raw.get("slug") or title) or f"lab-{fallback_index + 1}"
 
-    category = (raw.get("category") or "Pro Labs").strip()
-    difficulty = (raw.get("difficulty") or "Intermediate").strip()
+    category = _normalize_prolab_category(raw.get("category"))
+    difficulty = _normalize_prolab_difficulty(raw.get("difficulty"))
     is_free = bool(raw.get("is_free"))
     cover_image = (raw.get("cover_image") or "").strip()
     logo_image = (raw.get("logo_image") or "").strip()
@@ -762,7 +785,13 @@ def prolab_admin_add():
         title = (request.form.get("title") or "").strip()
         if not title:
             level_rules = get_level_rules()
-            return render_template("prolabs/add.html", error="Title is required", levels=level_rules)
+            return render_template(
+                "prolabs/add.html",
+                error="Title is required",
+                levels=level_rules,
+                category_options=PROLAB_CATEGORY_OPTIONS,
+                difficulty_options=PROLAB_DIFFICULTY_OPTIONS,
+            )
 
         base_slug = _slugify((request.form.get("slug") or "").strip() or title) or "prolab"
         labs = _load_raw_config_list("pro_red_team_labs", DEFAULT_PROLABS)
@@ -788,8 +817,8 @@ def prolab_admin_add():
         template = json.loads(json.dumps(DEFAULT_PROLABS[0] if DEFAULT_PROLABS else {}))
         template["slug"] = slug
         template["title"] = title
-        template["category"] = (request.form.get("category") or template.get("category") or "Pro Labs").strip()
-        template["difficulty"] = (request.form.get("difficulty") or template.get("difficulty") or "Intermediate").strip()
+        template["category"] = _normalize_prolab_category(request.form.get("category") or template.get("category"))
+        template["difficulty"] = _normalize_prolab_difficulty(request.form.get("difficulty") or template.get("difficulty"))
         template["is_free"] = _as_bool(request.form.get("is_free") or "0")
         template["cover_image"] = (request.form.get("cover_image") or template.get("cover_image") or "").strip()
         template["logo_image"] = (request.form.get("logo_image") or template.get("logo_image") or "").strip()
@@ -816,7 +845,12 @@ def prolab_admin_add():
         return redirect(url_for("prolabs.prolab_admin_manage", saved=1, _anchor=f"lab-{slug}"))
 
     level_rules = get_level_rules()
-    return render_template("prolabs/add.html", levels=level_rules)
+    return render_template(
+        "prolabs/add.html",
+        levels=level_rules,
+        category_options=PROLAB_CATEGORY_OPTIONS,
+        difficulty_options=PROLAB_DIFFICULTY_OPTIONS,
+    )
 
 
 @prolabs.route("/pro-red-team-labs", methods=["GET"])
@@ -1073,8 +1107,8 @@ def prolab_admin_manage():
                 {
                     "slug": (slugs[i] if i < len(slugs) else "").strip(),
                     "title": title,
-                    "category": (categories[i] if i < len(categories) else "Pro Labs").strip(),
-                    "difficulty": (difficulties[i] if i < len(difficulties) else "Intermediate").strip(),
+                    "category": _normalize_prolab_category(categories[i] if i < len(categories) else "Pro Labs"),
+                    "difficulty": _normalize_prolab_difficulty(difficulties[i] if i < len(difficulties) else "Intermediate"),
                     "is_free": is_free,
                     "cover_image": (covers[i] if i < len(covers) else "").strip(),
                     "logo_image": (logos[i] if i < len(logos) else "").strip(),
@@ -1101,7 +1135,13 @@ def prolab_admin_manage():
         return redirect(url_for("prolabs.prolab_admin_manage", saved=1))
 
     labs = get_prolabs()
-    return render_template("prolabs/admin.html", labs=labs, levels=level_rules)
+    return render_template(
+        "prolabs/admin.html",
+        labs=labs,
+        levels=level_rules,
+        category_options=PROLAB_CATEGORY_OPTIONS,
+        difficulty_options=PROLAB_DIFFICULTY_OPTIONS,
+    )
 
 
 @prolabs.route("/admin/prolabs/levels", methods=["GET", "POST"])
