@@ -1,0 +1,54 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+  <div class="container">
+    <h1>Adversary Operations Admin</h1>
+    <p>Select an operation to open the full editor in a new tab.</p>
+    {% if request.args.get('saved') %}
+      <div class="alert alert-success mt-3">Adversary Operations updated successfully.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <a class="btn btn-success" href="{{ url_for('prolabs.adversary_operations_admin_add') }}">Add Operation</a>
+    <a class="btn btn-primary" href="{{ url_for('prolabs.adversary_operations_admin_manage') }}">Open Full Editor</a>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><strong>Adversary Operations</strong></div>
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Slug</th>
+            <th>Difficulty</th>
+            <th>Category</th>
+            <th style="width: 160px;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for operation in operations %}
+          <tr>
+            <td>{{ operation.title }}</td>
+            <td>{{ operation.slug }}</td>
+            <td>{{ operation.difficulty }}</td>
+            <td>{{ operation.category }}</td>
+            <td>
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('prolabs.adversary_operations_admin_manage') }}#adversary-operation-{{ operation.slug }}">Open Editor</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-4">No operations configured.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

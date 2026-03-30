@@ -163,6 +163,25 @@ class CVESubmission(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+class AdversaryOperationSubmission(db.Model):
+    __tablename__ = "adversary_operation_submissions"
+    __table_args__ = (
+        db.UniqueConstraint("operation_slug", "entry_id", "user_id"),
+        db.UniqueConstraint("operation_slug", "entry_id", "team_id"),
+        {},
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    operation_slug = db.Column(db.String(128), index=True, nullable=False)
+    entry_id = db.Column(db.String(128), index=True, nullable=False)
+    provided = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(32), nullable=False, default="incorrect")
+    ip = db.Column(db.String(46), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    team_id = db.Column(db.Integer, db.ForeignKey("teams.id", ondelete="CASCADE"), nullable=True)
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 MACHINES_CONFIG_KEY = "boot2root_machines"
 
 DEFAULT_BOOT2ROOT_MACHINES = [
@@ -220,6 +239,32 @@ DEFAULT_SHERLOCKS = [
                 "question": "Analyze auth.log. What is the source IP used for brute force?",
                 "hint": "Look for repeated failed password attempts.",
                 "answer": "127.0.0.1",
+                "points": 20,
+            }
+        ],
+    }
+]
+
+ADVERSARY_OPERATIONS_CONFIG_KEY = "prolab_adversary_operations"
+
+DEFAULT_ADVERSARY_OPERATIONS = [
+    {
+        "slug": "blackout-ledger",
+        "title": "Blackout Ledger",
+        "difficulty": "Medium",
+        "category": "Adversary Operations",
+        "rating": 4.5,
+        "rating_count": 128,
+        "solves": 1420,
+        "release_date": "01 Jan 2025",
+        "description": "## Operation Brief\nInvestigate an active adversary campaign and answer mission tasks to build the attack timeline.",
+        "tasks": [
+            {
+                "id": "task-1",
+                "title": "Task 1",
+                "question": "What command-and-control protocol was identified first?",
+                "hint": "Review the earliest beacon traces.",
+                "answer": "https",
                 "points": 20,
             }
         ],
@@ -1409,6 +1454,27 @@ def _normalize_sherlock(raw, index):
     }
 
 
+def _normalize_adversary_operation(raw, index):
+    title = (raw.get("title") or f"Adversary Operation {index + 1}").strip()
+    slug = _slugify(raw.get("slug") or title) or f"adversary-operation-{index + 1}"
+    description = (raw.get("description") or "").strip()
+    tasks = _normalize_sherlock_tasks(raw.get("tasks", []))
+
+    return {
+        "slug": slug,
+        "title": title,
+        "difficulty": _normalize_sherlock_difficulty(raw.get("difficulty")),
+        "category": (raw.get("category") or "Adversary Operations").strip(),
+        "rating": _safe_float(raw.get("rating", 0), 0.0),
+        "rating_count": _safe_int(raw.get("rating_count", 0), 0),
+        "solves": _safe_int(raw.get("solves", 0), 0),
+        "release_date": (raw.get("release_date") or "").strip(),
+        "description": description,
+        "description_html": build_markdown(description, sanitize=True),
+        "tasks": tasks,
+    }
+
+
 def get_sherlocks():
     configured = get_config(SHERLOCKS_CONFIG_KEY)
     if not configured:
@@ -1431,6 +1497,34 @@ def get_sherlocks():
     return sherlocks
 
 
+def get_adversary_operations():
+    configured = get_config(ADVERSARY_OPERATIONS_CONFIG_KEY)
+    if not configured:
+        return [
+            _normalize_adversary_operation(item, index)
+            for index, item in enumerate(DEFAULT_ADVERSARY_OPERATIONS)
+        ]
+
+    try:
+        data = json.loads(configured)
+        if not isinstance(data, list):
+            raise ValueError("Expected list")
+    except Exception:
+        data = DEFAULT_ADVERSARY_OPERATIONS
+
+    operations = []
+    for index, item in enumerate(data):
+        if isinstance(item, dict):
+            operations.append(_normalize_adversary_operation(item, index))
+
+    if not operations:
+        operations = [
+            _normalize_adversary_operation(item, index)
+            for index, item in enumerate(DEFAULT_ADVERSARY_OPERATIONS)
+        ]
+    return operations
+
+
 def _get_sherlock_submissions(sherlock_slug):
     user, team, scope = _get_current_account_scope()
     if user is None:
@@ -1450,6 +1544,40 @@ def _find_sherlock_task(sherlock, entry_id):
         if task.get("id") == entry_id:
             return task
     return None
+
+
+def _get_adversary_operation_submissions(operation_slug):
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        return {}
+
+    query = AdversaryOperationSubmission.query.filter_by(
+        operation_slug=operation_slug,
+        status="correct",
+    )
+    if scope == "team":
+        query = query.filter_by(team_id=team.id)
+    else:
+        query = query.filter_by(user_id=user.id)
+
+    return {row.entry_id: row for row in query.all()}
+
+
+def _find_adversary_operation_task(operation, entry_id):
+    for task in operation.get("tasks", []):
+        if task.get("id") == entry_id:
+            return task
+    return None
+
+
+def _get_adversary_operation_progress(operation):
+    tasks = operation.get("tasks", [])
+    total = len(tasks)
+    if total == 0:
+        return 0
+    solved = _get_adversary_operation_submissions(operation["slug"])
+    solved_count = sum(1 for task in tasks if task.get("id") in solved)
+    return int((solved_count / total) * 100)
 
 
 def _normalize_cve_references(raw_refs):
@@ -2965,6 +3093,151 @@ def sherlocks_submit(slug):
     }
 
 
+@prolabs.route("/adversary-operations", methods=["GET"])
+@authed_only
+def adversary_operations_listing():
+    operations = get_adversary_operations()
+    for operation in operations:
+        operation["progress"] = _get_adversary_operation_progress(operation)
+    return render_template("adversary_operations/list.html", operations=operations)
+
+
+@prolabs.route("/adversary-operations/<slug>", methods=["GET"])
+@authed_only
+def adversary_operations_detail(slug):
+    operations = get_adversary_operations()
+    operation = next((item for item in operations if item["slug"] == slug), None)
+    if not operation:
+        abort(404)
+
+    solved = _get_adversary_operation_submissions(slug)
+    operation["solved_task_ids"] = [task_id for task_id in solved.keys()]
+    operation["progress"] = _get_adversary_operation_progress(operation)
+    return render_template("adversary_operations/detail.html", operation=operation)
+
+
+@prolabs.route("/api/v1/adversary-operations/<slug>/submit", methods=["POST"])
+@authed_only
+def adversary_operations_submit(slug):
+    req = request.form or request.get_json(silent=True) or {}
+    entry_id = (req.get("entry_id") or "").strip()
+    answer = (req.get("answer") or "").strip()
+
+    if not entry_id or not answer:
+        return {"success": False, "errors": {"message": "Missing entry_id or answer"}}, 400
+
+    operations = get_adversary_operations()
+    operation = next((item for item in operations if item["slug"] == slug), None)
+    if not operation:
+        return {"success": False, "errors": {"message": "Operation not found"}}, 404
+
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        return {"success": False, "errors": {"message": "Authentication required"}}, 403
+
+    if not (ctftime() or is_admin()):
+        return {"success": False, "errors": {"message": "Submissions are closed"}}, 403
+
+    task = _find_adversary_operation_task(operation, entry_id)
+    if task is None:
+        return {"success": False, "errors": {"message": "Unknown task"}}, 404
+
+    scoped_query = AdversaryOperationSubmission.query.filter_by(
+        operation_slug=slug,
+        entry_id=entry_id,
+    )
+    if scope == "team":
+        scoped_query = scoped_query.filter_by(team_id=team.id)
+    else:
+        scoped_query = scoped_query.filter_by(user_id=user.id)
+
+    existing = scoped_query.first()
+    if existing is not None and existing.status == "correct":
+        return {
+            "success": True,
+            "data": {
+                "status": "already_solved",
+                "message": "Correct but you already solved this task",
+                "total_score": _get_current_account_score(),
+                "progress": _get_adversary_operation_progress(operation),
+            },
+        }
+
+    expected = task.get("answer", "")
+    is_correct = expected and answer == expected
+    points = _safe_points(task.get("points", 0))
+
+    if existing is None:
+        row = AdversaryOperationSubmission(
+            operation_slug=slug,
+            entry_id=entry_id,
+            provided=answer,
+            status="correct" if is_correct else "incorrect",
+            ip=get_ip(req=request),
+            user_id=user.id,
+            team_id=team.id if team else None,
+        )
+        db.session.add(row)
+    else:
+        existing.provided = answer
+        existing.status = "correct" if is_correct else "incorrect"
+        existing.ip = get_ip(req=request)
+        existing.user_id = user.id
+        existing.team_id = team.id if team else None
+        existing.date = datetime.utcnow()
+
+    if is_correct and points > 0:
+        db.session.add(
+            Awards(
+                user_id=user.id,
+                team_id=team.id if team else None,
+                name=f"{operation['title']} - {task.get('title', entry_id)}"[:80],
+                description=f"Solved {entry_id} in {operation['title']}",
+                value=points,
+                category="Adversary Operations",
+                icon="fas fa-crosshairs",
+            )
+        )
+
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return {
+            "success": True,
+            "data": {
+                "status": "already_solved",
+                "message": "Correct but you already solved this task",
+                "total_score": _get_current_account_score(),
+                "progress": _get_adversary_operation_progress(operation),
+            },
+        }
+
+    if is_correct:
+        if points > 0:
+            clear_standings()
+        return {
+            "success": True,
+            "data": {
+                "status": "correct",
+                "message": f"Correct (+{points} pts)" if points > 0 else "Correct",
+                "points": points,
+                "total_score": _get_current_account_score(),
+                "progress": _get_adversary_operation_progress(operation),
+            },
+        }
+
+    return {
+        "success": True,
+        "data": {
+            "status": "incorrect",
+            "message": "Incorrect",
+            "total_score": _get_current_account_score(),
+            "progress": _get_adversary_operation_progress(operation),
+        },
+    }
+
+
 @prolabs.route("/admin/sherlocks", methods=["GET"])
 @admins_only
 def sherlocks_admin_list():
@@ -3096,6 +3369,153 @@ def sherlocks_admin_manage():
         docker_images=docker_images,
         docker_images_error=docker_images_error,
         difficulty_options=SHERLOCK_DIFFICULTY_OPTIONS,
+    )
+
+
+@prolabs.route("/admin/adversary-operations", methods=["GET"])
+@admins_only
+def adversary_operations_admin_list():
+    operations = get_adversary_operations()
+    return render_template("adversary_operations/admin_list.html", operations=operations)
+
+
+@prolabs.route("/admin/adversary-operations/add", methods=["GET", "POST"])
+@admins_only
+def adversary_operations_admin_add():
+    if request.method == "POST":
+        title = (request.form.get("title") or "").strip()
+        if not title:
+            return render_template(
+                "adversary_operations/add.html",
+                error="Title is required",
+                difficulty_options=SHERLOCK_DIFFICULTY_OPTIONS,
+            )
+
+        base_slug = _slugify((request.form.get("slug") or "").strip() or title) or "adversary-operation"
+        operations = _load_raw_config_list(ADVERSARY_OPERATIONS_CONFIG_KEY, DEFAULT_ADVERSARY_OPERATIONS)
+        existing_slugs = {
+            _slugify((item or {}).get("slug", ""))
+            for item in operations
+            if isinstance(item, dict)
+        }
+        slug = _ensure_unique_slug(base_slug, existing_slugs)
+
+        template = json.loads(json.dumps(DEFAULT_ADVERSARY_OPERATIONS[0] if DEFAULT_ADVERSARY_OPERATIONS else {}))
+        template["slug"] = slug
+        template["title"] = title
+        template["difficulty"] = _normalize_sherlock_difficulty(
+            request.form.get("difficulty") or template.get("difficulty")
+        )
+        template["category"] = (
+            request.form.get("category") or template.get("category") or "Adversary Operations"
+        ).strip()
+
+        operations.append(template)
+        set_config(ADVERSARY_OPERATIONS_CONFIG_KEY, json.dumps(operations))
+        return redirect(
+            url_for(
+                "prolabs.adversary_operations_admin_manage",
+                saved=1,
+                _anchor=f"adversary-operation-{slug}",
+            )
+        )
+
+    return render_template(
+        "adversary_operations/add.html",
+        difficulty_options=SHERLOCK_DIFFICULTY_OPTIONS,
+    )
+
+
+@prolabs.route("/admin/adversary-operations/manage", methods=["GET", "POST"])
+@admins_only
+def adversary_operations_admin_manage():
+    if request.method == "POST":
+        slugs = request.form.getlist("slug[]")
+        titles = request.form.getlist("title[]")
+        difficulties = request.form.getlist("difficulty[]")
+        categories = request.form.getlist("category[]")
+        ratings = request.form.getlist("rating[]")
+        rating_counts = request.form.getlist("rating_count[]")
+        solves = request.form.getlist("solves[]")
+        release_dates = request.form.getlist("release_date[]")
+        descriptions = request.form.getlist("description[]")
+        tasks_values = request.form.getlist("tasks[]")
+
+        row_count = max(
+            len(slugs),
+            len(titles),
+            len(difficulties),
+            len(categories),
+            len(descriptions),
+            len(tasks_values),
+        )
+
+        operations = []
+        for i in range(row_count):
+            title = (titles[i] if i < len(titles) else "").strip()
+            if not title:
+                continue
+
+            slug = _slugify((slugs[i] if i < len(slugs) else "").strip() or title)
+            try:
+                parsed_tasks = json.loads(tasks_values[i] if i < len(tasks_values) else "[]")
+            except Exception:
+                parsed_tasks = []
+
+            operations.append(
+                {
+                    "slug": slug,
+                    "title": title,
+                    "difficulty": _normalize_sherlock_difficulty(
+                        difficulties[i] if i < len(difficulties) else "Very Easy"
+                    ),
+                    "category": (
+                        categories[i] if i < len(categories) else "Adversary Operations"
+                    ).strip(),
+                    "rating": float(ratings[i]) if i < len(ratings) and ratings[i] else 0,
+                    "rating_count": _safe_int(rating_counts[i] if i < len(rating_counts) else 0, 0),
+                    "solves": _safe_int(solves[i] if i < len(solves) else 0, 0),
+                    "release_date": (release_dates[i] if i < len(release_dates) else "").strip(),
+                    "description": (descriptions[i] if i < len(descriptions) else "").strip(),
+                    "tasks": _normalize_sherlock_tasks(parsed_tasks),
+                }
+            )
+
+        if not operations:
+            operations = DEFAULT_ADVERSARY_OPERATIONS
+
+        set_config(ADVERSARY_OPERATIONS_CONFIG_KEY, json.dumps(operations))
+        return redirect(url_for("prolabs.adversary_operations_admin_manage", saved=1))
+
+    operations = get_adversary_operations()
+    return render_template(
+        "adversary_operations/admin.html",
+        operations=operations,
+        difficulty_options=SHERLOCK_DIFFICULTY_OPTIONS,
+    )
+
+
+@prolabs.route("/admin/adversary-operations/submissions", methods=["GET"])
+@admins_only
+def adversary_operations_admin_submissions():
+    page = abs(request.args.get("page", 1, type=int))
+    submissions = AdversaryOperationSubmission.query.order_by(
+        AdversaryOperationSubmission.date.desc()
+    ).paginate(
+        page=page,
+        per_page=50,
+        error_out=False,
+    )
+
+    operations = {item["slug"]: item["title"] for item in get_adversary_operations()}
+
+    return render_template(
+        "adversary_operations/admin_submissions.html",
+        submissions=submissions,
+        operations=operations,
+        type="Adversary Operations",
+        prev_page=request.endpoint and url_for(request.endpoint, page=submissions.prev_num) or "#",
+        next_page=request.endpoint and url_for(request.endpoint, page=submissions.next_num) or "#",
     )
 
 
@@ -4003,6 +4423,8 @@ def load(app):
     register_admin_plugin_menu_bar("Machine Submissions", "/admin/machines/submissions")
     register_admin_plugin_menu_bar("Sherlocks", "/admin/sherlocks")
     register_admin_plugin_menu_bar("Sherlock Submissions", "/admin/sherlocks/submissions")
+    register_admin_plugin_menu_bar("Adversary Operations", "/admin/adversary-operations")
+    register_admin_plugin_menu_bar("Adversary Submissions", "/admin/adversary-operations/submissions")
     register_admin_plugin_menu_bar("CVEs", "/admin/cves")
     register_admin_plugin_menu_bar("CVE Submissions", "/admin/cves/submissions")
     register_admin_plugin_menu_bar("Player Dashboards", "/admin/player-dashboard")

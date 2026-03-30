@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="container py-4 py-lg-5 sherlock-detail-page">
+  <style>
+    .sherlock-detail-page { max-width: 1240px; }
+    .sherlock-detail-page .text-secondary { color: #9fb5b9 !important; }
+    .sherlock-shell {
+      border: 1px solid rgba(84, 114, 168, 0.22);
+      background: linear-gradient(180deg, rgba(6, 10, 16, 0.88), rgba(8, 8, 10, 0.95));
+      border-radius: 1rem;
+      padding: 1.65rem;
+    }
+    .sherlock-tab-nav { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1.2rem; }
+    .sherlock-tab-btn { border: 1px solid rgba(255,255,255,0.13); background: rgba(12,16,24,0.85); color: #deecea; border-radius: 999px; padding: 0.5rem 1.05rem; font-weight: 700; }
+    .sherlock-tab-btn.is-active { background: linear-gradient(120deg, #1f8570, #256f60); color:#fff; }
+    .sherlock-panel { display: none; }
+    .sherlock-panel.is-active { display: block; }
+    .sherlock-card { border-radius: 1rem; border: 1px solid rgba(255,255,255,0.11); background: linear-gradient(160deg, rgba(8,14,20,0.78), rgba(12,13,16,0.92)); margin-bottom: 1.15rem; }
+    .sherlock-card .card-body { padding: 1.35rem; }
+    .sherlock-task-title { color: #8faad7; font-weight: 700; margin-bottom: 0.65rem; font-size: 1.1rem; }
+    .sherlock-form-control { background: rgba(10,13,18,0.9); border: 1px solid rgba(168,50,50,0.5); color: #e8f2f1; border-radius: 0.8rem; min-height: 48px; }
+    .sherlock-btn-primary { background: #c3ff00; border: 1px solid rgba(195,255,0,0.6); color: #0f1f09; font-weight: 800; border-radius: 0.7rem; min-height: 48px; min-width: 150px; }
+  </style>
+
+  <div class="p-4 p-lg-5 rounded-4 glass-effect border border-secondary border-opacity-25 mb-4">
+    <div class="d-flex justify-content-between gap-3 flex-wrap align-items-center">
+      <div>
+        <div class="text-uppercase text-primary fw-semibold small mb-2">Adversary Operations</div>
+        <h1 class="display-6 fw-bold mb-1">{{ operation.title }}</h1>
+        <div class="text-danger fw-semibold">{{ operation.difficulty }}</div>
+      </div>
+      <a href="{{ url_for('prolabs.adversary_operations_listing') }}" class="btn btn-outline-light btn-sm">Back</a>
+    </div>
+  </div>
+
+  <div class="sherlock-shell">
+    <div class="sherlock-tab-nav" data-tab-group="adversary-tabs">
+      <button type="button" class="sherlock-tab-btn is-active" data-tab-target="play">Play Operation</button>
+      <button type="button" class="sherlock-tab-btn" data-tab-target="brief">Operation Brief</button>
+    </div>
+
+    <div class="sherlock-panel is-active" data-tab-panel="play">
+      {% for task in operation.tasks %}
+      <div class="sherlock-card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="sherlock-task-title">{{ task.title }}</div>
+            {% if task.hint %}
+              <span class="badge bg-secondary">Hint: {{ task.hint }}</span>
+            {% endif %}
+          </div>
+          <p class="mb-3">{{ task.question }}</p>
+          <div class="d-flex gap-2 flex-wrap">
+            <input class="form-control sherlock-form-control flex-grow-1 adversary-task-input" data-entry-id="{{ task.id }}" placeholder="Enter answer" {% if task.id in operation.solved_task_ids %}disabled{% endif %}>
+            <button class="btn sherlock-btn-primary adversary-task-submit" data-entry-id="{{ task.id }}" {% if task.id in operation.solved_task_ids %}disabled{% endif %}>Submit Task</button>
+          </div>
+          <small class="text-secondary adversary-task-feedback" data-entry-id="{{ task.id }}">{% if task.id in operation.solved_task_ids %}Already solved.{% endif %}</small>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="sherlock-panel" data-tab-panel="brief">
+      <div class="sherlock-card"><div class="card-body markdown-body">{{ operation.description_html | safe }}</div></div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const submitUrl = "{{ url_for('prolabs.adversary_operations_submit', slug=operation.slug) }}";
+
+  const tabButtons = Array.from(document.querySelectorAll('[data-tab-group="adversary-tabs"] [data-tab-target]'));
+  const tabPanels = Array.from(document.querySelectorAll('[data-tab-panel]'));
+  tabButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      tabButtons.forEach((node) => node.classList.toggle('is-active', node === btn));
+      tabPanels.forEach((panel) => panel.classList.toggle('is-active', panel.dataset.tabPanel === btn.dataset.tabTarget));
+    });
+  });
+
+  const submitTask = async (entryId, value, feedback) => {
+    if (!value) {
+      feedback.textContent = 'Please enter an answer.';
+      return;
+    }
+    try {
+      const res = await fetch(submitUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'CSRF-Token': window.init?.csrfNonce || ''
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({ entry_id: entryId, answer: value })
+      });
+      const body = await res.json();
+      const msg = body?.data?.message || body?.errors?.message || 'Submission processed.';
+      const total = body?.data?.total_score;
+      const progress = body?.data?.progress;
+      feedback.textContent = Number.isFinite(total)
+        ? `${msg} | Total Score: ${total}${Number.isFinite(progress) ? ` | Progress: ${progress}%` : ''}`
+        : msg;
+    } catch {
+      feedback.textContent = 'Submission failed.';
+    }
+  };
+
+  Array.from(document.querySelectorAll('.adversary-task-submit')).forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const entryId = btn.dataset.entryId;
+      const input = document.querySelector(`.adversary-task-input[data-entry-id='${entryId}']`);
+      const feedback = document.querySelector(`.adversary-task-feedback[data-entry-id='${entryId}']`);
+      submitTask(entryId, (input?.value || '').trim(), feedback);
+    });
+  });
+})();
+</script>
+{% endblock %}
