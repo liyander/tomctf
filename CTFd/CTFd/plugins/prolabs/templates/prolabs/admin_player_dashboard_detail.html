@@ -1,0 +1,172 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+  <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <h1>Player Dashboard</h1>
+      <p class="mb-0">Detailed progress for {{ stats.account_name }}</p>
+    </div>
+    <a class="btn btn-outline-secondary" href="{{ url_for('prolabs.admin_player_dashboard_list') }}">Back to Player List</a>
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="row g-3 mb-3">
+    <div class="col-lg-3 col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="text-muted small">Current Score</div>
+          <div class="h3 mb-0">{{ stats.current_score|int }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="text-muted small">Global Rank</div>
+          <div class="h3 mb-0">{% if stats.global_rank %}#{{ stats.global_rank }}{% else %}-{% endif %}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="text-muted small">Flags Solved</div>
+          <div class="h3 mb-0">{{ stats.flags_solved }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="text-muted small">Scope</div>
+          <div class="h3 mb-0">{{ stats.scope|title }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header">
+      <strong>Category Progress</strong>
+    </div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-lg-3 col-md-6">
+          <div class="border rounded p-3 h-100">
+            <div class="text-muted small">Machines</div>
+            <div class="h5 mb-1">{{ stats.machines.user_flags }} / {{ stats.machines.total }}</div>
+            <div class="progress" style="height: 8px;"><div class="progress-bar bg-success js-progress-width" role="progressbar" data-progress="{{ '%.2f'|format(stats.machines.percentage) }}" style="width: 0;"></div></div>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <div class="border rounded p-3 h-100">
+            <div class="text-muted small">Sherlocks</div>
+            <div class="h5 mb-1">{{ stats.sherlocks.completed }} / {{ stats.sherlocks.total }}</div>
+            <div class="progress" style="height: 8px;"><div class="progress-bar bg-info js-progress-width" role="progressbar" data-progress="{{ '%.2f'|format(stats.sherlocks.percentage) }}" style="width: 0;"></div></div>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <div class="border rounded p-3 h-100">
+            <div class="text-muted small">Challenges</div>
+            <div class="h5 mb-1">{{ stats.challenges.completed }} / {{ stats.challenges.total }}</div>
+            <div class="progress" style="height: 8px;"><div class="progress-bar bg-primary js-progress-width" role="progressbar" data-progress="{{ '%.2f'|format(stats.challenges.percentage) }}" style="width: 0;"></div></div>
+          </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+          <div class="border rounded p-3 h-100">
+            <div class="text-muted small">CVEs</div>
+            <div class="h5 mb-1">{{ stats.cves.completed }} / {{ stats.cves.total }}</div>
+            <div class="progress" style="height: 8px;"><div class="progress-bar bg-danger js-progress-width" role="progressbar" data-progress="{{ '%.2f'|format(stats.cves.percentage) }}" style="width: 0;"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-xl-6">
+      <div class="card h-100">
+        <div class="card-header"><strong>Lab Tracks</strong></div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table mb-0">
+              <thead>
+                <tr>
+                  <th>Track</th>
+                  <th>Completed</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Pro Labs</td>
+                  <td>{{ stats.prolabs.categories['Pro Labs'].completed }}</td>
+                  <td>{{ stats.prolabs.categories['Pro Labs'].total }}</td>
+                </tr>
+                <tr>
+                  <td>Mini Pro Labs</td>
+                  <td>{{ stats.prolabs.categories['Mini Pro Labs'].completed }}</td>
+                  <td>{{ stats.prolabs.categories['Mini Pro Labs'].total }}</td>
+                </tr>
+                <tr>
+                  <td>CVEs</td>
+                  <td>{{ stats.prolabs.categories['CVEs'].completed }}</td>
+                  <td>{{ stats.prolabs.categories['CVEs'].total }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-6">
+      <div class="card h-100">
+        <div class="card-header"><strong>Recent/Top Operations</strong></div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table mb-0">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Type</th>
+                  <th style="width: 130px;">Completion</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% set combined = (stats.category_views.machines.list[:4] + stats.category_views.sherlocks.list[:3] + stats.category_views.challenges.list[:3]) %}
+                {% for item in combined %}
+                <tr>
+                  <td>{{ item.title }}</td>
+                  <td>{{ item.subtext }}</td>
+                  <td>{{ '%.0f'|format(item.completion) }}%</td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="3" class="text-center text-muted py-3">No progress entries.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    document.querySelectorAll('.js-progress-width').forEach(function (node) {
+      var value = parseFloat(node.getAttribute('data-progress') || '0');
+      if (!Number.isFinite(value)) {
+        value = 0;
+      }
+      value = Math.max(0, Math.min(100, value));
+      node.style.width = value + '%';
+    });
+  })();
+</script>
+{% endblock %}

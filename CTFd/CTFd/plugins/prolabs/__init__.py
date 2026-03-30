@@ -3905,7 +3905,7 @@ def admin_player_dashboard_detail(user_id):
     if stats is None:
         abort(404)
 
-    return render_template("prolabs/dashboard.html", stats=stats, admin_view=True)
+    return render_template("prolabs/admin_player_dashboard_detail.html", stats=stats)
 
 
 @prolabs.route("/admin/prolabs/submissions", methods=["GET"])
