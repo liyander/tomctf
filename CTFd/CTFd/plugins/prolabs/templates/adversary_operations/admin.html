@@ -50,6 +50,11 @@
             <div class="form-group col-md-3"><label>Solves</label><input class="form-control" type="number" min="0" name="solves[]" value="{{ operation.solves }}"></div>
           </div>
 
+          <div class="form-row">
+            <div class="form-group col-md-6"><label>Cover Image URL</label><input class="form-control" name="cover_image[]" value="{{ operation.cover_image }}" placeholder="https://..."></div>
+            <div class="form-group col-md-6"><label>Logo Image URL</label><input class="form-control" name="logo_image[]" value="{{ operation.logo_image }}" placeholder="https://..."></div>
+          </div>
+
           <div class="form-group">
             <label>Operation Brief (Markdown)</label>
             <textarea class="form-control" rows="5" name="description[]">{{ operation.description }}</textarea>

@@ -253,6 +253,8 @@ DEFAULT_ADVERSARY_OPERATIONS = [
         "title": "Blackout Ledger",
         "difficulty": "Medium",
         "category": "Adversary Operations",
+        "cover_image": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1400&q=80",
+        "logo_image": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=300&q=80",
         "rating": 4.5,
         "rating_count": 128,
         "solves": 1420,
@@ -1465,6 +1467,8 @@ def _normalize_adversary_operation(raw, index):
         "title": title,
         "difficulty": _normalize_sherlock_difficulty(raw.get("difficulty")),
         "category": (raw.get("category") or "Adversary Operations").strip(),
+        "cover_image": (raw.get("cover_image") or "").strip(),
+        "logo_image": (raw.get("logo_image") or "").strip(),
         "rating": _safe_float(raw.get("rating", 0), 0.0),
         "rating_count": _safe_int(raw.get("rating_count", 0), 0),
         "solves": _safe_int(raw.get("solves", 0), 0),
@@ -3409,6 +3413,8 @@ def adversary_operations_admin_add():
         template["category"] = (
             request.form.get("category") or template.get("category") or "Adversary Operations"
         ).strip()
+        template["cover_image"] = (request.form.get("cover_image") or "").strip()
+        template["logo_image"] = (request.form.get("logo_image") or "").strip()
 
         operations.append(template)
         set_config(ADVERSARY_OPERATIONS_CONFIG_KEY, json.dumps(operations))
@@ -3434,6 +3440,8 @@ def adversary_operations_admin_manage():
         titles = request.form.getlist("title[]")
         difficulties = request.form.getlist("difficulty[]")
         categories = request.form.getlist("category[]")
+        cover_images = request.form.getlist("cover_image[]")
+        logo_images = request.form.getlist("logo_image[]")
         ratings = request.form.getlist("rating[]")
         rating_counts = request.form.getlist("rating_count[]")
         solves = request.form.getlist("solves[]")
@@ -3472,6 +3480,8 @@ def adversary_operations_admin_manage():
                     "category": (
                         categories[i] if i < len(categories) else "Adversary Operations"
                     ).strip(),
+                    "cover_image": (cover_images[i] if i < len(cover_images) else "").strip(),
+                    "logo_image": (logo_images[i] if i < len(logo_images) else "").strip(),
                     "rating": float(ratings[i]) if i < len(ratings) and ratings[i] else 0,
                     "rating_count": _safe_int(rating_counts[i] if i < len(rating_counts) else 0, 0),
                     "solves": _safe_int(solves[i] if i < len(solves) else 0, 0),

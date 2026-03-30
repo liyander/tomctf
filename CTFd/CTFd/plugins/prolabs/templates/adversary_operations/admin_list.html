@@ -27,6 +27,8 @@
             <th>Slug</th>
             <th>Difficulty</th>
             <th>Category</th>
+            <th>Cover</th>
+            <th>Logo</th>
             <th style="width: 160px;">Action</th>
           </tr>
         </thead>
@@ -37,13 +39,15 @@
             <td>{{ operation.slug }}</td>
             <td>{{ operation.difficulty }}</td>
             <td>{{ operation.category }}</td>
+            <td>{% if operation.cover_image %}<span class="badge badge-success">Configured</span>{% else %}<span class="badge badge-secondary">Missing</span>{% endif %}</td>
+            <td>{% if operation.logo_image %}<span class="badge badge-success">Configured</span>{% else %}<span class="badge badge-secondary">Missing</span>{% endif %}</td>
             <td>
               <a class="btn btn-sm btn-outline-primary" href="{{ url_for('prolabs.adversary_operations_admin_manage') }}#adversary-operation-{{ operation.slug }}">Open Editor</a>
             </td>
           </tr>
           {% else %}
           <tr>
-            <td colspan="5" class="text-center text-muted py-4">No operations configured.</td>
+            <td colspan="7" class="text-center text-muted py-4">No operations configured.</td>
           </tr>
           {% endfor %}
         </tbody>

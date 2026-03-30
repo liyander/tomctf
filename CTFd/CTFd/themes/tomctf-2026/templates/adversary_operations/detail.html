@@ -23,14 +23,30 @@
     .sherlock-btn-primary { background: #c3ff00; border: 1px solid rgba(195,255,0,0.6); color: #0f1f09; font-weight: 800; border-radius: 0.7rem; min-height: 48px; min-width: 150px; }
   </style>
 
-  <div class="p-4 p-lg-5 rounded-4 glass-effect border border-secondary border-opacity-25 mb-4">
-    <div class="d-flex justify-content-between gap-3 flex-wrap align-items-center">
-      <div>
-        <div class="text-uppercase text-primary fw-semibold small mb-2">Adversary Operations</div>
-        <h1 class="display-6 fw-bold mb-1">{{ operation.title }}</h1>
-        <div class="text-danger fw-semibold">{{ operation.difficulty }}</div>
+  {% if operation.cover_image %}
+  <div class="rounded-4 overflow-hidden border border-secondary border-opacity-25 mb-4" style="background: linear-gradient(to bottom, rgba(9,9,13,0.35), rgba(9,9,13,0.96)), url('{{ operation.cover_image }}') center/cover no-repeat; min-height: 240px;">
+  {% else %}
+  <div class="rounded-4 overflow-hidden border border-secondary border-opacity-25 mb-4" style="background: linear-gradient(to bottom, rgba(9,9,13,0.35), rgba(9,9,13,0.96)); min-height: 240px;">
+  {% endif %}
+    <div class="p-4 p-lg-5 d-flex flex-column" style="min-height: 240px;">
+      <div class="d-flex justify-content-between gap-3 flex-wrap align-items-center mb-4">
+        <div class="text-uppercase text-primary fw-semibold small">Adversary Operations</div>
+        <a href="{{ url_for('prolabs.adversary_operations_listing') }}" class="btn btn-outline-light btn-sm">Back</a>
       </div>
-      <a href="{{ url_for('prolabs.adversary_operations_listing') }}" class="btn btn-outline-light btn-sm">Back</a>
+
+      <div class="mt-auto d-flex align-items-center gap-3">
+        {% if operation.logo_image %}
+        <img src="{{ operation.logo_image }}" alt="{{ operation.title }} logo" style="width: 86px; height: 86px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.3);">
+        {% else %}
+        <div style="width: 86px; height: 86px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.25); display:grid; place-items:center; background: rgba(16,18,28,0.75);">
+          <i class="fas fa-crosshairs text-danger" style="font-size: 1.7rem;"></i>
+        </div>
+        {% endif %}
+        <div>
+          <h1 class="display-6 fw-bold mb-1">{{ operation.title }}</h1>
+          <div class="text-danger fw-semibold">{{ operation.difficulty }}</div>
+        </div>
+      </div>
     </div>
   </div>
 
