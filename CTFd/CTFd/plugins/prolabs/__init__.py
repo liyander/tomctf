@@ -38,6 +38,7 @@ OS_CHOICES = {
 MACHINE_DIFFICULTY_OPTIONS = ["Easy", "Medium", "Hard", "Insane"]
 MACHINE_OS_OPTIONS = ["Linux", "Windows", "FreeBSD", "Solaris"]
 SHERLOCK_DIFFICULTY_OPTIONS = ["Very Easy", "Easy", "Medium", "Hard", "Insane"]
+CVE_SEVERITY_OPTIONS = ["Low", "Medium", "High", "Critical"]
 
 LEVELS_CONFIG_KEY = "prolab_levels"
 
@@ -350,6 +351,17 @@ def _normalize_sherlock_difficulty(value):
         "advanced": "Hard",
     }
     return mapping.get(raw_value, "Very Easy")
+
+
+def _normalize_cve_severity(value):
+    raw_value = (value or "").strip().lower()
+    mapping = {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "critical": "Critical",
+    }
+    return mapping.get(raw_value, "Medium")
 
 
 def _safe_points(value):
@@ -1466,7 +1478,7 @@ def _normalize_cve(raw, index):
     title = (raw.get("title") or f"CVE Item {index + 1}").strip()
     slug = _slugify(raw.get("slug") or title) or f"cve-{index + 1}"
     cve_id = (raw.get("cve_id") or "").strip()
-    severity = (raw.get("severity") or "Medium").strip()
+    severity = _normalize_cve_severity(raw.get("severity"))
     category = (raw.get("category") or "Web").strip()
     release_date = (raw.get("release_date") or "").strip()
     short_description = (raw.get("short_description") or "").strip()
@@ -3322,6 +3334,7 @@ def cves_admin_add():
                 error="Title is required",
                 docker_images=docker_images,
                 docker_images_error=docker_images_error,
+                severity_options=CVE_SEVERITY_OPTIONS,
             )
 
         base_slug = _slugify((request.form.get("slug") or "").strip() or title) or "cve"
@@ -3333,7 +3346,7 @@ def cves_admin_add():
         template["slug"] = slug
         template["title"] = title
         template["cve_id"] = (request.form.get("cve_id") or "").strip()
-        template["severity"] = (request.form.get("severity") or "Medium").strip()
+        template["severity"] = _normalize_cve_severity(request.form.get("severity") or "Medium")
         template["category"] = (request.form.get("category") or "Web").strip()
         template["cvss"] = _safe_float(request.form.get("cvss"), 0.0)
         template["release_date"] = (request.form.get("release_date") or "").strip()
@@ -3354,6 +3367,7 @@ def cves_admin_add():
         "cves/add.html",
         docker_images=docker_images,
         docker_images_error=docker_images_error,
+        severity_options=CVE_SEVERITY_OPTIONS,
     )
 
 
@@ -3401,7 +3415,9 @@ def cves_admin_manage():
                     "slug": slug,
                     "title": title,
                     "cve_id": (cve_ids[i] if i < len(cve_ids) else "").strip(),
-                    "severity": (severities[i] if i < len(severities) else "Medium").strip(),
+                    "severity": _normalize_cve_severity(
+                        severities[i] if i < len(severities) else "Medium"
+                    ),
                     "category": (categories[i] if i < len(categories) else "Web").strip(),
                     "cvss": _safe_float(cvss_values[i] if i < len(cvss_values) else 0, 0.0),
                     "release_date": (release_dates[i] if i < len(release_dates) else "").strip(),
@@ -3440,6 +3456,7 @@ def cves_admin_manage():
         cves=cves,
         docker_images=docker_images,
         docker_images_error=docker_images_error,
+        severity_options=CVE_SEVERITY_OPTIONS,
     )
 
 

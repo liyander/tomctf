@@ -56,7 +56,11 @@
         <div class="form-row">
           <div class="form-group col-md-3">
             <label>Severity</label>
-            <input class="form-control" type="text" name="severity[]" value="{{ cve.severity }}">
+            <select class="form-control custom-select" name="severity[]">
+              {% for option in severity_options %}
+                <option value="{{ option }}" {% if cve.severity == option %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+            </select>
           </div>
           <div class="form-group col-md-3">
             <label>Category</label>
