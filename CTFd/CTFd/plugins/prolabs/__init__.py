@@ -255,6 +255,9 @@ DEFAULT_ADVERSARY_OPERATIONS = [
         "category": "Adversary Operations",
         "cover_image": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1400&q=80",
         "logo_image": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=300&q=80",
+        "docker_enabled": False,
+        "docker_image": "",
+        "docker_expiry": 0,
         "rating": 4.5,
         "rating_count": 128,
         "solves": 1420,
@@ -1469,6 +1472,9 @@ def _normalize_adversary_operation(raw, index):
         "category": (raw.get("category") or "Adversary Operations").strip(),
         "cover_image": (raw.get("cover_image") or "").strip(),
         "logo_image": (raw.get("logo_image") or "").strip(),
+        "docker_enabled": _as_bool(raw.get("docker_enabled", False)),
+        "docker_image": (raw.get("docker_image") or "").strip(),
+        "docker_expiry": _safe_int(raw.get("docker_expiry", 0), 0),
         "rating": _safe_float(raw.get("rating", 0), 0.0),
         "rating_count": _safe_int(raw.get("rating_count", 0), 0),
         "solves": _safe_int(raw.get("solves", 0), 0),
@@ -2038,6 +2044,120 @@ def _build_sherlock_docker_status(slug, sherlock):
 
     base["authenticated"] = True
     entry = _clean_expired_sherlock_container(slug, sherlock, deps, docker_config, user, team, scope)
+    if entry is None:
+        base["message"] = "No active container instance."
+        return base
+
+    host = docker_config.display_host or str(docker_config.hostname).split(":")[0]
+    ports = [p for p in (entry.ports or "").split(",") if p]
+    tiers = _timer_tiers_for_cap(max_timer)
+    current_tier = 0
+    if entry.revert_time and entry.timestamp:
+        current_tier = max(0, int(entry.revert_time) - int(entry.timestamp))
+    can_extend = any(tier > current_tier for tier in tiers)
+
+    base.update(
+        {
+            "running": True,
+            "host": host,
+            "ports": ports,
+            "revert_time": entry.revert_time,
+            "current_tier": current_tier,
+            "can_extend": can_extend,
+            "message": "Container is running.",
+        }
+    )
+    return base
+
+
+def _get_adversary_operation_container_entry(slug, operation, deps, user, team, scope):
+    image = operation.get("docker_image")
+    if not image:
+        return None
+
+    challenge_key = f"adversary_operation:{slug}"
+    query = deps["DockerChallengeTracker"].query.filter_by(
+        docker_image=image,
+        challenge=challenge_key,
+    )
+    if scope == "team" and team is not None:
+        query = query.filter_by(team_id=team.id)
+    else:
+        query = query.filter_by(user_id=user.id)
+    return query.first()
+
+
+def _clean_expired_adversary_operation_container(slug, operation, deps, docker_config, user, team, scope):
+    entry = _get_adversary_operation_container_entry(slug, operation, deps, user, team, scope)
+    if entry is None:
+        return None
+
+    now = int(datetime.utcnow().timestamp())
+    if entry.revert_time and int(entry.revert_time) <= now:
+        try:
+            deps["delete_container"](docker_config, entry.instance_id, ports_str=entry.ports)
+        except Exception:
+            pass
+        deps["DockerChallengeTracker"].query.filter_by(id=entry.id).delete()
+        db.session.commit()
+        return None
+
+    return entry
+
+
+def _build_adversary_operation_docker_status(slug, operation):
+    max_timer = MACHINE_TIMER_DEFAULT
+    base = {
+        "enabled": bool(operation.get("docker_enabled")),
+        "configured": False,
+        "authenticated": False,
+        "running": False,
+        "docker_image": operation.get("docker_image", ""),
+        "host": "",
+        "ports": [],
+        "revert_time": None,
+        "max_timer": max_timer,
+        "can_extend": False,
+        "current_tier": 0,
+        "message": "Docker is disabled for this operation.",
+    }
+
+    if not base["enabled"]:
+        return base
+
+    if not operation.get("docker_image"):
+        base["message"] = "No Docker image configured by admins."
+        return base
+
+    deps = _get_docker_challenge_dependencies()
+    if deps is None:
+        base["message"] = "Docker plugin is unavailable."
+        return base
+
+    docker_config = deps["DockerConfig"].query.filter_by(id=1).first()
+    if docker_config is None or not docker_config.hostname:
+        base["message"] = "Docker host is not configured."
+        return base
+
+    max_timer = _resolve_machine_timer_cap(operation, docker_config)
+    base["max_timer"] = max_timer
+
+    base["configured"] = True
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        base["message"] = "Log in to spawn an operation instance."
+        return base
+
+    base["authenticated"] = True
+    entry = _clean_expired_adversary_operation_container(
+        slug,
+        operation,
+        deps,
+        docker_config,
+        user,
+        team,
+        scope,
+    )
     if entry is None:
         base["message"] = "No active container instance."
         return base
@@ -3117,7 +3237,202 @@ def adversary_operations_detail(slug):
     solved = _get_adversary_operation_submissions(slug)
     operation["solved_task_ids"] = [task_id for task_id in solved.keys()]
     operation["progress"] = _get_adversary_operation_progress(operation)
+    operation["docker_status"] = _build_adversary_operation_docker_status(slug, operation)
     return render_template("adversary_operations/detail.html", operation=operation)
+
+
+@prolabs.route("/api/v1/adversary-operations/<slug>/container", methods=["GET", "POST"])
+@authed_only
+def adversary_operations_container(slug):
+    operations = get_adversary_operations()
+    operation = next((item for item in operations if item["slug"] == slug), None)
+    if not operation:
+        return {"success": False, "errors": {"message": "Operation not found"}}, 404
+
+    action = "status"
+    if request.method == "POST":
+        req = request.form or request.get_json(silent=True) or {}
+        action = (req.get("action") or "status").strip().lower()
+    else:
+        action = (request.args.get("action") or "status").strip().lower()
+
+    if action not in {"status", "start", "stop", "extend"}:
+        return {"success": False, "errors": {"message": "Unsupported action"}}, 400
+
+    if not operation.get("docker_enabled"):
+        return {"success": False, "errors": {"message": "Docker is disabled for this operation"}}, 400
+    if not operation.get("docker_image"):
+        return {"success": False, "errors": {"message": "No Docker image configured for this operation"}}, 400
+
+    deps = _get_docker_challenge_dependencies()
+    if deps is None:
+        return {"success": False, "errors": {"message": "Docker plugin is unavailable"}}, 503
+
+    docker_config = deps["DockerConfig"].query.filter_by(id=1).first()
+    if docker_config is None or not docker_config.hostname:
+        return {"success": False, "errors": {"message": "Docker host is not configured"}}, 403
+
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        return {"success": False, "errors": {"message": "Authentication required"}}, 403
+
+    existing = _clean_expired_adversary_operation_container(
+        slug,
+        operation,
+        deps,
+        docker_config,
+        user,
+        team,
+        scope,
+    )
+
+    if action == "status":
+        return {"success": True, "data": _build_adversary_operation_docker_status(slug, operation)}
+
+    if action == "extend":
+        if existing is None:
+            return {"success": False, "errors": {"message": "No running container to extend."}}, 400
+
+        max_timer = _resolve_machine_timer_cap(operation, docker_config)
+        tiers = _timer_tiers_for_cap(max_timer)
+        current_tier = (
+            max(0, int(existing.revert_time) - int(existing.timestamp))
+            if existing.revert_time and existing.timestamp
+            else tiers[0]
+        )
+        next_tier = next((tier for tier in tiers if tier > current_tier), None)
+        if next_tier is None:
+            return {
+                "success": False,
+                "errors": {"message": "Maximum allowed timer has been reached for this operation."},
+                "data": _build_adversary_operation_docker_status(slug, operation),
+            }, 400
+
+        base_ts = int(existing.timestamp) if existing.timestamp else int(datetime.utcnow().timestamp())
+        existing.revert_time = base_ts + next_tier
+        db.session.commit()
+        return {
+            "success": True,
+            "data": _build_adversary_operation_docker_status(slug, operation),
+            "message": f"Container extended to {next_tier // 60} minutes.",
+        }
+
+    if action == "stop":
+        if existing is None:
+            return {
+                "success": True,
+                "data": _build_adversary_operation_docker_status(slug, operation),
+                "message": "No running container to stop.",
+            }
+
+        try:
+            deps["delete_container"](docker_config, existing.instance_id, ports_str=existing.ports)
+            deps["DockerChallengeTracker"].query.filter_by(id=existing.id).delete()
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            return {"success": False, "errors": {"message": "Failed to stop container"}}, 500
+
+        return {
+            "success": True,
+            "data": _build_adversary_operation_docker_status(slug, operation),
+            "message": "Container stopped.",
+        }
+
+    did_revert = False
+    if existing is not None:
+        try:
+            deps["delete_container"](docker_config, existing.instance_id, ports_str=existing.ports)
+            deps["DockerChallengeTracker"].query.filter_by(id=existing.id).delete()
+            db.session.commit()
+            did_revert = True
+        except Exception:
+            db.session.rollback()
+            return {"success": False, "errors": {"message": "Failed to revert existing container"}}, 500
+
+    repositories = []
+    try:
+        repositories = deps["get_repositories"](docker_config, tags=True) or []
+    except Exception:
+        repositories = []
+
+    image_name = operation.get("docker_image")
+    if repositories:
+        image_repo = image_name.split(":", 1)[0]
+        if image_name not in repositories and image_repo not in repositories:
+            return {
+                "success": False,
+                "errors": {"message": f"Docker image {image_name} is not available on the host"},
+            }, 403
+
+    if scope == "team" and team is not None:
+        running_count = deps["DockerChallengeTracker"].query.filter_by(team_id=team.id).count()
+    else:
+        running_count = deps["DockerChallengeTracker"].query.filter_by(user_id=user.id).count()
+
+    if running_count >= 3:
+        return {
+            "success": False,
+            "errors": {
+                "message": f"You already have {running_count} running containers. Stop one before spawning a new instance.",
+            },
+        }, 403
+
+    create_result = deps["create_container"](
+        docker_config,
+        image_name,
+        team.name if scope == "team" and team is not None else user.name,
+        deps["get_unavailable_ports"](docker_config),
+    )
+    if not create_result or not create_result[0] or "Id" not in create_result[0]:
+        return {
+            "success": False,
+            "errors": {"message": "Failed to create Docker container. Verify Docker host and image settings."},
+        }, 500
+
+    port_bindings = json.loads(create_result[1]).get("HostConfig", {}).get("PortBindings", {})
+    host_ports = []
+    for bindings in port_bindings.values():
+        if not bindings:
+            continue
+        host_port = bindings[0].get("HostPort")
+        if host_port:
+            host_ports.append(host_port)
+
+    for host_port in host_ports:
+        try:
+            deps["add_port_forward"](host_port, docker_config.display_host)
+        except Exception:
+            continue
+
+    now = int(datetime.utcnow().timestamp())
+    max_timer = _resolve_machine_timer_cap(operation, docker_config)
+    tiers = _timer_tiers_for_cap(max_timer)
+    initial_timer = tiers[0]
+    challenge_key = f"adversary_operation:{slug}"
+    tracker = deps["DockerChallengeTracker"](
+        team_id=team.id if scope == "team" and team is not None else None,
+        user_id=user.id if scope != "team" else None,
+        docker_image=image_name,
+        timestamp=now,
+        revert_time=now + initial_timer,
+        instance_id=create_result[0]["Id"],
+        ports=",".join(host_ports),
+        host=(docker_config.display_host or str(docker_config.hostname).split(":")[0]),
+        challenge=challenge_key,
+    )
+    db.session.add(tracker)
+    db.session.commit()
+
+    return {
+        "success": True,
+        "data": _build_adversary_operation_docker_status(slug, operation),
+        "message": (
+            f"Container reverted. Timer set to {initial_timer // 60} minutes."
+            if did_revert
+            else f"Container started. Timer set to {initial_timer // 60} minutes."
+        ),
+    }
 
 
 @prolabs.route("/api/v1/adversary-operations/<slug>/submit", methods=["POST"])
@@ -3389,10 +3704,13 @@ def adversary_operations_admin_add():
     if request.method == "POST":
         title = (request.form.get("title") or "").strip()
         if not title:
+            docker_images, docker_images_error = _get_available_docker_images()
             return render_template(
                 "adversary_operations/add.html",
                 error="Title is required",
                 difficulty_options=SHERLOCK_DIFFICULTY_OPTIONS,
+                docker_images=docker_images,
+                docker_images_error=docker_images_error,
             )
 
         base_slug = _slugify((request.form.get("slug") or "").strip() or title) or "adversary-operation"
@@ -3415,6 +3733,9 @@ def adversary_operations_admin_add():
         ).strip()
         template["cover_image"] = (request.form.get("cover_image") or "").strip()
         template["logo_image"] = (request.form.get("logo_image") or "").strip()
+        template["docker_enabled"] = _as_bool(request.form.get("docker_enabled") or "0")
+        template["docker_image"] = (request.form.get("docker_image") or "").strip()
+        template["docker_expiry"] = _safe_int(request.form.get("docker_expiry"), 0)
 
         operations.append(template)
         set_config(ADVERSARY_OPERATIONS_CONFIG_KEY, json.dumps(operations))
@@ -3426,9 +3747,12 @@ def adversary_operations_admin_add():
             )
         )
 
+    docker_images, docker_images_error = _get_available_docker_images()
     return render_template(
         "adversary_operations/add.html",
         difficulty_options=SHERLOCK_DIFFICULTY_OPTIONS,
+        docker_images=docker_images,
+        docker_images_error=docker_images_error,
     )
 
 
@@ -3442,6 +3766,9 @@ def adversary_operations_admin_manage():
         categories = request.form.getlist("category[]")
         cover_images = request.form.getlist("cover_image[]")
         logo_images = request.form.getlist("logo_image[]")
+        docker_enabled_values = request.form.getlist("docker_enabled[]")
+        docker_images = request.form.getlist("docker_image[]")
+        docker_expiry_values = request.form.getlist("docker_expiry[]")
         ratings = request.form.getlist("rating[]")
         rating_counts = request.form.getlist("rating_count[]")
         solves = request.form.getlist("solves[]")
@@ -3456,6 +3783,8 @@ def adversary_operations_admin_manage():
             len(categories),
             len(descriptions),
             len(tasks_values),
+            len(docker_enabled_values),
+            len(docker_images),
         )
 
         operations = []
@@ -3482,6 +3811,14 @@ def adversary_operations_admin_manage():
                     ).strip(),
                     "cover_image": (cover_images[i] if i < len(cover_images) else "").strip(),
                     "logo_image": (logo_images[i] if i < len(logo_images) else "").strip(),
+                    "docker_enabled": _as_bool(
+                        docker_enabled_values[i] if i < len(docker_enabled_values) else "0"
+                    ),
+                    "docker_image": (docker_images[i] if i < len(docker_images) else "").strip(),
+                    "docker_expiry": _safe_int(
+                        docker_expiry_values[i] if i < len(docker_expiry_values) else 0,
+                        0,
+                    ),
                     "rating": float(ratings[i]) if i < len(ratings) and ratings[i] else 0,
                     "rating_count": _safe_int(rating_counts[i] if i < len(rating_counts) else 0, 0),
                     "solves": _safe_int(solves[i] if i < len(solves) else 0, 0),
@@ -3498,10 +3835,13 @@ def adversary_operations_admin_manage():
         return redirect(url_for("prolabs.adversary_operations_admin_manage", saved=1))
 
     operations = get_adversary_operations()
+    docker_images, docker_images_error = _get_available_docker_images()
     return render_template(
         "adversary_operations/admin.html",
         operations=operations,
         difficulty_options=SHERLOCK_DIFFICULTY_OPTIONS,
+        docker_images=docker_images,
+        docker_images_error=docker_images_error,
     )
 
 

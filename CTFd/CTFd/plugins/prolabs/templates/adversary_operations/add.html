@@ -13,6 +13,10 @@
     <div class="alert alert-danger">{{ error }}</div>
   {% endif %}
 
+  {% if docker_images_error %}
+    <div class="alert alert-warning">{{ docker_images_error }}</div>
+  {% endif %}
+
   <form method="POST">
     <input type="hidden" name="nonce" value="{{ Session.nonce }}">
 
@@ -52,6 +56,34 @@
           <div class="form-group col-md-6">
             <label>Logo Image URL</label>
             <input class="form-control" name="logo_image" placeholder="https://...">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-2">
+            <label>Docker Enabled</label>
+            <select class="form-control" name="docker_enabled">
+              <option value="0" selected>Disabled</option>
+              <option value="1">Enabled</option>
+            </select>
+          </div>
+          <div class="form-group col-md-7">
+            <label>Docker Image</label>
+            <select class="form-control" name="docker_image">
+              <option value="">Select Docker image tag</option>
+              {% for image in docker_images %}
+                <option value="{{ image }}">{{ image }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group col-md-3">
+            <label>Timer Cap</label>
+            <select class="form-control" name="docker_expiry">
+              <option value="0" selected>Use Docker Global</option>
+              <option value="1800">30 mins</option>
+              <option value="3600">60 mins</option>
+              <option value="7200">120 mins</option>
+            </select>
           </div>
         </div>
       </div>

@@ -13,6 +13,23 @@
 </div>
 
 <div class="container pb-5">
+  <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <div>
+      <strong>Docker setup reference:</strong>
+      Configure Docker host/repositories first, then attach image tags to adversary operations.
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin_docker_config.docker_config') }}">Docker Config</a>
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin_docker_status.docker_admin') }}">Docker Status</a>
+    </div>
+  </div>
+
+  {% if docker_images_error %}
+  <div class="alert alert-warning">
+    <strong>Docker image list:</strong> {{ docker_images_error }}.
+  </div>
+  {% endif %}
+
   <form method="POST" id="adversary-operations-form">
     <input type="hidden" name="nonce" value="{{ Session.nonce }}">
 
@@ -53,6 +70,37 @@
           <div class="form-row">
             <div class="form-group col-md-6"><label>Cover Image URL</label><input class="form-control" name="cover_image[]" value="{{ operation.cover_image }}" placeholder="https://..."></div>
             <div class="form-group col-md-6"><label>Logo Image URL</label><input class="form-control" name="logo_image[]" value="{{ operation.logo_image }}" placeholder="https://..."></div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group col-md-2">
+              <label>Docker Enabled</label>
+              <select class="form-control" name="docker_enabled[]">
+                <option value="0" {% if not operation.docker_enabled %}selected{% endif %}>Disabled</option>
+                <option value="1" {% if operation.docker_enabled %}selected{% endif %}>Enabled</option>
+              </select>
+            </div>
+            <div class="form-group col-md-7">
+              <label>Docker Image</label>
+              <select class="form-control" name="docker_image[]">
+                <option value="">Select Docker image tag</option>
+                {% for image in docker_images %}
+                  <option value="{{ image }}" {% if operation.docker_image == image %}selected{% endif %}>{{ image }}</option>
+                {% endfor %}
+                {% if operation.docker_image and operation.docker_image not in docker_images %}
+                  <option value="{{ operation.docker_image }}" selected>{{ operation.docker_image }} (current)</option>
+                {% endif %}
+              </select>
+            </div>
+            <div class="form-group col-md-3">
+              <label>Timer Cap</label>
+              <select class="form-control" name="docker_expiry[]">
+                <option value="0" {% if (operation.docker_expiry|int) == 0 %}selected{% endif %}>Use Docker Global</option>
+                <option value="1800" {% if (operation.docker_expiry|int) == 1800 %}selected{% endif %}>30 mins</option>
+                <option value="3600" {% if (operation.docker_expiry|int) == 3600 %}selected{% endif %}>60 mins</option>
+                <option value="7200" {% if (operation.docker_expiry|int) == 7200 %}selected{% endif %}>120 mins</option>
+              </select>
+            </div>
           </div>
 
           <div class="form-group">
