@@ -38,7 +38,8 @@
 	{% endfor %}
 </head>
 
-<body>{% include "loader.html" %}	<style>
+<body>
+	<style>
 		body {
 			margin: 0;
 			overflow-x: hidden;
@@ -353,6 +354,7 @@
 	<script defer src="{{ script }}"></script>
 	{% endif %}
 	{% endfor %}
+{% include "loader.html" %}
 </body>
 
 </html>

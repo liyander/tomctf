@@ -263,7 +263,7 @@
   {{ Configs.theme_header }}
 </head>
 <body class="with-sidebar">
-  {% include "components/loader.html" %}
+  {% include "components/sidebar.html" %}
 
 <main role="main" class="tom-main-content">
   {% block content %}
@@ -377,5 +377,6 @@ setTimeout(checkOutroRedirect,12000);
 </script>
 
 {{ Configs.theme_footer }}
+  {% include "components/loader.html" %}
 </body>
 </html>
