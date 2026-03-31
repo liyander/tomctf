@@ -460,7 +460,7 @@ def login():
                 admin = generate_preset_admin()
                 if admin:
                     login_user(user=admin)
-                    return redirect(url_for("challenges.listing"))
+                    return redirect(url_for("prolabs.player_dashboard"))
                 else:
                     errors.append(
                         "Preset admin user could not be created. Please contact an administrator"
@@ -492,7 +492,7 @@ def login():
                     request.args.get("next")
                 ):
                     return redirect(request.args.get("next"))
-                return redirect(url_for("challenges.listing"))
+                return redirect(url_for("prolabs.player_dashboard"))
 
             else:
                 # This user exists but the password is wrong
