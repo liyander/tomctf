@@ -33,11 +33,14 @@
     <input type="hidden" name="nonce" value="{{ Session.nonce }}">
     {% for cve in cves %}
     <div class="card mb-3" id="cve-{{ cve.slug }}">
-      <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="card-header d-flex justify-content-between align-items-center bg-light" style="cursor: pointer;" onclick="const b = this.nextElementSibling; b.style.display = b.style.display === 'none' ? 'block' : 'none';">
         <strong>{{ cve.title }}</strong>
-        <button type="button" class="btn btn-sm btn-outline-danger js-remove">Remove</button>
+        <div>
+          <span class="text-muted mr-3" style="font-size: 0.85em;">(Click to toggle full editor)</span>
+          <button type="button" class="btn btn-sm btn-outline-danger js-remove" onclick="event.stopPropagation();">Remove</button>
+        </div>
       </div>
-      <div class="card-body">
+      <div class="card-body" style="display: none;">
         <div class="form-row">
           <div class="form-group col-md-4">
             <label>Slug</label>
@@ -152,6 +155,17 @@
         }
       });
     });
+
+    if (window.location.hash) {
+      const target = document.querySelector(window.location.hash);
+      if (target) {
+        const body = target.querySelector('.card-body');
+        if (body) {
+          body.style.display = 'block';
+          target.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    }
   })();
 </script>
 {% endblock %}

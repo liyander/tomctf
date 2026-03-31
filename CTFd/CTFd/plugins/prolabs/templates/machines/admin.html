@@ -49,11 +49,14 @@
     <div id="machines-wrapper" class="d-flex flex-column" style="gap: 1rem;">
       {% for machine in machines %}
       <div class="card" id="machine-{{ machine.slug or loop.index0 }}">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header d-flex justify-content-between align-items-center bg-light" style="cursor: pointer;" onclick="const b = this.nextElementSibling; b.style.display = b.style.display === 'none' ? 'block' : 'none';">
           <strong>{{ machine.title }}</strong>
-          <button type="button" class="btn btn-sm btn-outline-danger remove-machine">Remove</button>
+          <div>
+            <span class="text-muted mr-3" style="font-size: 0.85em;">(Click to toggle full editor)</span>
+            <button type="button" class="btn btn-sm btn-outline-danger remove-machine" onclick="event.stopPropagation();">Remove</button>
+          </div>
         </div>
-        <div class="card-body">
+        <div class="card-body" style="display: none;">
           <div class="form-row">
             <div class="form-group col-md-3">
               <label>Slug</label>
@@ -233,9 +236,12 @@
     const el = document.createElement('div');
     el.className = 'card';
     el.innerHTML = `
-      <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="card-header d-flex justify-content-between align-items-center bg-light" style="cursor: pointer;" onclick="const b = this.nextElementSibling; b.style.display = b.style.display === 'none' ? 'block' : 'none';">
         <strong>New Machine</strong>
-        <button type="button" class="btn btn-sm btn-outline-danger remove-machine">Remove</button>
+        <div>
+          <span class="text-muted mr-3" style="font-size: 0.85em;">(Click to toggle full editor)</span>
+          <button type="button" class="btn btn-sm btn-outline-danger remove-machine" onclick="event.stopPropagation();">Remove</button>
+        </div>
       </div>
       <div class="card-body">
         <div class="form-row">
@@ -352,6 +358,18 @@
   });
 
   renumberWalkthroughInputs();
+
+  // Auto-expand card if URL has a hash matching a machine ID
+  if (window.location.hash) {
+    const target = document.querySelector(window.location.hash);
+    if (target) {
+      const body = target.querySelector('.card-body');
+      if (body) {
+        body.style.display = 'block';
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }
 })();
 </script>
 {% endblock %}

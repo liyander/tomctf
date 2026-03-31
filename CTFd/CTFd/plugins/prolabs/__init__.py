@@ -3883,6 +3883,13 @@ def adversary_operations_admin_add():
         template["docker_enabled"] = _as_bool(request.form.get("docker_enabled") or "0")
         template["docker_image"] = (request.form.get("docker_image") or "").strip()
         template["docker_expiry"] = _safe_int(request.form.get("docker_expiry"), 0)
+        template["description"] = (request.form.get("description") or "").strip()
+        tasks_json = request.form.get("tasks-json")
+        if tasks_json:
+            try:
+                template["tasks"] = json.loads(tasks_json)
+            except Exception:
+                template["tasks"] = []
 
         operations.append(template)
         set_config(ADVERSARY_OPERATIONS_CONFIG_KEY, json.dumps(operations))

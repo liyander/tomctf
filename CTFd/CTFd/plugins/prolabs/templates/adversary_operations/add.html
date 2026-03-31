@@ -86,13 +86,78 @@
             </select>
           </div>
         </div>
+
+        <div class="form-group mt-3">
+          <label>Operation Brief (Markdown)</label>
+          <textarea class="form-control" rows="5" name="description"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Tasks</label>
+          <table class="table table-sm table-bordered mb-2 operation-task-table">
+            <thead>
+              <tr><th>Title</th><th>Question</th><th>Hint</th><th>Answer</th><th>Points</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+            </tbody>
+          </table>
+          <button type="button" class="btn btn-sm btn-outline-primary add-task-row">Add Task</button>
+          <input type="hidden" class="tasks-json" name="tasks" value='[]'>
+        </div>
       </div>
     </div>
 
     <div class="mt-3 d-flex gap-2">
-      <button type="submit" class="btn btn-primary">Create Operation</button>
+      <button type="submit" class="btn btn-primary">Create Operation</button>   
       <a class="btn btn-outline-secondary" href="{{ url_for('prolabs.adversary_operations_admin_list') }}">Cancel</a>
     </div>
   </form>
 </div>
 {% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const taskRow = () => `
+    <tr class="task-row">
+      <td><input class="form-control task-title" value=""></td>
+      <td><input class="form-control task-question" value=""></td>
+      <td><input class="form-control task-hint" value=""></td>
+      <td><input class="form-control task-answer" value=""></td>
+      <td><input class="form-control task-points" type="number" min="0" value="0"></td>
+      <td><button type="button" class="btn btn-sm btn-outline-danger remove-task-row">X</button></td>
+    </tr>`;
+
+  const serializeTasks = () => {
+    const rows = Array.from(document.querySelectorAll('.task-row'));
+    const tasks = rows.map((row, idx) => {
+      const title = (row.querySelector('.task-title')?.value || '').trim() || `Task ${idx + 1}`;
+      const question = (row.querySelector('.task-question')?.value || '').trim();
+      const hint = (row.querySelector('.task-hint')?.value || '').trim();
+      const answer = (row.querySelector('.task-answer')?.value || '').trim();
+      const points = parseInt((row.querySelector('.task-points')?.value || '0').trim(), 10) || 0;
+      if (!question) return null;
+      return { id: `task-${idx + 1}`, title, question, hint, answer, points };
+    }).filter(Boolean);
+    const hidden = document.querySelector('.tasks-json');
+    if (hidden) hidden.value = JSON.stringify(tasks);
+  };
+
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('add-task-row')) {
+      const tbody = document.querySelector('.operation-task-table tbody');
+      if (tbody) tbody.insertAdjacentHTML('beforeend', taskRow());
+    }
+    if (e.target.classList.contains('remove-task-row')) {
+      e.target.closest('.task-row')?.remove();
+    }
+  });
+
+  const form = document.querySelector('form');
+  if (form) {
+    form.addEventListener('submit', () => {
+      serializeTasks();
+    });
+  }
+})();
+</script>

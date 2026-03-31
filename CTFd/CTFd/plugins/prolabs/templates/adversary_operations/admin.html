@@ -41,11 +41,14 @@
     <div id="operations-wrapper" class="d-flex flex-column" style="gap:1rem;">
       {% for operation in operations %}
       <div class="card" id="adversary-operation-{{ operation.slug or loop.index0 }}">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong>{{ operation.title }}</strong>
-          <button type="button" class="btn btn-sm btn-outline-danger remove-operation">Remove</button>
-        </div>
-        <div class="card-body">
+          <div class="card-header d-flex justify-content-between align-items-center bg-light" style="cursor: pointer;" onclick="const b = this.nextElementSibling; b.style.display = b.style.display === 'none' ? 'block' : 'none';">
+            <strong>{{ operation.title }}</strong>
+            <div>
+              <span class="text-muted mr-3" style="font-size: 0.85em;">(Click to toggle full editor)</span>
+              <button type="button" class="btn btn-sm btn-outline-danger remove-operation" onclick="event.stopPropagation();">Remove</button>
+            </div>
+          </div>
+          <div class="card-body" style="display: none;">
           <div class="form-row">
             <div class="form-group col-md-3"><label>Slug</label><input class="form-control" name="slug[]" value="{{ operation.slug }}"></div>
             <div class="form-group col-md-3"><label>Title</label><input class="form-control" name="title[]" value="{{ operation.title }}" required></div>
@@ -185,6 +188,14 @@
   form?.addEventListener('submit', () => {
     wrapper.querySelectorAll('.card').forEach((card) => serializeTasks(card));
   });
-})();
-</script>
-{% endblock %}
+
+  if (window.location.hash) {
+    const target = document.querySelector(window.location.hash);
+    if (target) {
+      const body = target.querySelector('.card-body');
+      if (body) {
+        body.style.display = 'block';
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }
