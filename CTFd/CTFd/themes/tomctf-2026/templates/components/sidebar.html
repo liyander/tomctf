@@ -76,6 +76,8 @@
 
   .tom-running-lab {
     display: block;
+    box-sizing: border-box;
+    max-width: 100%;
     border: 1px solid rgba(227, 35, 35, 0.4);
     border-radius: 0.75rem;
     padding: 0.65rem 0.75rem;
@@ -94,6 +96,8 @@
   .tom-running-lab-title {
     font-weight: 700;
     font-size: 0.88rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .tom-running-lab-meta {
@@ -203,6 +207,10 @@
   body.tom-sidebar-collapsed .tom-sidebar .tom-sidebar-panel {
     display: block !important;
     padding-left: 0;
+  }
+
+  body.tom-sidebar-collapsed .tom-sidebar #tomRunningLabMount {
+    display: none !important;
   }
 
   body.tom-sidebar-collapsed .tom-sidebar .nav-link {
@@ -567,6 +575,9 @@
     if (runningLabMount) {
       loadRunningLab();
       window.setInterval(loadRunningLab, 15000);
+      window.addEventListener("tom:container-state-changed", () => {
+        loadRunningLab();
+      });
     }
   })();
 </script>

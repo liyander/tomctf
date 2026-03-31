@@ -382,6 +382,9 @@
       .then(function (body) {
         if (body && body.data) updateContainerView(body.data);
         if (body && body.errors && body.errors.message && statusText) statusText.textContent = body.errors.message;
+        if (action === 'start' || action === 'stop' || action === 'extend') {
+          window.dispatchEvent(new CustomEvent('tom:container-state-changed', { detail: { action: action } }));
+        }
       })
       .catch(function () {
         if (statusText) statusText.textContent = 'Failed to update container state.';

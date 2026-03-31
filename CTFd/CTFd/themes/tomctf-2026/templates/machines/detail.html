@@ -510,6 +510,9 @@
       if (body?.message && (action === 'start' || action === 'stop' || action === 'extend')) {
         showNotice({ title: 'Attention!', text: body.message });
       }
+      if (action === 'start' || action === 'stop' || action === 'extend') {
+        window.dispatchEvent(new CustomEvent('tom:container-state-changed', { detail: { action } }));
+      }
     } catch (error) {
       if (statusText) statusText.textContent = 'Failed to update container state.';
     }

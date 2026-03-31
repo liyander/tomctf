@@ -253,6 +253,9 @@
       const body = await res.json();
       if (body?.data) renderDocker(body.data);
       if (body?.errors?.message && statusText) statusText.textContent = body.errors.message;
+      if (action === 'start' || action === 'stop' || action === 'extend') {
+        window.dispatchEvent(new CustomEvent('tom:container-state-changed', { detail: { action } }));
+      }
     } catch {
       if (statusText) statusText.textContent = 'Failed to update container state.';
     }
