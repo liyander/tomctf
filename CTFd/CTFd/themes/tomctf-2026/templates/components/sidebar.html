@@ -74,6 +74,54 @@
     border-color: rgba(227, 35, 35, 0.32);
   }
 
+  .tom-running-lab {
+    display: block;
+    border: 1px solid rgba(227, 35, 35, 0.4);
+    border-radius: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    margin-bottom: 0.6rem;
+    background: linear-gradient(140deg, rgba(227, 35, 35, 0.14), rgba(35, 35, 35, 0.24));
+    color: rgba(245, 245, 245, 0.95);
+    text-decoration: none;
+  }
+
+  .tom-running-lab:hover {
+    color: #fff;
+    border-color: rgba(227, 35, 35, 0.6);
+    background: linear-gradient(140deg, rgba(227, 35, 35, 0.2), rgba(35, 35, 35, 0.3));
+  }
+
+  .tom-running-lab-title {
+    font-weight: 700;
+    font-size: 0.88rem;
+  }
+
+  .tom-running-lab-meta {
+    font-size: 0.76rem;
+    color: rgba(230, 230, 230, 0.78);
+  }
+
+  .tom-running-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #57ff7f;
+    box-shadow: 0 0 0 0 rgba(87, 255, 127, 0.7);
+    animation: tomRunningPulse 1.5s infinite;
+  }
+
+  @keyframes tomRunningPulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(87, 255, 127, 0.7);
+    }
+    70% {
+      box-shadow: 0 0 0 10px rgba(87, 255, 127, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(87, 255, 127, 0);
+    }
+  }
+
   .tom-auth-actions .btn {
     display: flex;
     align-items: center;
@@ -277,6 +325,10 @@
         <a class="nav-link {% if request.path.startswith('/challenges') %}active{% endif %}" href="{{ url_for('challenges.listing') }}"><i class="fas fa-flag me-2"></i><span class="label">Challenges</span></a>
         <a class="nav-link {% if request.path.startswith('/dashboard') %}active{% endif %}" href="{{ url_for('prolabs.player_dashboard') }}"><i class="fas fa-chart-line me-2"></i><span class="label">Dashboard</span></a>
 
+        {% if authed() %}
+        <div id="tomRunningLabMount" data-endpoint="{{ url_for('prolabs.active_container_status') }}"></div>
+        {% endif %}
+
         {% if Configs.account_visibility != 'admins' and Configs.score_visibility != 'admins' %}
         <a class="nav-link {% if request.path.startswith('/scoreboard') %}active{% endif %}" href="{{ url_for('scoreboard.listing') }}"><i class="fas fa-trophy me-2"></i><span class="label">Scoreboard</span></a>
         {% endif %}
@@ -350,8 +402,60 @@
     const desktopCollapseToggle = document.getElementById("tomSidebarCollapseToggle");
     const desktopCollapseIcon = document.getElementById("tomSidebarCollapseIcon");
     const collapseStorageKey = "tom-sidebar-collapsed";
+    const runningLabMount = document.getElementById("tomRunningLabMount");
 
     if (!sidebar) return;
+
+    const escapeHtml = (value) => {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    };
+
+    const renderRunningLab = (data) => {
+      if (!runningLabMount) return;
+      if (!data || !data.url || !data.title) {
+        runningLabMount.innerHTML = "";
+        return;
+      }
+
+      const endpointText = data.host && Array.isArray(data.ports) && data.ports.length
+        ? `${escapeHtml(data.host)}:${escapeHtml(data.ports[0])}`
+        : "Container active";
+
+      runningLabMount.innerHTML = `
+        <a class="tom-running-lab" href="${escapeHtml(data.url)}">
+          <div class="d-flex align-items-center justify-content-between mb-1">
+            <div class="tom-running-lab-title"><i class="${escapeHtml(data.icon || "fas fa-cube")} me-2"></i>${escapeHtml(data.title)}</div>
+            <span class="tom-running-dot"></span>
+          </div>
+          <div class="tom-running-lab-meta">Running now • ${endpointText}</div>
+        </a>
+      `;
+    };
+
+    const loadRunningLab = async () => {
+      if (!runningLabMount) return;
+      const endpoint = runningLabMount.dataset.endpoint;
+      if (!endpoint) return;
+      try {
+        const response = await fetch(endpoint, {
+          method: "GET",
+          credentials: "same-origin"
+        });
+        if (!response.ok) {
+          renderRunningLab(null);
+          return;
+        }
+        const body = await response.json();
+        renderRunningLab(body?.data || null);
+      } catch {
+        renderRunningLab(null);
+      }
+    };
 
     const openSidebar = () => {
       if (!sidebar || !backdrop) return;
@@ -459,5 +563,10 @@
         applyDesktopCollapsedState(false);
       }
     });
+
+    if (runningLabMount) {
+      loadRunningLab();
+      window.setInterval(loadRunningLab, 15000);
+    }
   })();
 </script>

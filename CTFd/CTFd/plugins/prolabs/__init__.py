@@ -1821,6 +1821,111 @@ def _get_docker_challenge_dependencies():
     }
 
 
+def _get_scope_tracker_query(deps, user, team, scope):
+    if scope == "team" and team is not None:
+        return deps["DockerChallengeTracker"].query.filter_by(team_id=team.id)
+    return deps["DockerChallengeTracker"].query.filter_by(user_id=user.id)
+
+
+def _find_active_scope_container(deps, docker_config, user, team, scope, exclude_tracker_id=None):
+    now = int(datetime.utcnow().timestamp())
+    query = _get_scope_tracker_query(deps, user, team, scope)
+    entries = query.order_by(deps["DockerChallengeTracker"].timestamp.desc()).all()
+
+    removed_any = False
+    for entry in entries:
+        if exclude_tracker_id is not None and entry.id == exclude_tracker_id:
+            continue
+
+        if entry.revert_time and int(entry.revert_time) <= now:
+            try:
+                deps["delete_container"](docker_config, entry.instance_id, ports_str=entry.ports)
+            except Exception:
+                pass
+            deps["DockerChallengeTracker"].query.filter_by(id=entry.id).delete()
+            removed_any = True
+            continue
+
+        return entry
+
+    if removed_any:
+        db.session.commit()
+    return None
+
+
+def _build_active_container_sidebar_item(entry):
+    challenge_key = (entry.challenge or "").strip()
+    host = (entry.host or "").strip()
+    ports = [p for p in (entry.ports or "").split(",") if p]
+
+    item = {
+        "kind": "challenge",
+        "title": "Challenge Container",
+        "url": url_for("challenges.listing"),
+        "icon": "fas fa-flag",
+        "host": host,
+        "ports": ports,
+    }
+
+    if challenge_key.startswith("machine:"):
+        slug = challenge_key.split(":", 1)[1]
+        machine = next((m for m in get_boot2root_machines() if m.get("slug") == slug), None)
+        item.update(
+            {
+                "kind": "machine",
+                "title": machine.get("title") if machine else f"Machine: {slug}",
+                "url": url_for("prolabs.machines_detail", slug=slug),
+                "icon": "fas fa-server",
+            }
+        )
+    elif challenge_key.startswith("cve:"):
+        slug = challenge_key.split(":", 1)[1]
+        cve = next((c for c in get_cves() if c.get("slug") == slug), None)
+        item.update(
+            {
+                "kind": "cve",
+                "title": cve.get("title") if cve else f"CVE: {slug}",
+                "url": url_for("prolabs.cves_detail", slug=slug),
+                "icon": "fas fa-bug",
+            }
+        )
+    elif challenge_key.startswith("sherlock:"):
+        slug = challenge_key.split(":", 1)[1]
+        sherlock = next((s for s in get_sherlocks() if s.get("slug") == slug), None)
+        item.update(
+            {
+                "kind": "sherlock",
+                "title": sherlock.get("title") if sherlock else f"Sherlock: {slug}",
+                "url": url_for("prolabs.sherlocks_detail", slug=slug),
+                "icon": "fas fa-shield-alt",
+            }
+        )
+    elif challenge_key.startswith("adversary_operation:"):
+        slug = challenge_key.split(":", 1)[1]
+        operation = next((o for o in get_adversary_operations() if o.get("slug") == slug), None)
+        item.update(
+            {
+                "kind": "adversary_operation",
+                "title": operation.get("title") if operation else f"Adversary Operation: {slug}",
+                "url": url_for("prolabs.adversary_operations_detail", slug=slug),
+                "icon": "fas fa-crosshairs",
+            }
+        )
+
+    return item
+
+
+def _single_container_block_response(active_entry):
+    active_item = _build_active_container_sidebar_item(active_entry)
+    return {
+        "success": False,
+        "errors": {
+            "message": "Stop the running container first in order to access another lab.",
+        },
+        "active_container": active_item,
+    }, 403
+
+
 def _get_machine_container_entry(slug, machine, deps, user, team, scope):
     image = machine.get("docker_image")
     if not image:
@@ -2351,6 +2456,17 @@ def machines_container(slug):
             "message": "Container stopped.",
         }
 
+    other_active = _find_active_scope_container(
+        deps,
+        docker_config,
+        user,
+        team,
+        scope,
+        exclude_tracker_id=existing.id if existing is not None else None,
+    )
+    if other_active is not None:
+        return _single_container_block_response(other_active)
+
     did_revert = False
     if existing is not None:
         # Match docker challenge behavior: start acts as a revert when an instance already exists.
@@ -2380,20 +2496,6 @@ def machines_container(slug):
                 "success": False,
                 "errors": {"message": f"Docker image {image_name} is not available on the host"},
             }, 403
-
-    if scope == "team" and team is not None:
-        running_count = deps["DockerChallengeTracker"].query.filter_by(team_id=team.id).count()
-    else:
-        running_count = deps["DockerChallengeTracker"].query.filter_by(user_id=user.id).count()
-
-    max_containers = 3
-    if running_count >= max_containers:
-        return {
-            "success": False,
-            "errors": {
-                "message": f"You already have {running_count} running containers. Stop one before spawning a new instance.",
-            },
-        }, 403
 
     create_result = deps["create_container"](
         docker_config,
@@ -2699,6 +2801,17 @@ def cves_container(slug):
             "message": "Container stopped.",
         }
 
+    other_active = _find_active_scope_container(
+        deps,
+        docker_config,
+        user,
+        team,
+        scope,
+        exclude_tracker_id=existing.id if existing is not None else None,
+    )
+    if other_active is not None:
+        return _single_container_block_response(other_active)
+
     did_revert = False
     if existing is not None:
         try:
@@ -2724,19 +2837,6 @@ def cves_container(slug):
                 "success": False,
                 "errors": {"message": f"Docker image {image_name} is not available on the host"},
             }, 403
-
-    if scope == "team" and team is not None:
-        running_count = deps["DockerChallengeTracker"].query.filter_by(team_id=team.id).count()
-    else:
-        running_count = deps["DockerChallengeTracker"].query.filter_by(user_id=user.id).count()
-
-    if running_count >= 3:
-        return {
-            "success": False,
-            "errors": {
-                "message": f"You already have {running_count} running containers. Stop one before spawning a new instance.",
-            },
-        }, 403
 
     create_result = deps["create_container"](
         docker_config,
@@ -3028,6 +3128,17 @@ def sherlocks_container(slug):
             "message": "Container stopped.",
         }
 
+    other_active = _find_active_scope_container(
+        deps,
+        docker_config,
+        user,
+        team,
+        scope,
+        exclude_tracker_id=existing.id if existing is not None else None,
+    )
+    if other_active is not None:
+        return _single_container_block_response(other_active)
+
     did_revert = False
     if existing is not None:
         try:
@@ -3053,19 +3164,6 @@ def sherlocks_container(slug):
                 "success": False,
                 "errors": {"message": f"Docker image {image_name} is not available on the host"},
             }, 403
-
-    if scope == "team" and team is not None:
-        running_count = deps["DockerChallengeTracker"].query.filter_by(team_id=team.id).count()
-    else:
-        running_count = deps["DockerChallengeTracker"].query.filter_by(user_id=user.id).count()
-
-    if running_count >= 3:
-        return {
-            "success": False,
-            "errors": {
-                "message": f"You already have {running_count} running containers. Stop one before spawning a new instance.",
-            },
-        }, 403
 
     create_result = deps["create_container"](
         docker_config,
@@ -3365,6 +3463,17 @@ def adversary_operations_container(slug):
             "message": "Container stopped.",
         }
 
+    other_active = _find_active_scope_container(
+        deps,
+        docker_config,
+        user,
+        team,
+        scope,
+        exclude_tracker_id=existing.id if existing is not None else None,
+    )
+    if other_active is not None:
+        return _single_container_block_response(other_active)
+
     did_revert = False
     if existing is not None:
         try:
@@ -3390,19 +3499,6 @@ def adversary_operations_container(slug):
                 "success": False,
                 "errors": {"message": f"Docker image {image_name} is not available on the host"},
             }, 403
-
-    if scope == "team" and team is not None:
-        running_count = deps["DockerChallengeTracker"].query.filter_by(team_id=team.id).count()
-    else:
-        running_count = deps["DockerChallengeTracker"].query.filter_by(user_id=user.id).count()
-
-    if running_count >= 3:
-        return {
-            "success": False,
-            "errors": {
-                "message": f"You already have {running_count} running containers. Stop one before spawning a new instance.",
-            },
-        }, 403
 
     create_result = deps["create_container"](
         docker_config,
@@ -3458,6 +3554,31 @@ def adversary_operations_container(slug):
             if did_revert
             else f"Container started. Timer set to {initial_timer // 60} minutes."
         ),
+    }
+
+
+@prolabs.route("/api/v1/active-container", methods=["GET"])
+@authed_only
+def active_container_status():
+    deps = _get_docker_challenge_dependencies()
+    if deps is None:
+        return {"success": True, "data": None}
+
+    docker_config = deps["DockerConfig"].query.filter_by(id=1).first()
+    if docker_config is None or not docker_config.hostname:
+        return {"success": True, "data": None}
+
+    user, team, scope = _get_current_account_scope()
+    if user is None:
+        return {"success": True, "data": None}
+
+    entry = _find_active_scope_container(deps, docker_config, user, team, scope)
+    if entry is None:
+        return {"success": True, "data": None}
+
+    return {
+        "success": True,
+        "data": _build_active_container_sidebar_item(entry),
     }
 
 

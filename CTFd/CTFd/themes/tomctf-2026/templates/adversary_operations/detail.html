@@ -36,6 +36,10 @@
       font-family: monospace;
       letter-spacing: 0.4px;
     }
+    .adversary-copy-feedback {
+      font-size: 0.82rem;
+      color: #a8c2c0;
+    }
   </style>
 
   {% if operation.cover_image %}
@@ -86,6 +90,10 @@
           </div>
           <div class="sherlock-docker-status" id="adversary-container-status">{{ operation.docker_status.message }}</div>
           <div id="adversary-container-endpoints" class="mt-2"></div>
+          <div id="adversary-copy-ip-wrap" class="mt-2" style="display:none;">
+            <button class="btn btn-sm btn-outline-info" id="adversary-copy-ip" type="button">Copy IP</button>
+            <span id="adversary-copy-ip-feedback" class="adversary-copy-feedback ms-2"></span>
+          </div>
           <div id="adversary-container-timer" class="mt-2 text-secondary"></div>
         </div>
       </div>
@@ -140,6 +148,9 @@
   const startBtn = document.getElementById('adversary-container-start');
   const stopBtn = document.getElementById('adversary-container-stop');
   const extendBtn = document.getElementById('adversary-container-extend');
+  const copyIpWrap = document.getElementById('adversary-copy-ip-wrap');
+  const copyIpBtn = document.getElementById('adversary-copy-ip');
+  const copyIpFeedback = document.getElementById('adversary-copy-ip-feedback');
   let countdown = null;
   let expirySyncInFlight = false;
 
@@ -170,12 +181,15 @@
 
     if (status.running && status.host && Array.isArray(status.ports) && status.ports.length) {
       endpointBox.innerHTML = status.ports.map((port) => `<div class="sherlock-endpoint-box mt-2">${status.host}:${port}</div>`).join('');
+      if (copyIpWrap) copyIpWrap.style.display = '';
+      if (copyIpBtn) copyIpBtn.setAttribute('data-copy-ip', String(status.host));
+      if (copyIpFeedback) copyIpFeedback.textContent = '';
       if (status.revert_time) {
         const tick = () => {
           const now = Math.floor(Date.now() / 1000);
           const left = parseInt(status.revert_time, 10) - now;
           if (left <= 0) {
-            timerNode.textContent = 'Instance expired. Syncing status...';
+            timerNode.textContent = 'Instance expired';
             clearInterval(countdown);
             countdown = null;
             if (!expirySyncInFlight) {
@@ -193,6 +207,35 @@
         tick();
         countdown = setInterval(tick, 1000);
       }
+    } else {
+      if (copyIpWrap) copyIpWrap.style.display = 'none';
+      if (copyIpFeedback) copyIpFeedback.textContent = '';
+    }
+  };
+
+  const copyIpToClipboard = async () => {
+    const ip = copyIpBtn?.getAttribute('data-copy-ip') || '';
+    if (!ip) {
+      if (copyIpFeedback) copyIpFeedback.textContent = 'No IP available.';
+      return;
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(ip);
+      } else {
+        const helper = document.createElement('textarea');
+        helper.value = ip;
+        helper.style.position = 'fixed';
+        helper.style.opacity = '0';
+        document.body.appendChild(helper);
+        helper.focus();
+        helper.select();
+        document.execCommand('copy');
+        document.body.removeChild(helper);
+      }
+      if (copyIpFeedback) copyIpFeedback.textContent = `Copied: ${ip}`;
+    } catch {
+      if (copyIpFeedback) copyIpFeedback.textContent = 'Failed to copy IP.';
     }
   };
 
@@ -219,6 +262,7 @@
   startBtn?.addEventListener('click', () => callContainer('start'));
   stopBtn?.addEventListener('click', () => callContainer('stop'));
   extendBtn?.addEventListener('click', () => callContainer('extend'));
+  copyIpBtn?.addEventListener('click', copyIpToClipboard);
   document.getElementById('adversary-container-refresh')?.addEventListener('click', () => callContainer('status'));
 
   const submitTask = async (entryId, value, feedback) => {

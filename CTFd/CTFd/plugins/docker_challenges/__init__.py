@@ -897,22 +897,22 @@ class ContainerAPI(Resource):
                 DockerChallengeTracker.query.filter_by(user_id=session.id).filter_by(docker_image=container).delete()
             db.session.commit()
         
-        # Check if too many containers are already running for this team/user.
-        MAX_CONTAINERS = 3
+        # Enforce one active container at a time across all challenge/lab types.
+        MAX_CONTAINERS = 1
         containers = DockerChallengeTracker.query.all()
         if is_teams_mode():
             running_count = sum(1 for entry in containers if entry.team_id is not None and str(session.id) == str(entry.team_id))
             if running_count >= MAX_CONTAINERS:
                 return {
                     "success": False,
-                    "message": f"You already have {running_count} containers running. Please stop one first. Maximum allowed: {MAX_CONTAINERS}.",
+                    "message": "Stop the running container first in order to access another lab.",
                 }, 403
         else:
             running_count = sum(1 for entry in containers if entry.user_id is not None and str(session.id) == str(entry.user_id))
             if running_count >= MAX_CONTAINERS:
                 return {
                     "success": False,
-                    "message": f"You already have {running_count} containers running. Please stop one first. Maximum allowed: {MAX_CONTAINERS}.",
+                    "message": "Stop the running container first in order to access another lab.",
                 }, 403
 
         portsbl = get_unavailable_ports(docker)
