@@ -1,0 +1,68 @@
+<style>
+  #tom-global-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 999999;
+    background: rgba(12, 12, 16, 0.6);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+  }
+  
+  #tom-global-loader.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .tom-loader-spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    border-top-color: rgba(227, 35, 35, 0.9);
+    animation: tomLoaderSpin 1s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
+    box-shadow: 0 0 20px rgba(227, 35, 35, 0.4);
+  }
+
+  @keyframes tomLoaderSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
+
+<div id="tom-global-loader">
+  <div class="tom-loader-spinner"></div>
+</div>
+
+<script>
+  window.addEventListener('load', () => {
+    const loader = document.getElementById('tom-global-loader');
+    if (loader) {
+      setTimeout(() => {
+        loader.classList.add('hidden');
+      }, 100);
+    }
+  });
+
+  window.addEventListener('beforeunload', () => {
+    const loader = document.getElementById('tom-global-loader');
+    if (loader) {
+      loader.classList.remove('hidden');
+    }
+  });
+
+  setTimeout(() => {
+    const loader = document.getElementById('tom-global-loader');
+    if (loader && !loader.classList.contains('hidden')) {
+      loader.classList.add('hidden');
+    }
+  }, 4000);
+</script>
