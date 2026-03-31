@@ -506,7 +506,12 @@
       });
       const body = await res.json();
       if (body?.data) updateContainerView(body.data);
-      if (body?.errors?.message && statusText) statusText.textContent = body.errors.message;
+      if (body?.errors?.message) {
+        if (statusText) statusText.textContent = body.errors.message;
+        if (body.errors.message.includes('Stop the running container first in order to access another lab')) {
+          showNotice({ title: 'Warning', text: body.errors.message });
+        }
+      }
       if (body?.message && (action === 'start' || action === 'stop' || action === 'extend')) {
         showNotice({ title: 'Attention!', text: body.message });
       }

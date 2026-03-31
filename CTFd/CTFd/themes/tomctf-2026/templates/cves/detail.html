@@ -381,7 +381,12 @@
       .then(function (r) { return r.json(); })
       .then(function (body) {
         if (body && body.data) updateContainerView(body.data);
-        if (body && body.errors && body.errors.message && statusText) statusText.textContent = body.errors.message;
+        if (body && body.errors && body.errors.message) {
+          if (statusText) statusText.textContent = body.errors.message;
+          if (body.errors.message.indexOf('Stop the running container first in order to access another lab') !== -1) {
+            window.alert('Warning: ' + body.errors.message);
+          }
+        }
         if (action === 'start' || action === 'stop' || action === 'extend') {
           window.dispatchEvent(new CustomEvent('tom:container-state-changed', { detail: { action: action } }));
         }

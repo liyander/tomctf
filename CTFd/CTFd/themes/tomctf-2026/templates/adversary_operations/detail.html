@@ -252,7 +252,12 @@
       });
       const body = await res.json();
       if (body?.data) renderDocker(body.data);
-      if (body?.errors?.message && statusText) statusText.textContent = body.errors.message;
+      if (body?.errors?.message) {
+        if (statusText) statusText.textContent = body.errors.message;
+        if (body.errors.message.includes('Stop the running container first in order to access another lab')) {
+          window.alert(`Warning: ${body.errors.message}`);
+        }
+      }
       if (action === 'start' || action === 'stop' || action === 'extend') {
         window.dispatchEvent(new CustomEvent('tom:container-state-changed', { detail: { action } }));
       }
