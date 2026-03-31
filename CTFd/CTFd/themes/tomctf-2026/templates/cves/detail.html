@@ -257,6 +257,7 @@
     var stopBtn = document.getElementById('cve-container-stop');
     var extendBtn = document.getElementById('cve-container-extend');
     var countdownInterval = null;
+    var expirySyncInFlight = false;
 
     var form = document.getElementById('cveSubmitForm');
     var msg = document.getElementById('submitMsg');
@@ -313,11 +314,17 @@
         var now = Math.floor(Date.now() / 1000);
         var distance = parseInt(revertTime, 10) - now;
         if (distance <= 0) {
-          timerNode.textContent = 'Instance expired';
+          timerNode.textContent = 'Instance expired. Syncing status...';
           timerNode.classList.add('danger');
           if (extendBtn) extendBtn.style.display = 'none';
           clearInterval(countdownInterval);
           countdownInterval = null;
+          if (!expirySyncInFlight) {
+            expirySyncInFlight = true;
+            Promise.resolve(callContainerAction('status')).finally(function () {
+              expirySyncInFlight = false;
+            });
+          }
           return;
         }
         var mins = Math.floor(distance / 60);

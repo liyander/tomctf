@@ -353,6 +353,7 @@
   const stopBtn = document.getElementById('machine-container-stop');
   const extendBtn = document.getElementById('machine-container-extend');
   let countdownInterval = null;
+  let expirySyncInFlight = false;
 
   const clearCountdown = () => {
     if (countdownInterval) {
@@ -431,11 +432,17 @@
       const now = Math.floor(Date.now() / 1000);
       const distance = parseInt(revertTime, 10) - now;
       if (distance <= 0) {
-        timerNode.textContent = 'Instance expired';
+        timerNode.textContent = 'Instance expired. Syncing status...';
         timerNode.classList.add('danger');
         if (extendBtn) extendBtn.style.display = 'none';
         clearInterval(countdownInterval);
         countdownInterval = null;
+        if (!expirySyncInFlight) {
+          expirySyncInFlight = true;
+          Promise.resolve(callContainerAction('status')).finally(() => {
+            expirySyncInFlight = false;
+          });
+        }
         return;
       }
       const mins = Math.floor(distance / 60);

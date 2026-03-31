@@ -141,6 +141,7 @@
   const stopBtn = document.getElementById('adversary-container-stop');
   const extendBtn = document.getElementById('adversary-container-extend');
   let countdown = null;
+  let expirySyncInFlight = false;
 
   const clearTimer = () => {
     if (countdown) {
@@ -174,9 +175,15 @@
           const now = Math.floor(Date.now() / 1000);
           const left = parseInt(status.revert_time, 10) - now;
           if (left <= 0) {
-            timerNode.textContent = 'Instance expired';
+            timerNode.textContent = 'Instance expired. Syncing status...';
             clearInterval(countdown);
             countdown = null;
+            if (!expirySyncInFlight) {
+              expirySyncInFlight = true;
+              Promise.resolve(callContainer('status')).finally(() => {
+                expirySyncInFlight = false;
+              });
+            }
             return;
           }
           const m = Math.floor(left / 60);
