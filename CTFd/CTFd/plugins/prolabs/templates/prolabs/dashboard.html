@@ -50,7 +50,7 @@
 
   .dash-tabs {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.75rem;
   }
 
@@ -209,11 +209,16 @@
         <div class="dash-stat-label">Challenges</div>
         <div class="dash-tab-detail" data-kpi-detail="challenges"></div>
       </button>
+      <button type="button" class="dash-tab" data-category="adversary">
+        <div class="dash-stat-value">{{ stats.adversary.completed }} <span class="dash-subtle">/{{ stats.adversary.total }}</span></div>
+        <div class="dash-stat-label">Adversary Emulation</div>
+        <div class="dash-tab-detail" data-kpi-detail="adversary"></div>
+      </button>
     </div>
 
     <div class="d-flex justify-content-between align-items-center mt-3 mb-2 flex-wrap gap-2">
       <h5 class="dash-headline h6 mb-0">Lab Tracks</h5>
-      <span class="dash-subtle small">Pro Labs, Mini Pro Labs, CVEs</span>
+      <span class="dash-subtle small">Pro Labs, Mini Pro Labs, CVEs, Adversary Operations</span>
     </div>
     <div class="dash-tabs" id="dashLabTabs">
       <button type="button" class="dash-lab-tab active" data-lab-category="Pro Labs">
@@ -227,6 +232,10 @@
       <button type="button" class="dash-lab-tab" data-lab-category="CVEs">
         <div class="dash-stat-value">{{ stats.prolabs.categories['CVEs'].completed }} <span class="dash-subtle">/{{ stats.prolabs.categories['CVEs'].total }}</span></div>
         <div class="dash-stat-label">CVEs</div>
+      </button>
+      <button type="button" class="dash-lab-tab" data-lab-category="Adversary Operations">
+        <div class="dash-stat-value">{{ stats.prolabs.categories['Adversary Operations'].completed }} <span class="dash-subtle">/{{ stats.prolabs.categories['Adversary Operations'].total }}</span></div>
+        <div class="dash-stat-label">Adversary Ops</div>
       </button>
     </div>
   </section>

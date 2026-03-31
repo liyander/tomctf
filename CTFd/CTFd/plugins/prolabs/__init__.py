@@ -4348,6 +4348,7 @@ def _get_dashboard_stats_for_scope(target_user=None):
         "Pro Labs": {"completed": 0, "total": 0},
         "Mini Pro Labs": {"completed": 0, "total": 0},
         "CVEs": {"completed": 0, "total": 0},
+        "Adversary Operations": {"completed": 0, "total": 0},
     }
     for lab in get_prolabs():
         slug = lab.get("slug")
@@ -4423,6 +4424,67 @@ def _get_dashboard_stats_for_scope(target_user=None):
         total = cve_difficulty_totals[name]
         solved = cve_difficulty_solved[name]
         cve_difficulty_completion.append(
+            {
+                "name": name,
+                "solved": solved,
+                "total": total,
+                "percentage": (solved / total * 100) if total > 0 else 0,
+            }
+        )
+
+    # Adversary Operations data + graphs
+    adversary_rows = AdversaryOperationSubmission.query.filter_by(status="correct", **scope_filter).all()
+    adversary_dates = [row.date for row in adversary_rows if row.date]
+    solved_adversary_by_slug = {}
+    for row in adversary_rows:
+        slug = row.operation_slug
+        if not slug:
+            continue
+        solved_adversary_by_slug.setdefault(slug, set()).add(row.entry_id)
+
+    adversary_operations = get_adversary_operations()
+    total_adversary_tasks = sum(len(item.get("tasks", [])) for item in adversary_operations)
+    adversary_correct = len(adversary_rows)
+
+    adversary_data = []
+    adversary_difficulty_totals = {name: 0 for name in difficulty_order}
+    adversary_difficulty_solved = {name: 0 for name in difficulty_order}
+    for operation in adversary_operations:
+        slug = operation.get("slug")
+        total_tasks = len(operation.get("tasks", []))
+        solved_tasks = len(solved_adversary_by_slug.get(slug, set()))
+        completion = (solved_tasks / total_tasks * 100) if total_tasks > 0 else 0
+        adversary_data.append(
+            {
+                "title": operation.get("title"),
+                "slug": slug,
+                "completion": completion,
+                "subtext": f"{solved_tasks}/{total_tasks} tasks",
+                "logo_image": operation.get("logo_image", ""),
+                "category": "Adversary Operations",
+                "solved": solved_tasks,
+                "total": total_tasks,
+            }
+        )
+
+        difficulty = (operation.get("difficulty") or "Easy").strip()
+        if difficulty in adversary_difficulty_totals:
+            adversary_difficulty_totals[difficulty] += 1
+            if completion >= 100:
+                adversary_difficulty_solved[difficulty] += 1
+
+        category_summary["Adversary Operations"]["total"] += 1
+        if completion >= 100:
+            category_summary["Adversary Operations"]["completed"] += 1
+
+    adversary_data.sort(key=lambda item: item.get("completion", 0), reverse=True)
+    prolabs_data.extend(adversary_data)
+
+    adversary_difficulty_completion = []
+    for name in difficulty_order:
+        total = adversary_difficulty_totals[name]
+        solved = adversary_difficulty_solved[name]
+        adversary_difficulty_completion.append(
             {
                 "name": name,
                 "solved": solved,
@@ -4570,6 +4632,7 @@ def _get_dashboard_stats_for_scope(target_user=None):
         + machine_user_correct
         + machine_root_correct
         + sherlock_correct
+        + adversary_correct
         + cve_correct
         + challenge_solves
     )
@@ -4608,6 +4671,14 @@ def _get_dashboard_stats_for_scope(target_user=None):
             "difficulty": cve_difficulty_completion,
             "list": cves_data,
         },
+        "adversary": {
+            "title": "Adversary Emulation Completed",
+            "subtitle": "Adversary operation progress over last 12 months",
+            "counter": {"done": adversary_correct, "total": total_adversary_tasks},
+            "timeline": _build_timeline(adversary_dates),
+            "difficulty": adversary_difficulty_completion,
+            "list": adversary_data,
+        },
     }
 
     return {
@@ -4645,6 +4716,11 @@ def _get_dashboard_stats_for_scope(target_user=None):
             "completed": cve_correct,
             "total": total_cves,
             "percentage": (cve_correct / total_cves * 100) if total_cves > 0 else 0,
+        },
+        "adversary": {
+            "completed": adversary_correct,
+            "total": total_adversary_tasks,
+            "percentage": (adversary_correct / total_adversary_tasks * 100) if total_adversary_tasks > 0 else 0,
         },
         "category_views": category_views,
     }
