@@ -307,6 +307,30 @@
       });
     }
 
+    function showThemeAlert(title, text) {
+      var existing = document.getElementById('cveThemeAlert');
+      if (existing) existing.remove();
+      var modal = document.createElement('div');
+      modal.id = 'cveThemeAlert';
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(4,7,10,.72);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;';
+      modal.innerHTML =
+        '<div style="max-width:430px;width:100%;background:linear-gradient(170deg, rgba(10,14,20,0.98), rgba(14,10,12,0.98));color:#e7f1f0;border:1px solid rgba(227,35,35,.36);border-radius:12px;overflow:hidden;box-shadow:0 16px 38px rgba(0,0,0,.55)">' +
+          '<div style="padding:.85rem 1rem;background:linear-gradient(120deg, rgba(227,35,35,.24), rgba(227,35,35,.12));font-weight:700;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(227,35,35,.34);">' +
+            '<span>' + (title || 'Warning') + '</span>' +
+            '<button id="cveThemeAlertClose" style="border:none;background:transparent;color:#f2f2f2;font-size:1.2rem;line-height:1;cursor:pointer;">&times;</button>' +
+          '</div>' +
+          '<div style="padding:1rem;color:#c7d6d4;">' + (text || '') + '</div>' +
+          '<div style="padding:0 1rem 1rem;text-align:right;">' +
+            '<button id="cveThemeAlertOk" style="border:1px solid rgba(227,35,35,.45);background:rgba(227,35,35,.2);color:#fff;border-radius:8px;padding:.35rem .7rem;">Got it</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(modal);
+      var close = function () { modal.remove(); };
+      modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+      document.getElementById('cveThemeAlertClose')?.addEventListener('click', close);
+      document.getElementById('cveThemeAlertOk')?.addEventListener('click', close);
+    }
+
     function startCountdown(revertTime) {
       clearCountdown();
       if (!timerNode || !revertTime) return;
@@ -384,7 +408,7 @@
         if (body && body.errors && body.errors.message) {
           if (statusText) statusText.textContent = body.errors.message;
           if (body.errors.message.indexOf('Stop the running container first in order to access another lab') !== -1) {
-            window.alert('Warning: ' + body.errors.message);
+            showThemeAlert('Warning', body.errors.message);
           }
         }
         if (action === 'start' || action === 'stop' || action === 'extend') {

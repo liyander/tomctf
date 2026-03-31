@@ -389,16 +389,16 @@
     if (existing) existing.remove();
     const modal = document.createElement('div');
     modal.id = 'machineNoticeModal';
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(4,7,10,.72);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;';
     modal.innerHTML = `
-      <div style="max-width:420px;width:100%;background:#fff;color:#1d2428;border-radius:10px;overflow:hidden;box-shadow:0 12px 28px rgba(0,0,0,.35)">
-        <div style="padding:.9rem 1rem;background:#ffc107;font-weight:700;display:flex;justify-content:space-between;align-items:center;">
+      <div style="max-width:430px;width:100%;background:linear-gradient(170deg, rgba(10,14,20,0.98), rgba(14,10,12,0.98));color:#e7f1f0;border:1px solid rgba(227,35,35,.36);border-radius:12px;overflow:hidden;box-shadow:0 16px 38px rgba(0,0,0,.55)">
+        <div style="padding:.85rem 1rem;background:linear-gradient(120deg, rgba(227,35,35,.24), rgba(227,35,35,.12));font-weight:700;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(227,35,35,.34);">
           <span>${title}</span>
-          <button id="machineNoticeClose" style="border:none;background:transparent;font-size:1.2rem;line-height:1;cursor:pointer;">&times;</button>
+          <button id="machineNoticeClose" style="border:none;background:transparent;color:#f2f2f2;font-size:1.2rem;line-height:1;cursor:pointer;">&times;</button>
         </div>
-        <div style="padding:1rem;">${text}</div>
+        <div style="padding:1rem;color:#c7d6d4;">${text}</div>
         <div style="padding:0 1rem 1rem;text-align:right;">
-          <button id="machineNoticeOk" class="btn btn-secondary btn-sm">Got it</button>
+          <button id="machineNoticeOk" style="border:1px solid rgba(227,35,35,.45);background:rgba(227,35,35,.2);color:#fff;border-radius:8px;padding:.35rem .7rem;">Got it</button>
         </div>
       </div>`;
     document.body.appendChild(modal);

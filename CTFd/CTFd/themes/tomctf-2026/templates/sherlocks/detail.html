@@ -284,6 +284,22 @@
     }
   };
 
+  const showThemeAlert = (message) => {
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(4,7,10,0.72);backdrop-filter:blur(8px);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+      <div style="background:linear-gradient(145deg, rgba(20,25,32,0.98), rgba(10,14,20,0.98));border:1px solid rgba(220,53,69,0.5);border-radius:1rem;padding:2rem;max-width:400px;text-align:center;box-shadow:0 15px 35px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);animation: alertScaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+        <i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:#dc3545;margin-bottom:1rem;filter:drop-shadow(0 0 8px rgba(220,53,69,0.4));"></i>
+        <h5 style="color:#fff;margin-bottom:0.75rem;font-weight:700;">Conflict Detected</h5>
+        <div style="color:rgba(230,230,230,0.9);margin-bottom:1.5rem;font-size:0.95rem;line-height:1.4;">${message}</div>
+        <button style="background:rgba(220,53,69,0.15);border:1px solid rgba(220,53,69,0.3);color:#ff6b6b;padding:0.5rem 1.75rem;border-radius:0.5rem;font-weight:600;cursor:pointer;transition:all 0.2s;" onclick="this.closest('.tom-alert-modal').remove()">Acknowledge</button>
+        <style>@keyframes alertScaleIn { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }</style>
+      </div>
+    `;
+    modal.classList.add('tom-alert-modal');
+    document.body.appendChild(modal);
+  };
+
   const callContainer = async (action) => {
     try {
       const res = await fetch(containerUrl, {
@@ -300,7 +316,7 @@
       if (body?.errors?.message) {
         if (statusText) statusText.textContent = body.errors.message;
         if (body.errors.message.includes('Stop the running container first in order to access another lab')) {
-          window.alert(`Warning: ${body.errors.message}`);
+          showThemeAlert(body.errors.message);
         }
       }
       if (action === 'start' || action === 'stop' || action === 'extend') {
