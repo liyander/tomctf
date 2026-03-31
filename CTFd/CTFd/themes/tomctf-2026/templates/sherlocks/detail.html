@@ -263,7 +263,7 @@
           const now = Math.floor(Date.now() / 1000);
           const left = parseInt(status.revert_time, 10) - now;
           if (left <= 0) {
-            timerNode.textContent = 'Instance expired';
+            timerNode.textContent = '';
             clearInterval(countdown);
             countdown = null;
             if (!expirySyncInFlight) {

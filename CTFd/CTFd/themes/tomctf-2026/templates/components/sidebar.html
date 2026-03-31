@@ -74,6 +74,13 @@
     border-color: rgba(227, 35, 35, 0.32);
   }
 
+  .tom-sidebar .nav-link.tom-running-highlight {
+    color: #ffffff;
+    border-color: rgba(87, 255, 127, 0.45);
+    background: linear-gradient(135deg, rgba(87, 255, 127, 0.14), rgba(10, 20, 14, 0.28));
+    box-shadow: 0 0 0 1px rgba(87, 255, 127, 0.22), 0 0 14px rgba(87, 255, 127, 0.18);
+  }
+
   .tom-running-lab {
     display: block;
     box-sizing: border-box;
@@ -425,6 +432,7 @@
 
     const renderRunningLab = (data) => {
       if (!runningLabMount) return;
+      applyRunningNavGlow(data?.kind || null);
       if (!data || !data.url || !data.title) {
         runningLabMount.innerHTML = "";
         return;
@@ -443,6 +451,27 @@
           <div class="tom-running-lab-meta">Running now • ${endpointText}</div>
         </a>
       `;
+    };
+
+    const applyRunningNavGlow = (kind) => {
+      sidebar.querySelectorAll("a.nav-link.tom-running-highlight").forEach((node) => {
+        node.classList.remove("tom-running-highlight");
+      });
+
+      if (!kind) return;
+
+      const selectorByKind = {
+        machine: 'a.nav-link[href*="/machines"]',
+        cve: 'a.nav-link[href*="/cves"]',
+        sherlock: 'a.nav-link[href*="/sherlocks"]',
+        adversary_operation: 'a.nav-link[href*="/adversary-operations"]',
+        challenge: 'a.nav-link[href*="/challenges"]',
+      };
+
+      const target = sidebar.querySelector(selectorByKind[kind] || "");
+      if (target) {
+        target.classList.add("tom-running-highlight");
+      }
     };
 
     const loadRunningLab = async () => {
