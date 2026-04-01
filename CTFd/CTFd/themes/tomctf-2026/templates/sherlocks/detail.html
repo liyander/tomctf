@@ -300,14 +300,7 @@
     document.body.appendChild(modal);
   };
 
-  let isFetchingContainer = false;
   const callContainer = async (action) => {
-    if (isFetchingContainer) return;
-    isFetchingContainer = true;
-    if (startBtn) startBtn.disabled = true;
-    if (stopBtn) stopBtn.disabled = true;
-    if (extendBtn) extendBtn.disabled = true;
-
     try {
       const res = await fetch(containerUrl, {
         method: 'POST',
@@ -331,8 +324,6 @@
       }
     } catch {
       if (statusText) statusText.textContent = 'Failed to update container state.';
-    } finally {
-      isFetchingContainer = false;
     }
   };
 
