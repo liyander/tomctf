@@ -493,7 +493,11 @@
     }
   };
 
+  let isFetchingContainerAction = false;
   const callContainerAction = async (action) => {
+    if (isFetchingContainerAction) return;
+    isFetchingContainerAction = true;
+    
     try {
       const res = await fetch(containerUrl, {
         method: 'POST',
@@ -520,6 +524,8 @@
       }
     } catch (error) {
       if (statusText) statusText.textContent = 'Failed to update container state.';
+    } finally {
+      isFetchingContainerAction = false;
     }
   };
 
