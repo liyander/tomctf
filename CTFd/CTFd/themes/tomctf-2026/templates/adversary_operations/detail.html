@@ -180,7 +180,8 @@
     }
 
     if (status.running && status.host && Array.isArray(status.ports) && status.ports.length) {
-      endpointBox.innerHTML = status.ports.map((port) => `<div class="sherlock-endpoint-box mt-2">${status.host}:${port}</div>`).join('');
+      const lastPort = status.ports[status.ports.length - 1];
+      endpointBox.innerHTML = `<div class="sherlock-endpoint-box mt-2">${status.host}:${lastPort}</div>`;
       if (copyIpWrap) copyIpWrap.style.display = '';
       if (copyIpBtn) copyIpBtn.setAttribute('data-copy-ip', String(status.host));
       if (copyIpFeedback) copyIpFeedback.textContent = '';

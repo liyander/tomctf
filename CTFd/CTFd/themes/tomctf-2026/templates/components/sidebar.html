@@ -439,7 +439,7 @@
       }
 
       const endpointText = data.host && Array.isArray(data.ports) && data.ports.length
-        ? `${escapeHtml(data.host)}:${escapeHtml(data.ports[0])}`
+        ? `${escapeHtml(data.host)}:${escapeHtml(data.ports[data.ports.length - 1])}`
         : "Container active";
 
       runningLabMount.innerHTML = `
