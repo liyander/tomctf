@@ -43,11 +43,11 @@
                 <div class="form-group mb-4 pb-3 border-bottom">
 					<label class="font-weight-bold">
 						{{ label }} <br>
-						<small class="text-muted">Currently: {% if Configs[key] == 'false' %}Hidden{% else %}Visible{% endif %}</small>
+						<small class="text-muted">Currently: {% if (Configs[key] | string | lower) == 'false' %}Hidden{% else %}Visible{% endif %}</small>
 					</label>
 					<select class="form-control custom-select" name="{{ key }}">
-						<option value="true" {% if Configs[key] != 'false' %}selected{% endif %}>Visible</option>
-						<option value="false" {% if Configs[key] == 'false' %}selected{% endif %}>Hidden</option>
+						<option value="true" {% if (Configs[key] | string | lower) != 'false' %}selected{% endif %}>Visible</option>
+						<option value="false" {% if (Configs[key] | string | lower) == 'false' %}selected{% endif %}>Hidden</option>
 					</select>
 				</div>
                 {% endfor %}
