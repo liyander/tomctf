@@ -9,28 +9,34 @@ def load(app):
 
     @app.before_request
     def block_hidden_pages():
-        if is_admin():
-            return
-            
-        path = request.path
+        from flask import request, redirect, url_for, jsonify
         
-        # Mapping of path prefixes to their config keys
+        path = request.path
+
         visibility_map = {
             '/dashboard': 'dashboard_visible',
             '/challenges': 'challenges_visible',
+            '/api/v1/challenges': 'challenges_visible',
             '/ctfs': 'hosted_ctf_visible',
+            '/api/v1/ctfs': 'hosted_ctf_visible',
             '/pro-red-team-labs': 'pro_red_team_labs_visible',
             '/machines': 'machines_visible',
             '/adversary-operations': 'adversary_operations_visible',
             '/cves': 'cves_visible',
             '/sherlocks': 'sherlocks_visible',
+            '/api/v1/sherlocks': 'sherlocks_visible',
             '/credits': 'credits_visible',
         }
-        
+
+        if is_admin():
+            return
+
         for prefix, config_key in visibility_map.items():
             if path.startswith(prefix):
                 val = str(get_config(config_key)).lower()
                 if val == 'false':
+                    if path.startswith('/api/v1/'):
+                        return jsonify({'success': False, 'message': 'Hidden'}), 403
                     return redirect(url_for('views.static_html', route='/'))
 
     @page_visibility_bp.route('/admin/page_visibility', methods=['GET'])

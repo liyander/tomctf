@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 from CTFd.cache import cache
-from CTFd.models import Awards, Solves
+from CTFd.models import Awards, Solves, Challenges
 from CTFd.utils import get_config
 from CTFd.utils.dates import isoformat, unix_time_to_utc
 from CTFd.utils.modes import generate_account_url
@@ -16,7 +16,14 @@ def get_scoreboard_detail(count, bracket_id=None):
 
     team_ids = [team.account_id for team in standings]
 
-    solves = Solves.query.filter(Solves.account_id.in_(team_ids))
+    solves = Solves.query.join(Challenges).filter(Solves.account_id.in_(team_ids))
+    
+    c_vis = str(get_config('challenges_visible')).lower() != 'false'
+    h_vis = str(get_config('hosted_ctf_visible')).lower() != 'false'
+    if not c_vis:
+        solves = solves.filter(Challenges.category.like('% [Hosted CTF]'))
+    if not h_vis:
+        solves = solves.filter(~Challenges.category.like('% [Hosted CTF]'))
     awards = Awards.query.filter(Awards.account_id.in_(team_ids))
 
     freeze = get_config("freeze")
