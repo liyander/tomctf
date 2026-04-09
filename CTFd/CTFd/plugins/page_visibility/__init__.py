@@ -33,7 +33,7 @@ def load(app):
         for prefix, config_key in visibility_map.items():
             if path.startswith(prefix) and not path.startswith('/admin'):
                 val = str(get_config(config_key)).lower()
-                if val == 'false' or val == 'none':
+                if val == 'false':
                     if path.startswith('/api/v1/'):
                         return jsonify({"success": False, "message": "Hidden"}), 403
                     return redirect('/')
