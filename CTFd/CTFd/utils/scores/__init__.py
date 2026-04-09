@@ -32,6 +32,13 @@ def get_standings(count=None, bracket_id=None, admin=False, fields=None):
         .filter(Challenges.value != 0)
         .group_by(Solves.account_id)
     )
+    
+    c_vis = str(get_config('challenges_visible')).lower() != 'false'
+    h_vis = str(get_config('hosted_ctf_visible')).lower() != 'false'
+    if not c_vis:
+        scores = scores.filter(Challenges.category.like('% [Hosted CTF]'))
+    if not h_vis:
+        scores = scores.filter(~Challenges.category.like('% [Hosted CTF]'))
 
     awards = (
         db.session.query(
@@ -149,6 +156,13 @@ def get_team_standings(count=None, bracket_id=None, admin=False, fields=None):
         .filter(Challenges.value != 0)
         .group_by(Solves.team_id)
     )
+    
+    c_vis = str(get_config('challenges_visible')).lower() != 'false'
+    h_vis = str(get_config('hosted_ctf_visible')).lower() != 'false'
+    if not c_vis:
+        scores = scores.filter(Challenges.category.like('% [Hosted CTF]'))
+    if not h_vis:
+        scores = scores.filter(~Challenges.category.like('% [Hosted CTF]'))
 
     awards = (
         db.session.query(
@@ -248,6 +262,13 @@ def get_user_standings(count=None, bracket_id=None, admin=False, fields=None):
         .filter(Challenges.value != 0)
         .group_by(Solves.user_id)
     )
+    
+    c_vis = str(get_config('challenges_visible')).lower() != 'false'
+    h_vis = str(get_config('hosted_ctf_visible')).lower() != 'false'
+    if not c_vis:
+        scores = scores.filter(Challenges.category.like('% [Hosted CTF]'))
+    if not h_vis:
+        scores = scores.filter(~Challenges.category.like('% [Hosted CTF]'))
 
     awards = (
         db.session.query(
