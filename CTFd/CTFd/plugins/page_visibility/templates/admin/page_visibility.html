@@ -1,0 +1,94 @@
+{% extends "admin/base.html" %}
+
+{% block stylesheets %}
+<style>
+.section-title {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    font-weight: 500;
+}
+.help-text {
+    font-size: 0.85em;
+    color: #6c757d;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="jumbotron">
+	<div class="container">
+		<h1>Page Visibility Settings</h1>
+		<h2 class="text-muted">Control which sections of the sidebar players can see.</h2>
+	</div>
+</div>
+
+<div class="container">
+	<div class="row">
+		<div class="col-md-8 offset-md-2">
+			<form id="visibility-config-form" method="POST" autocomplete="off" class="w-100">
+                <p class="help-text">Set a page to "Visible" or "Hidden" to control if it shows up in the player sidebar menu. (Note: This hides the sidebar link, but protecting the routes completely requires further CTFd modifications, although standard CTFd routes respect account_visibility.)</p>
+
+                {% set pages = [
+                    ('dashboard_visible', 'Dashboard Page'),
+                    ('challenges_visible', 'Standard Challenges Page'),
+                    ('pro_red_team_labs_visible', 'Pro Red Team Labs Page'),
+                    ('machines_visible', 'Machines Page'),
+                    ('adversary_operations_visible', 'Adversary Operations Page'),
+                    ('cves_visible', 'CVEs Page'),
+                    ('sherlocks_visible', 'Sherlocks Page'),
+                    ('credits_visible', 'Credits Page')
+                ] %}
+
+                {% for key, label in pages %}
+                <div class="form-group mb-4 pb-3 border-bottom">
+					<label class="font-weight-bold">
+						{{ label }} <br>
+						<small class="text-muted">Currently: {% if Configs[key] == 'false' %}Hidden{% else %}Visible{% endif %}</small>
+					</label>
+					<select class="form-control custom-select" name="{{ key }}">
+						<option value="true" {% if Configs[key] != 'false' %}selected{% endif %}>Visible</option>
+						<option value="false" {% if Configs[key] == 'false' %}selected{% endif %}>Hidden</option>
+					</select>
+				</div>
+                {% endfor %}
+
+				<button type="submit" class="btn btn-md btn-primary float-right mt-3 mb-5">Update Settings</button>
+			</form>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('visibility-config-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    fetch('/api/v1/configs', {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'CSRF-Token': init.csrfNonce
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert('Settings updated successfully! Refresh player page to see changes.');
+            window.location.reload();
+        } else {
+            alert('Error updating settings');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while saving.');
+    });
+});
+</script>
+{% endblock %}

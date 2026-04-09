@@ -4,31 +4,30 @@
 <script>
 (() => {
     const hostedSuffix = ' [Hosted CTF]';
-    const _oldFetch = window.fetch;
+    const originalFetch = window.fetch;
     window.fetch = async function(...args) {
         const urlStr = typeof args[0] === 'object' ? args[0].url : args[0];
-        const res = await _oldFetch.apply(this, args);
+        const res = await originalFetch.apply(this, args);
         
-        if (urlStr && urlStr.includes('/api/v1/challenges') && !urlStr.includes('attempts') && !urlStr.includes('files') && !urlStr.includes('tags') && !urlStr.includes('hints') && !urlStr.includes('flags')) {
+        if (urlStr.includes('/api/v1/challenges') && !urlStr.includes('attempts') && !urlStr.includes('files') && !urlStr.includes('tags') && !urlStr.includes('hints') && !urlStr.includes('flags')) {
             try {
                 const clone = res.clone();
                 const text = await clone.text();
                 const json = JSON.parse(text);
                 
-                if (json && json.data && Array.isArray(json.data)) {
-                    json.data = json.data.filter(c => c.category && !c.category.endsWith(hostedSuffix));
-                    
-                    const newBody = JSON.stringify(json);
-                    const newRes = new Response(newBody, {
+                if (json.data && Array.isArray(json.data)) {
+                    json.data = json.data.filter(c => c.category && c.category.endsWith(hostedSuffix)).map(c => { c.category = c.category.replace(hostedSuffix, '').trim(); return c; });
+                    const newRes = new Response(JSON.stringify(json), {
                         status: res.status,
                         statusText: res.statusText,
                         headers: res.headers
                     });
+                    
                     Object.defineProperty(newRes, 'url', { value: res.url });
                     return newRes;
                 }
             } catch (e) {
-                console.error("challenges.html fetch intercept error:", e);
+                console.error("Intercept fetch error", e);
             }
         }
         return res;
@@ -41,10 +40,10 @@
     <div class="container position-relative text-center">
       <div class="hero-subtitle-sm slide-up">CAPTURE THE FLAG</div>
       <h1 class="slide-up" style="animation-delay: 0.05s;">
-        <span class="stranger-title">{% trans %}Challenges{% endtrans %}</span>
+        <span class="stranger-title">{{ ctfs_configs.hero_name }}</span>
       </h1>
       <p class="hero-desc slide-up" style="animation-delay: 0.1s;">
-        {% trans %}Test your skills and solve challenging problems{% endtrans %}
+        {{ ctfs_configs.hero_desc }}
       </p>
     </div>
   </div>
@@ -187,7 +186,7 @@
             <div class="card-header border-0 py-3" style="background: rgba(139,0,0,0.15) !important; border-bottom: 1px solid rgba(139,0,0,0.2) !important;">
               <h6 class="card-title mb-0 fw-bold" style="font-family: 'Space Grotesk', sans-serif; color: #ec1313; letter-spacing: 1px; text-transform: uppercase; font-size: 0.8rem;">
                 <i class="fas fa-filter me-2"></i>
-                {% trans %}Challenges{% endtrans %}
+                {{ ctfs_configs.hero_name }}
               </h6>
             </div>
             <div class="card-body p-0">
@@ -256,7 +255,7 @@
                     <div>
                       <h4 class="mb-1 fw-bold" style="font-family: 'Space Grotesk', sans-serif; color: #fff;" x-text="category"></h4>
                       <small style="color: rgba(255,255,255,0.4); font-family: 'Space Grotesk', sans-serif;">
-                        <span x-text="getSortedChallenges(category).length"></span> {% trans %}challenges{% endtrans %}
+                        <span x-text="getSortedChallenges(category).length"></span> {{ ctfs_configs.hero_name }}
                         · <span x-text="getSortedChallenges(category).filter(c => c.solved_by_me).length"></span> {% trans %}solved{% endtrans %}
                       </small>
                     </div>
@@ -1290,4 +1289,7 @@
 {% block scripts %}
   {{ Assets.js("assets/js/challenges.js") }}
 {% endblock %}
+
+
+
 

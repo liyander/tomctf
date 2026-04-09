@@ -1,0 +1,55 @@
+﻿{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+    <div class="container">
+        <h1>Hosted CTFs Configuration</h1>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <form method="POST" autocomplete="off" class="w-100">
+                <div class="form-group">
+                    <label>Tab Name<br><small class="text-muted">The name of the menu item (e.g. CTFs)</small></label>
+                    <input type="text" class="form-control" name="tab_name" value="{{ configs.tab_name }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Hero Section Title<br><small class="text-muted">The title displayed on the user page</small></label>
+                    <input type="text" class="form-control" name="hero_name" value="{{ configs.hero_name }}" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Hero Section Description</label>
+                    <input type="text" class="form-control" name="hero_desc" value="{{ configs.hero_desc }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Challenge Category Filter<br><small class="text-muted">Only challenges matching this EXACT category show on the Hosted CTFs page. They are HIDDEN from the regular Challenges page.</small></label>
+                    <input type="text" class="form-control" name="category_filter" value="{{ configs.category_filter }}" required>
+                </div>
+
+                                <div class="form-group">
+                    <label>Sidebar Icon<br><small class="text-muted">FontAwesome icon class (e.g. fas fa-flag-checkered, fas fa-trophy)</small></label>
+                    <input type="text" class="form-control" name="sidebar_icon" value="{{ configs.sidebar_icon }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Visibility<br><small class="text-muted">Show the Hosted CTFs option in the sidebar for users?</small></label>
+                    <select class="form-control" name="is_visible">
+                        <option value="true" {% if configs.is_visible == 'true' %}selected{% endif %}>Visible</option>
+                        <option value="false" {% if configs.is_visible == 'false' %}selected{% endif %}>Hidden</option>
+                    </select>
+                </div>
+
+                <input type="hidden" name="nonce" value="{{ nonce }}">
+                <button type="submit" class="btn btn-primary float-right">Save Settings</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

@@ -195,15 +195,63 @@
 {% endblock %}
 
 {% block scripts %}
-	<script>
+        <script>
         var CHALLENGE_ID = {{ challenge.id }};
         var CHALLENGE_NAME = {{ challenge.name | tojson }};
         var CHALLENGE_SOLUTION_ID = {{ challenge.solution_id | tojson }};
-	</script>
-	<script defer src="{{ request.script_root }}{{ update_script }}"></script>
+        </script>
+        <script defer src="{{ request.script_root }}{{ update_script }}"></script>
+        <script>
+document.addEventListener("DOMContentLoaded", function() {
+    const hostedCategory = "{{ Configs.hosted_ctf_category or 'CTF' }}";
+    
+    // We poll briefly until the form mounts since it's injected
+    setInterval(() => {
+        const catInput = document.querySelector('input[name="category"]');
+        if (catInput && !document.getElementById('hosted-ctf-toggle-wrapper')) {
+            const wrapper = document.createElement('div');
+            wrapper.id = 'hosted-ctf-toggle-wrapper';
+            wrapper.className = 'form-group border rounded p-3 bg-light mt-3 mb-3';
+            wrapper.innerHTML = `<div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="hosted-ctf-toggle">
+                    <label class="custom-control-label" for="hosted-ctf-toggle">
+                        <strong>Is this a Hosted CTF Challenge?</strong>
+                    </label>
+                </div>
+                <small class="form-text text-muted mt-2">Checking this pushes the challenge to the Hosted CTF board rather than the normal map.</small>`;
+            
+            catInput.closest('.form-group').parentNode.insertBefore(wrapper, catInput.closest('.form-group'));
+            
+            const toggle = document.getElementById('hosted-ctf-toggle');
+            const originalCatGroup = catInput.closest('.form-group');
+            
+            if (catInput.value.endsWith(' [Hosted CTF]')) {
+                toggle.checked = true;
+            }
+            toggle.addEventListener('change', function() {
+                if (this.checked) {
+                    if (!catInput.value.endsWith(' [Hosted CTF]')) { catInput.value = catInput.value.trim() + ' [Hosted CTF]'; }
+                } else {
+                    catInput.value = catInput.value.replace(' [Hosted CTF]', '').trim();
+                }
+            });
+            catInput.addEventListener('blur', function() {
+                if (toggle.checked && !catInput.value.endsWith(' [Hosted CTF]')) {
+                    catInput.value = catInput.value.trim() + ' [Hosted CTF]';
+                }
+            });
+        }
+    }, 500);
+});
+        </script>
 {% endblock %}
 
 
 {% block entrypoint %}
 	{{ Assets.js("assets/js/pages/challenge.js", theme="admin") }}
 {% endblock %}
+
+
+
+
+

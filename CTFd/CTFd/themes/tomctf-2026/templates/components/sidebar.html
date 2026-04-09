@@ -341,18 +341,37 @@
         <div id="tomRunningLabMount" data-endpoint="{{ url_for('prolabs.active_container_status') }}"></div>
         {% endif %}
 
+        {% if Configs.dashboard_visible != 'false' %}
         <a class="nav-link {% if request.path.startswith('/dashboard') %}active{% endif %}" href="{{ url_for('prolabs.player_dashboard') }}"><i class="fas fa-chart-line me-2"></i><span class="label">Dashboard</span></a>
+        {% endif %}
+        
+        {% if Configs.hosted_ctf_visible != 'false' %}
+        <a class="nav-link {% if request.path.startswith('/ctfs') %}active{% endif %}" href="/ctfs"><i class="{{ Configs.hosted_ctf_sidebar_icon or 'fas fa-flag-checkered' }} me-2"></i><span class="label">{{ Configs.hosted_ctf_tab_name or 'CTFs' }}</span></a>
+        {% endif %}
+        
+        {% if Configs.challenges_visible != 'false' %}
         <a class="nav-link {% if request.path.startswith('/challenges') %}active{% endif %}" href="{{ url_for('challenges.listing') }}"><i class="fas fa-flag me-2"></i><span class="label">Challenges</span></a>
+        {% endif %}
 
         {% if Configs.account_visibility != 'admins' and Configs.score_visibility != 'admins' %}
         <a class="nav-link {% if request.path.startswith('/scoreboard') %}active{% endif %}" href="{{ url_for('scoreboard.listing') }}"><i class="fas fa-trophy me-2"></i><span class="label">Scoreboard</span></a>
         {% endif %}
 
+        {% if Configs.pro_red_team_labs_visible != 'false' %}
         <a class="nav-link {% if request.path.startswith('/pro-red-team-labs') %}active{% endif %}" href="{{ url_for('prolabs.prolab_listing') }}"><i class="fas fa-user-secret me-2"></i><span class="label">Pro Red Team Labs</span></a>
+        {% endif %}
+        {% if Configs.machines_visible != 'false' %}
         <a class="nav-link {% if request.path.startswith('/machines') %}active{% endif %}" href="{{ url_for('prolabs.machines_listing') }}"><i class="fas fa-server me-2"></i><span class="label">Machines</span></a>
+        {% endif %}
+        {% if Configs.adversary_operations_visible != 'false' %}
         <a class="nav-link {% if request.path.startswith('/adversary-operations') %}active{% endif %}" href="{{ url_for('prolabs.adversary_operations_listing') }}"><i class="fas fa-crosshairs me-2"></i><span class="label">Adversary Operations</span></a>
+        {% endif %}
+        {% if Configs.cves_visible != 'false' %}
         <a class="nav-link {% if request.path.startswith('/cves') %}active{% endif %}" href="{{ url_for('prolabs.cves_listing') }}"><i class="fas fa-bug me-2"></i><span class="label">CVEs</span></a>
+        {% endif %}
+        {% if Configs.sherlocks_visible != 'false' %}
         <a class="nav-link {% if request.path.startswith('/sherlocks') %}active{% endif %}" href="{{ url_for('prolabs.sherlocks_listing') }}"><i class="fas fa-shield-alt me-2"></i><span class="label">Sherlocks</span></a>
+        {% endif %}
       </div>
 
       <button type="button" class="tom-sidebar-toggle" data-target="community-panel">
@@ -367,7 +386,9 @@
         {% endif %}
         {% endif %}
 
+        {% if Configs.credits_visible != 'false' %}
         <a class="nav-link {% if request.path.startswith('/credits') %}active{% endif %}" href="{{ url_for('views.credits_page') }}"><i class="fas fa-heart me-2"></i><span class="label">Credits</span></a>
+        {% endif %}
 
         {% for page in Plugins.user_menu_pages %}
         <a class="nav-link" href="{{ page.route }}" {% if page.link_target %}target="{{ page.link_target }}"{% endif %}><i class="fas fa-circle me-2" style="font-size: 0.45rem;"></i><span class="label">{{ page.title }}</span></a>
@@ -466,6 +487,7 @@
         sherlock: 'a.nav-link[href*="/sherlocks"]',
         adversary_operation: 'a.nav-link[href*="/adversary-operations"]',
         challenge: 'a.nav-link[href*="/challenges"]',
+        ctf: 'a.nav-link[href*="/ctfs"]',
       };
 
       const target = sidebar.querySelector(selectorByKind[kind] || "");
