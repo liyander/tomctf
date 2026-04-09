@@ -1,4 +1,4 @@
-﻿from flask import Blueprint, render_template, request, redirect, url_for, jsonify
+﻿from flask import Blueprint, render_template, request, redirect, url_for, jsonify, abort
 from CTFd.utils.decorators import admins_only
 from CTFd.utils import get_config
 from CTFd.utils.user import is_admin
@@ -36,7 +36,7 @@ def load(app):
                 if val == 'false':
                     if path.startswith('/api/v1/'):
                         return jsonify({"success": False, "message": "Hidden"}), 403
-                    return redirect('/')
+                    abort(404)
 
     @page_visibility_bp.route('/admin/page_visibility', methods=['GET'])
     @admins_only
