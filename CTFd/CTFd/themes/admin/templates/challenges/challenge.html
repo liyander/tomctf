@@ -1,4 +1,4 @@
-{% extends "admin/base.html" %}
+﻿{% extends "admin/base.html" %}
 
 {% block stylesheets %}
 	{{ Assets.css("assets/css/challenge-board.scss", theme="admin") }}
@@ -212,31 +212,51 @@ document.addEventListener("DOMContentLoaded", function() {
             const wrapper = document.createElement('div');
             wrapper.id = 'hosted-ctf-toggle-wrapper';
             wrapper.className = 'form-group border rounded p-3 bg-light mt-3 mb-3';
-            wrapper.innerHTML = `<div class="custom-control custom-switch">
-                    <input type="checkbox" class="custom-control-input" id="hosted-ctf-toggle">
-                    <label class="custom-control-label" for="hosted-ctf-toggle">
-                        <strong>Is this a Hosted CTF Challenge?</strong>
-                    </label>
-                </div>
-                <small class="form-text text-muted mt-2">Checking this pushes the challenge to the Hosted CTF board rather than the normal map.</small>`;
-            
+            wrapper.innerHTML = 
+<div style="display: flex; align-items: center; gap: 10px;">
+    <span id="hosted-ctf-toggle-switch" style="display:inline-block;width:3rem;height:1.5rem;border-radius:2rem;background:#adb5bd;position:relative;cursor:pointer;transition:background .2s;" data-on="false">
+        <span style="position:absolute;top:2px;left:2px;width:calc(1.5rem - 4px);height:calc(1.5rem - 4px);border-radius:50%;background:#fff;transition:transform .2s;" id="hosted-ctf-toggle-knob"></span>
+    </span>
+    <label style="margin:0;cursor:pointer;" onclick="document.getElementById('hosted-ctf-toggle-switch').click()">
+        <strong>Is this a Hosted CTF Challenge?</strong>
+    </label>
+</div>
+<small class="form-text text-muted mt-2">Checking this pushes the challenge to the Hosted CTF board rather than the normal map.</small>
+;
+
             catInput.closest('.form-group').parentNode.insertBefore(wrapper, catInput.closest('.form-group'));
+
+            const toggleSwitch = document.getElementById('hosted-ctf-toggle-switch');
+            const knob = document.getElementById('hosted-ctf-toggle-knob');
             
-            const toggle = document.getElementById('hosted-ctf-toggle');
-            const originalCatGroup = catInput.closest('.form-group');
-            
-            if (catInput.value.endsWith(' [Hosted CTF]')) {
-                toggle.checked = true;
+            function setToggle(on) {
+                toggleSwitch.setAttribute('data-on', on ? 'true' : 'false');
+                if (on) {
+                    toggleSwitch.style.background = '#007bff';
+                    knob.style.transform = 'translateX(1.5rem)';
+                } else {
+                    toggleSwitch.style.background = '#adb5bd';
+                    knob.style.transform = 'translateX(0)';
+                }
             }
-            toggle.addEventListener('change', function() {
-                if (this.checked) {
+
+            if (catInput.value.endsWith(' [Hosted CTF]')) {
+                setToggle(true);
+            }
+
+            toggleSwitch.addEventListener('click', function() {
+                let isOn = this.getAttribute('data-on') === 'true';
+                isOn = !isOn;
+                setToggle(isOn);
+                
+                if (isOn) {
                     if (!catInput.value.endsWith(' [Hosted CTF]')) { catInput.value = catInput.value.trim() + ' [Hosted CTF]'; }
                 } else {
                     catInput.value = catInput.value.replace(' [Hosted CTF]', '').trim();
                 }
             });
             catInput.addEventListener('blur', function() {
-                if (toggle.checked && !catInput.value.endsWith(' [Hosted CTF]')) {
+                if (toggleSwitch.getAttribute('data-on') === 'true' && !catInput.value.endsWith(' [Hosted CTF]')) {
                     catInput.value = catInput.value.trim() + ' [Hosted CTF]';
                 }
             });
@@ -250,6 +270,10 @@ document.addEventListener("DOMContentLoaded", function() {
 {% block entrypoint %}
 	{{ Assets.js("assets/js/pages/challenge.js", theme="admin") }}
 {% endblock %}
+
+
+
+
 
 
 
