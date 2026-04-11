@@ -139,11 +139,14 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (on) {
                     toggleSwitch.style.background = '#007bff';
                     knob.style.transform = 'translateX(1.5rem)';
-                    catInput.closest('.form-group').style.display = 'none';
                 } else {
                     toggleSwitch.style.background = '#adb5bd';
                     knob.style.transform = 'translateX(0)';
-                    catInput.closest('.form-group').style.display = '';
+                }
+            }
+
+            if (catInput.value.endsWith(' [Hosted CTF]')) {
+                setToggle(true);
             }
 
             toggleSwitch.addEventListener('click', function() {
@@ -153,10 +156,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 
                 if (isOn) {
                     if (!catInput.value.endsWith(' [Hosted CTF]')) { catInput.value = catInput.value.trim() + ' [Hosted CTF]'; }
-                    catInput.closest('.form-group').style.display = 'none';
                 } else {
                     catInput.value = catInput.value.replace(' [Hosted CTF]', '').trim();
-                    catInput.closest('.form-group').style.display = '';
                 }
             });
             catInput.addEventListener('blur', function() {
