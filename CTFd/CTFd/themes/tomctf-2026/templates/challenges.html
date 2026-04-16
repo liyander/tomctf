@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 
 {% block content %}
 <script>
@@ -16,7 +16,7 @@
                 const json = JSON.parse(text);
                 
                 if (json && json.data && Array.isArray(json.data)) {
-                    json.data = json.data.filter(c => c.category && !c.category.endsWith(hostedSuffix));
+                    json.data = json.data.filter(c => !c.category || !c.category.endsWith(hostedSuffix));
                     
                     const newBody = JSON.stringify(json);
                     const newRes = new Response(newBody, {
@@ -257,7 +257,7 @@
                       <h4 class="mb-1 fw-bold" style="font-family: 'Space Grotesk', sans-serif; color: #fff;" x-text="category"></h4>
                       <small style="color: rgba(255,255,255,0.4); font-family: 'Space Grotesk', sans-serif;">
                         <span x-text="getSortedChallenges(category).length"></span> {% trans %}challenges{% endtrans %}
-                        · <span x-text="getSortedChallenges(category).filter(c => c.solved_by_me).length"></span> {% trans %}solved{% endtrans %}
+                        � <span x-text="getSortedChallenges(category).filter(c => c.solved_by_me).length"></span> {% trans %}solved{% endtrans %}
                       </small>
                     </div>
                   </div>
@@ -593,12 +593,12 @@
     }
 
     .user-sidebar {
-      /* ç§»é™¤å›ºå®šé«˜åº¦å’Œæ»šåŠ¨æ¡ï¼Œè®©å®ƒè·Ÿéšé¡µé¢æ»šåŠ¨ */
+      /* 移除固定高度和滚动条，让它跟随页面滚动 */
       min-height: auto;
     }
 
     .challenges-main {
-      /* ç§»é™¤å›ºå®šé«˜åº¦å’Œæ»šåŠ¨æ¡ï¼Œè®©å®ƒè·Ÿéšé¡µé¢æ»šåŠ¨ */
+      /* 移除固定高度和滚动条，让它跟随页面滚动 */
       min-height: auto;
     }
 
@@ -976,7 +976,7 @@
       color: var(--dark-text) !important;
     }
 
-    /* ä¿®å¤é¢˜ç›®æ¨¡æ€æ¡†é¡¶éƒ¨è“çº¿é—®é¢˜ - é’ˆå¯¹æ¨¡æ€æ¡†å®¹å™¨ */
+    /* 修复题目模态框顶部蓝线问题 - 针对模态框容器 */
     .challenge-modal-container {
       outline: none !important;
     }
@@ -990,7 +990,7 @@
       outline: none !important;
     }
     
-    /* ç¡®ä¿æ¨¡æ€æ¡†å†…å®¹åŒºåŸŸä¹Ÿæ²¡æœ‰ç„¦ç‚¹æ ·å¼ */
+    /* 确保模态框内容区域也没有焦点样式 */
     .challenge-modal-container .modal-dialog {
       outline: none !important;
     }
@@ -1029,7 +1029,7 @@
         async loadActivityData() {
           await this.loadNotifications();
           
-          // åˆå§‹åŒ–CTFdé€šçŸ¥ç³»ç»Ÿ
+          // 初始化CTFd通知系统
           this.initCTFdNotificationSystem();
           
           // Set up auto-refresh every 60 seconds
@@ -1041,7 +1041,7 @@
           }, 60000);
         },
         
-        // åˆå§‹åŒ–CTFdé€šçŸ¥ç³»ç»Ÿ
+        // 初始化CTFd通知系统
         initCTFdNotificationSystem() {
           try {
             // Listen for counter changes using the supported hook.
@@ -1066,7 +1066,7 @@
               CTFd._functions.events.__activityFeedCountWrapped = true;
             }
             
-            // åˆå§‹åŒ–æœªè¯»è®¡æ•°
+            // 初始化未读计数
             if (typeof CTFd !== 'undefined' && CTFd.events && CTFd.events.counter) {
               this.unreadCount = CTFd.events.counter.unread.getAll().length;
               Alpine.store("unread_count", this.unreadCount);
@@ -1078,14 +1078,14 @@
         
         async loadNotifications() {
           try {
-            // èŽ·å–æ‰€æœ‰é€šçŸ¥ï¼ˆä¸é™åˆ¶since_idï¼‰
+            // 获取所有通知（不限制since_id）
             const response = await CTFd.fetch('/api/v1/notifications');
             if (response.ok) {
               const data = await response.json();
               if (data.success) {
-                // æŒ‰æ—¥æœŸå€’åºæŽ’åˆ—ï¼Œæœ€æ–°çš„åœ¨æœ€ä¸Šé¢
+                // 按日期倒序排列，最新的在最上面
                 this.notifications = data.data.sort((a, b) => new Date(b.date) - new Date(a.date));
-                // ä½¿ç”¨CTFdçš„é€šçŸ¥è®¡æ•°å™¨æ¥èŽ·å–æœªè¯»æ•°é‡
+                // 使用CTFd的通知计数器来获取未读数量
                 this.unreadCount = CTFd.events.counter.unread.getAll().length;
               }
             }
@@ -1140,7 +1140,7 @@
                       .map(solve => ({
                         id: `${team.id}-${solve.challenge_id}-${solve.date}`,
                         user: team.name,
-                        challenge: challengesMap[solve.challenge_id] || `é¢˜ç›® ${solve.challenge_id}`,
+                        challenge: challengesMap[solve.challenge_id] || `题目 ${solve.challenge_id}`,
                         value: solve.value || 0,
                         date: solve.date
                       }));
@@ -1169,7 +1169,7 @@
                 this.recentSolves = userData.data.slice(-5).map(solve => ({
                   id: solve.id,
                   user: '{{ User.name }}', // Current user
-                  challenge: solve.challenge?.name || `é¢˜ç›® ${solve.challenge_id}`,
+                  challenge: solve.challenge?.name || `题目 ${solve.challenge_id}`,
                   value: solve.challenge?.value || 0,
                   date: solve.date
                 })).reverse(); // Most recent first
@@ -1201,21 +1201,21 @@
           }
         },
         
-        // æ ‡è®°æ‰€æœ‰é€šçŸ¥ä¸ºå·²è¯»
+        // 标记所有通知为已读
         markAllNotificationsAsRead() {
           try {
-            // èŽ·å–æ‰€æœ‰æœªè¯»é€šçŸ¥çš„ID
+            // 获取所有未读通知的ID
             const unreadIds = CTFd.events.counter.unread.getAll();
             
-            // å°†æœªè¯»é€šçŸ¥æ ‡è®°ä¸ºå·²è¯»
+            // 将未读通知标记为已读
             unreadIds.forEach(notificationId => {
               CTFd._functions.events.eventRead(notificationId);
             });
             
-            // æ›´æ–°æœªè¯»è®¡æ•°
+            // 更新未读计数
             this.unreadCount = CTFd.events.counter.unread.getAll().length;
             
-            // æ›´æ–°Alpine store
+            // 更新Alpine store
             Alpine.store("unread_count", this.unreadCount);
             
             console.log('All notifications marked as read');
@@ -1290,4 +1290,5 @@
 {% block scripts %}
   {{ Assets.js("assets/js/challenges.js") }}
 {% endblock %}
+
 

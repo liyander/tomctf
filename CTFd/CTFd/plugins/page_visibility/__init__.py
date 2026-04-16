@@ -33,6 +33,15 @@ def load(app):
         for prefix, config_key in visibility_map.items():
             if path.startswith(prefix) and not path.startswith('/admin'):
                 val = str(get_config(config_key)).lower()
+                
+                # Special logic for challenges API
+                # Hosted CTFs also uses /api/v1/challenges endpoint, so don't block it 
+                # if Hosted CTFs board is visible, even if standard Challenges board is hidden.
+                if prefix == '/api/v1/challenges' and val == 'false':
+                    hosted_ctf_val = str(get_config('hosted_ctf_visible')).lower()
+                    if hosted_ctf_val != 'false':
+                        continue
+                        
                 if val == 'false':
                     if path.startswith('/api/v1/'):
                         return jsonify({"success": False, "message": "Hidden"}), 403
