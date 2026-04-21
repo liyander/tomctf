@@ -61,7 +61,7 @@ def get_user_attrs(user_id):
 def get_user_place(user_id):
     user = Users.query.filter_by(id=user_id).first()
     if user:
-        return user.account.place
+        return user.place
     return None
 
 
@@ -69,7 +69,7 @@ def get_user_place(user_id):
 def get_user_score(user_id):
     user = Users.query.filter_by(id=user_id).first()
     if user:
-        return user.account.score
+        return user.score
     return None
 
 
