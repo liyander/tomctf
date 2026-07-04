@@ -43,27 +43,57 @@
 </div>
 
 <script>
-  window.addEventListener('load', () => {
+  (() => {
     const loader = document.getElementById('tom-global-loader');
-    if (loader) {
-      setTimeout(() => {
-        loader.classList.add('hidden');
-      }, 100); // Small delay to ensure smooth transition
-    }
-  });
+    if (!loader) return;
 
-  window.addEventListener('beforeunload', () => {
-    const loader = document.getElementById('tom-global-loader');
-    if (loader) {
-      loader.classList.remove('hidden');
-    }
-  });
+    let skipNextUnload = false;
+    let recoveryTimer;
 
-  // Optional safeguard: If load event missed, hide anyway after a timeout
-  setTimeout(() => {
-    const loader = document.getElementById('tom-global-loader');
-    if (loader) {
+    const hideLoader = () => {
+      window.clearTimeout(recoveryTimer);
       loader.classList.add('hidden');
-    }
-  }, 4000);
+    };
+
+    const showLoader = () => {
+      loader.classList.remove('hidden');
+      // Attachment responses and cancelled navigations do not produce a new
+      // page load. Never leave the current page trapped behind the overlay.
+      window.clearTimeout(recoveryTimer);
+      recoveryTimer = window.setTimeout(hideLoader, 8000);
+    };
+
+    document.addEventListener('click', (event) => {
+      const link = event.target.closest('a[href]');
+      if (!link) return;
+
+      const href = link.getAttribute('href') || '';
+      skipNextUnload = Boolean(
+        link.dataset.noLoader !== undefined ||
+        link.hasAttribute('download') ||
+        link.target === '_blank' ||
+        /(^|\/)files\//i.test(href)
+      );
+
+      if (skipNextUnload) {
+        // Some browsers dispatch beforeunload before the click stack clears.
+        window.setTimeout(() => { skipNextUnload = false; }, 1500);
+      }
+    }, true);
+
+    window.addEventListener('load', () => window.setTimeout(hideLoader, 100));
+    window.addEventListener('pageshow', hideLoader);
+    window.addEventListener('focus', () => {
+      if (document.visibilityState === 'visible') hideLoader();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') hideLoader();
+    });
+
+    window.addEventListener('beforeunload', () => {
+      if (!skipNextUnload) showLoader();
+    });
+
+    window.setTimeout(hideLoader, 4000);
+  })();
 </script>

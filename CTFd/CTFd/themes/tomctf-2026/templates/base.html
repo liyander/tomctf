@@ -235,6 +235,103 @@
       border-radius: 0.55rem;
       border: 1px solid rgba(255, 255, 255, 0.09);
     }
+
+    /* Shared interaction polish. Typography intentionally inherits unchanged. */
+    ::selection {
+      color: #fff;
+      background: rgba(236, 19, 19, 0.7);
+    }
+
+    :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+      outline: 2px solid #ff6262 !important;
+      outline-offset: 3px;
+      box-shadow: 0 0 0 4px rgba(236, 19, 19, 0.16) !important;
+    }
+
+    .tom-main-content {
+      min-height: calc(100vh - 70px);
+    }
+
+    .modal-backdrop.show {
+      opacity: 0.78;
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.58);
+    }
+
+    .btn:disabled,
+    .btn.disabled {
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+      opacity: 0.55;
+    }
+
+    .form-control::placeholder,
+    .form-select::placeholder {
+      color: rgba(255, 255, 255, 0.38);
+    }
+
+    .alert {
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 0.8rem;
+    }
+
+    .challenge-section-label {
+      color: rgba(239, 243, 248, 0.68);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .challenge-file-link {
+      display: flex !important;
+      align-items: center;
+      gap: 0.7rem;
+      min-height: 52px;
+      padding: 0.6rem 0.75rem !important;
+      color: rgba(255, 255, 255, 0.9) !important;
+      text-align: left;
+      background: rgba(255, 255, 255, 0.045) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border-radius: 0.75rem !important;
+      box-shadow: none !important;
+    }
+
+    .challenge-file-link:hover {
+      color: #fff !important;
+      background: rgba(236, 19, 19, 0.1) !important;
+      border-color: rgba(236, 19, 19, 0.48) !important;
+      transform: translateY(-2px);
+    }
+
+    .challenge-file-icon {
+      display: grid;
+      place-items: center;
+      flex: 0 0 34px;
+      height: 34px;
+      color: #ff7373;
+      background: rgba(236, 19, 19, 0.13);
+      border-radius: 0.55rem;
+    }
+
+    .challenge-file-name {
+      min-width: 0;
+      font-size: 0.84rem;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
   </style>
 
   {{ Plugins.styles }}
