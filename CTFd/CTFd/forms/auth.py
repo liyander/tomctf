@@ -59,7 +59,9 @@ def RegistrationForm(*args, **kwargs):
         def extra(self):
             return (
                 build_custom_user_fields(
-                    self, include_entries=False, blacklisted_items=()
+                    self,
+                    include_entries=False,
+                    blacklisted_items=("register number",),
                 )
                 + build_registration_code_field(self)
                 + build_user_bracket_field(self)

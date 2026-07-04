@@ -272,9 +272,15 @@ def register():
             .filter_by(email=email_address)
             .first()
         )
-        register_numbers = Users.query.filter_by(
-            register_number=register_number
+        register_number_field = UserFields.query.filter_by(
+            name="Register Number"
         ).first()
+        register_numbers = None
+        if register_number_field:
+            register_numbers = UserFieldEntries.query.filter_by(
+                field_id=register_number_field.id,
+                value=register_number,
+            ).first()
         pass_short = len(password) == 0
         pass_long = len(password) > 128
         valid_email = validators.validate_email(email_address)
@@ -293,6 +299,8 @@ def register():
         # Process additional user fields
         fields = {}
         for field in UserFields.query.all():
+            if field.name.lower() == "register number":
+                continue
             fields[field.id] = field
 
         entries = {}
@@ -387,7 +395,6 @@ def register():
                 user = Users(
                     name=name,
                     email=email_address,
-                    register_number=register_number,
                     password=password,
                     bracket_id=bracket_id,
                 )
@@ -402,6 +409,26 @@ def register():
                 db.session.add(user)
                 db.session.commit()
                 db.session.flush()
+
+                if register_number_field is None:
+                    register_number_field = UserFields(
+                        name="Register Number",
+                        field_type="text",
+                        description="12-digit institutional register number",
+                        required=False,
+                        public=False,
+                        editable=False,
+                    )
+                    db.session.add(register_number_field)
+                    db.session.commit()
+
+                db.session.add(
+                    UserFieldEntries(
+                        field_id=register_number_field.id,
+                        value=register_number,
+                        user_id=user.id,
+                    )
+                )
 
                 for field_id, value in entries.items():
                     entry = UserFieldEntries(

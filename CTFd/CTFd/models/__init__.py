@@ -401,7 +401,6 @@ class Users(db.Model):
     name = db.Column(db.String(128))
     password = db.Column(db.String(128))
     email = db.Column(db.String(128), unique=True)
-    register_number = db.Column(db.String(12), unique=True, nullable=True)
     type = db.Column(db.String(80))
     secret = db.Column(db.String(128))
 

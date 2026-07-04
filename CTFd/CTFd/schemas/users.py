@@ -389,7 +389,6 @@ class UserSchema(ma.ModelSchema):
             "country",
             "banned",
             "email",
-            "register_number",
             "language",
             "affiliation",
             "secret",
