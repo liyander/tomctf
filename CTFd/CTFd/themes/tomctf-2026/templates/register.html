@@ -72,6 +72,17 @@
                   <small class="auth-hint">{% trans %}Never shown to the public{% endtrans %}</small>
                 </div>
 
+                <!-- Register Number -->
+                <div class="auth-field mb-4">
+                  <label class="auth-label" for="{{ form.register_number.id }}">
+                    <i class="fas fa-id-card"></i>
+                    {{ form.register_number.label.text }}
+                  </label>
+                  {{ form.register_number(class="auth-input", value=register_number, placeholder="e.g. 714023149048", aria_describedby="register-number-hint") }}
+                  <div class="input-glow"></div>
+                  <small class="auth-hint" id="register-number-hint">{% trans %}Enter exactly 12 digits, without spaces or symbols{% endtrans %}</small>
+                </div>
+
                 <!-- Password -->
                 <div class="auth-field mb-4">
                   <label class="auth-label">

@@ -81,6 +81,17 @@
 			<div role="tabpanel" class="tab-pane" id="team-accounts">
 				<div id="team-accounts">
 					<div class="form-group">
+						<label for="team_onboarding_enabled">Team onboarding guide</label>
+						<select class="form-control custom-select" id="team_onboarding_enabled" name="team_onboarding_enabled">
+							<option value="true" {% if team_onboarding_enabled is not sameas false and team_onboarding_enabled != "false" %}selected{% endif %}>Enabled</option>
+							<option value="false" {% if team_onboarding_enabled is sameas false or team_onboarding_enabled == "false" %}selected{% endif %}>Disabled</option>
+						</select>
+						<small class="form-text text-muted">
+							Show new participants a short team setup and site navigation guide after registration in Team Mode.
+						</small>
+					</div>
+
+					<div class="form-group">
 						{{ form.team_creation.label }}
 						{{ form.team_creation(class="form-control", value=team_creation) }}
 						<small class="form-text text-muted">

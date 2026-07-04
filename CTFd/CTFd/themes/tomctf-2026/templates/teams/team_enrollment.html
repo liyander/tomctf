@@ -1,44 +1,93 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <div class="jumbotron">
-    <div class="container d-flex flex-column justify-content-center align-items-center" style="min-height: 20vh;">
-      <h1>{% trans %}Team{% endtrans %}</h1>
-    </div>
-  </div>
-  <div class="container">
-    <div class="row">
-      <div class="col-md-6 offset-md-3 text-center">
-        <p class="h2">{% trans %}Welcome to{% endtrans %} {{ Configs.ctf_name }}!</p>
-        <p>
-          {% trans %}In order to participate you must either join or create a team.{% endtrans %}
-        </p>
+  <section class="team-enrollment-page">
+    <div class="team-enrollment-grid" aria-hidden="true"></div>
+    <div class="container position-relative py-5">
+      <div class="team-kicker"><i class="fas fa-users me-2"></i>{% trans %}Team setup{% endtrans %}</div>
+      <div class="row align-items-center g-4 mb-4">
+        <div class="col-lg-7">
+          <h1 class="team-title">{% trans %}Choose your squad{% endtrans %}</h1>
+          <p class="team-lead">{% trans %}Your account is ready. Join an existing team with an invite, or create a new one and invite your teammates.{% endtrans %}</p>
+        </div>
+        <div class="col-lg-5">
+          <div class="team-status-card">
+            <span class="team-status-icon"><i class="fas fa-check"></i></span>
+            <div><strong>{% trans %}Account created{% endtrans %}</strong><small>{% trans %}One quick step remains before you can compete.{% endtrans %}</small></div>
+          </div>
+        </div>
       </div>
-    </div>
 
     {% if integrations.mlc() %}
-      <div class="row">
-        <div class="col-md-6 offset-md-3 text-center">
-          <a class="btn btn-primary w-100" href="{{ url_for('auth.oauth_login') }}">{% trans %}Play with Official Team{% endtrans %}</a>
+      <div class="row g-3 justify-content-center">
+        <div class="col-lg-8">
+          <a class="team-choice team-choice-featured" href="{{ url_for('auth.oauth_login') }}"><span class="team-choice-icon"><i class="fas fa-shield-alt"></i></span><span><strong>{% trans %}Play with Official Team{% endtrans %}</strong><small>{% trans %}Connect your official Major League Cyber team{% endtrans %}</small></span><i class="fas fa-arrow-right ms-auto"></i></a>
         </div>
-      </div>
-      <div class="row">
-        <div class="mt-3 col-md-3 offset-md-3 text-center">
-          <a class="btn btn-outline-info w-100" href="{{ url_for('teams.join') }}">{% trans %}Join Unofficial Team{% endtrans %}</a>
+        <div class="col-md-6 col-lg-4">
+          <a class="team-choice" href="{{ url_for('teams.join') }}"><span class="team-choice-icon"><i class="fas fa-link"></i></span><span><strong>{% trans %}Join a team{% endtrans %}</strong><small>{% trans %}Use the team name and password{% endtrans %}</small></span><i class="fas fa-arrow-right ms-auto"></i></a>
         </div>
-        <div class="mt-3 col-md-3 text-center">
-          <a class="btn btn-outline-info w-100" href="{{ url_for('teams.new') }}">{% trans %}Create Unofficial Team{% endtrans %}</a>
+        <div class="col-md-6 col-lg-4">
+          <a class="team-choice" href="{{ url_for('teams.new') }}"><span class="team-choice-icon"><i class="fas fa-plus"></i></span><span><strong>{% trans %}Create a team{% endtrans %}</strong><small>{% trans %}Become captain and invite others{% endtrans %}</small></span><i class="fas fa-arrow-right ms-auto"></i></a>
         </div>
       </div>
     {% else %}
-      <div class="row">
-        <div class="mt-3 col-sm-4 col-md-3 offset-sm-2 offset-md-3 text-center">
-          <a class="btn btn-primary w-100" href="{{ url_for('teams.join') }}">{% trans %}Join Team{% endtrans %}</a>
+      <div class="row g-3 justify-content-center">
+        <div class="col-md-6 col-lg-5">
+          <a class="team-choice" href="{{ url_for('teams.join') }}"><span class="team-choice-icon"><i class="fas fa-link"></i></span><span><strong>{% trans %}Join an existing team{% endtrans %}</strong><small>{% trans %}Ask your captain for the team name and password{% endtrans %}</small></span><i class="fas fa-arrow-right ms-auto"></i></a>
         </div>
-        <div class="mt-3 col-sm-4 col-md-3 text-center">
-          <a class="btn btn-primary w-100" href="{{ url_for('teams.new') }}">{% trans %}Create Team{% endtrans %}</a>
+        <div class="col-md-6 col-lg-5">
+          <a class="team-choice" href="{{ url_for('teams.new') }}"><span class="team-choice-icon"><i class="fas fa-plus"></i></span><span><strong>{% trans %}Create a new team{% endtrans %}</strong><small>{% trans %}Set up your squad and share its credentials{% endtrans %}</small></span><i class="fas fa-arrow-right ms-auto"></i></a>
         </div>
       </div>
     {% endif %}
+
+      <p class="team-help text-center mt-4"><i class="fas fa-info-circle me-2"></i>{% trans %}You will be taken to the competition area as soon as your team setup is complete.{% endtrans %}</p>
+    </div>
+  </section>
+
+  {% if (Configs.team_onboarding_enabled | string | lower) != 'false' %}
+  <div class="modal fade team-guide-modal" id="teamOnboardingModal" tabindex="-1" aria-labelledby="teamOnboardingTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <button type="button" class="btn-close btn-close-white team-guide-close" data-bs-dismiss="modal" aria-label="{% trans %}Close{% endtrans %}"></button>
+        <div class="modal-body p-4 p-md-5">
+          <div class="team-kicker mb-2"><i class="fas fa-compass me-2"></i>{% trans %}Quick start{% endtrans %}</div>
+          <h2 id="teamOnboardingTitle" class="mb-2">{% trans %}Welcome to team mode{% endtrans %}</h2>
+          <p class="team-guide-intro">{% trans %}Every player has their own login, but points are shared with the whole team. Here is how to get ready.{% endtrans %}</p>
+          <div class="team-guide-steps">
+            <div class="team-guide-step"><span>1</span><div><strong>{% trans %}Form your team{% endtrans %}</strong><small>{% trans %}Create a team or join one using the details from your captain.{% endtrans %}</small></div></div>
+            <div class="team-guide-step"><span>2</span><div><strong>{% trans %}Open Challenges{% endtrans %}</strong><small>{% trans %}Use the sidebar to browse challenges and submit flags. A solve awards points to everyone on your team.{% endtrans %}</small></div></div>
+            <div class="team-guide-step"><span>3</span><div><strong>{% trans %}Track your progress{% endtrans %}</strong><small>{% trans %}Check Scoreboard for rankings, Teams for rosters, and Profile for your account activity.{% endtrans %}</small></div></div>
+          </div>
+          <div class="team-guide-nav"><span><i class="fas fa-flag"></i> Challenges</span><span><i class="fas fa-trophy"></i> Scoreboard</span><span><i class="fas fa-users"></i> Teams</span><span><i class="fas fa-user"></i> Profile</span></div>
+          <button type="button" class="btn btn-primary w-100 mt-4" data-bs-dismiss="modal">{% trans %}Got it — set up my team{% endtrans %}</button>
+        </div>
+      </div>
+    </div>
   </div>
+  {% endif %}
+
+  <style>
+    .team-enrollment-page{min-height:calc(100vh - 70px);position:relative;overflow:hidden;background:radial-gradient(circle at 15% 15%,rgba(236,19,19,.17),transparent 32%),#050303;color:#fff}.team-enrollment-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(236,19,19,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(236,19,19,.045) 1px,transparent 1px);background-size:52px 52px;mask-image:linear-gradient(to bottom,#000,transparent)}
+    .team-kicker{display:inline-flex;align-items:center;color:#ff7777;text-transform:uppercase;letter-spacing:.14em;font-size:.78rem;font-weight:700}.team-title{font-size:clamp(2.4rem,6vw,4.8rem);line-height:.95;margin:.7rem 0 1.2rem;letter-spacing:-.05em}.team-lead{max-width:700px;color:#c8bcc0;font-size:1.1rem;margin:0}.team-status-card{display:flex;align-items:center;gap:1rem;padding:1.2rem;border:1px solid rgba(255,255,255,.1);border-radius:18px;background:rgba(20,8,8,.72);box-shadow:0 18px 50px rgba(0,0,0,.25)}.team-status-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;color:#fff;background:linear-gradient(135deg,#8b0000,#ec1313);box-shadow:0 0 22px rgba(236,19,19,.35)}.team-status-card strong,.team-status-card small,.team-choice strong,.team-choice small,.team-guide-step strong,.team-guide-step small{display:block}.team-status-card small,.team-choice small,.team-guide-step small{color:#a99da1;margin-top:.25rem}.team-choice{height:100%;min-height:132px;display:flex;align-items:center;gap:1rem;padding:1.35rem;color:#fff!important;border:1px solid rgba(255,255,255,.11);border-radius:18px;background:rgba(20,8,8,.82);transition:transform .2s,border-color .2s,box-shadow .2s}.team-choice:hover{transform:translateY(-4px);border-color:rgba(236,19,19,.65);box-shadow:0 16px 40px rgba(0,0,0,.35),0 0 24px rgba(236,19,19,.12)}.team-choice-icon{display:grid;place-items:center;flex:0 0 50px;height:50px;border-radius:14px;background:rgba(236,19,19,.14);color:#ff6161;font-size:1.15rem}.team-choice-featured{border-color:rgba(236,19,19,.4);background:linear-gradient(135deg,rgba(139,0,0,.38),rgba(20,8,8,.9))}.team-help{color:#8f8488;font-size:.9rem}
+    .team-guide-modal .modal-content{position:relative;border:1px solid rgba(236,19,19,.42);border-radius:24px;background:linear-gradient(145deg,#190909,#080505);color:#fff;box-shadow:0 30px 90px #000,0 0 45px rgba(236,19,19,.14);overflow:hidden}.team-guide-close{position:absolute;right:1.25rem;top:1.25rem;z-index:2}.team-guide-intro{color:#b9adb1;max-width:650px}.team-guide-steps{display:grid;gap:.75rem;margin-top:1.5rem}.team-guide-step{display:flex;align-items:flex-start;gap:1rem;padding:1rem;border-radius:14px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}.team-guide-step>span{display:grid;place-items:center;flex:0 0 32px;height:32px;border-radius:10px;background:#8b0000;color:#fff;font-weight:700}.team-guide-nav{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1rem}.team-guide-nav span{padding:.5rem .75rem;border-radius:999px;background:rgba(236,19,19,.1);color:#e6dadd;font-size:.82rem}.team-guide-nav i{color:#ff5a5a;margin-right:.35rem}@media(max-width:767px){.team-enrollment-page .container{padding-top:2rem!important}.team-choice{min-height:105px}.team-status-card{margin-top:.5rem}}
+  </style>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  {% if (Configs.team_onboarding_enabled | string | lower) != 'false' %}
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      var element = document.getElementById("teamOnboardingModal");
+      if (!element || typeof bootstrap === "undefined") return;
+      var key = "tomctf-team-onboarding-{{ Session.id }}";
+      try {
+        if (sessionStorage.getItem(key)) return;
+        sessionStorage.setItem(key, "shown");
+      } catch (error) {}
+      bootstrap.Modal.getOrCreateInstance(element).show();
+    });
+  </script>
+  {% endif %}
 {% endblock %}

@@ -1,3 +1,5 @@
+import re
+
 import requests
 from flask import Blueprint, abort
 from flask import current_app as app
@@ -252,6 +254,7 @@ def register():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         email_address = request.form.get("email", "").strip().lower()
+        register_number = request.form.get("register_number", "").strip()
         password = request.form.get("password", "").strip()
 
         website = request.form.get("website")
@@ -269,6 +272,9 @@ def register():
             .filter_by(email=email_address)
             .first()
         )
+        register_numbers = Users.query.filter_by(
+            register_number=register_number
+        ).first()
         pass_short = len(password) == 0
         pass_long = len(password) > 128
         valid_email = validators.validate_email(email_address)
@@ -342,6 +348,10 @@ def register():
             errors.append(_l("Your user name cannot be an email address"))
         if emails:
             errors.append(_l("That email has already been used"))
+        if re.fullmatch(r"[0-9]{12}", register_number) is None:
+            errors.append(_l("Register number must contain exactly 12 digits"))
+        elif register_numbers:
+            errors.append(_l("That register number has already been used"))
         if pass_short:
             errors.append(_l("Pick a longer password"))
         if password_min_length and pass_min:
@@ -369,6 +379,7 @@ def register():
                 errors=errors,
                 name=request.form["name"],
                 email=request.form["email"],
+                register_number=register_number,
                 password=request.form["password"],
             )
         else:
@@ -376,6 +387,7 @@ def register():
                 user = Users(
                     name=name,
                     email=email_address,
+                    register_number=register_number,
                     password=password,
                     bracket_id=bracket_id,
                 )

@@ -11,6 +11,7 @@ DEFAULTS = {
     # General Settings
     "ctf_name": "CTFd",
     "user_mode": UserModeTypes.USERS,
+    "team_onboarding_enabled": True,
     # Visual/Style Settings
     "ctf_theme": DEFAULT_THEME,
     # Visibility Settings

@@ -36,6 +36,18 @@ def RegistrationForm(*args, **kwargs):
             description="Never shown to the public",
             validators=[InputRequired()],
         )
+        register_number = StringField(
+            _l("Register Number"),
+            description=_l("Your 12-digit institutional register number"),
+            validators=[InputRequired()],
+            render_kw={
+                "inputmode": "numeric",
+                "pattern": "[0-9]{12}",
+                "minlength": "12",
+                "maxlength": "12",
+                "autocomplete": "off",
+            },
+        )
         password = PasswordField(
             _l("Password"),
             description=password_description,
