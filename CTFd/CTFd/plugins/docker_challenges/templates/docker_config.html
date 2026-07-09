@@ -36,6 +36,37 @@
                     <input class="form-control" type="text" name="display_host" id="display-host-input" placeholder="Ex: 192.168.1.100" />
                     {% endif %}
                 </div>
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title mb-2">Challenge Proxy</h5>
+                        <p class="text-muted small mb-3">
+                            Route player traffic through CTFd so only the CTFd web port needs to be public. CTFd checks the logged-in user/team before forwarding to the player's own container.
+                        </p>
+                        <div class="form-group">
+                            <label for="docker-proxy-enabled">Proxy Mode</label>
+                            <select class="form-control" name="docker_proxy_enabled" id="docker-proxy-enabled">
+                                <option value="true" {% if proxy_config.enabled != 'false' %}selected{% endif %}>Enabled - show protected CTFd proxy URLs</option>
+                                <option value="false" {% if proxy_config.enabled == 'false' %}selected{% endif %}>Disabled - show raw host:port</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="docker-proxy-upstream-host">
+                                Proxy Upstream Host
+                                <small class="text-muted">(private address CTFd can reach)</small>
+                            </label>
+                            <input class="form-control" type="text" name="docker_proxy_upstream_host" id="docker-proxy-upstream-host" placeholder="Ex: 10.0.0.20" value="{{ proxy_config.upstream_host }}">
+                            <small class="form-text text-muted">Leave blank to use Display Host, then Docker Hostname without its API port.</small>
+                        </div>
+                        <div class="form-group mb-0">
+                            <label for="docker-proxy-public-base">
+                                Public CTFd Base URL
+                                <small class="text-muted">(optional)</small>
+                            </label>
+                            <input class="form-control" type="text" name="docker_proxy_public_base" id="docker-proxy-public-base" placeholder="Ex: https://ctf.example.com" value="{{ proxy_config.public_base }}">
+                            <small class="form-text text-muted">Use this when CTFd runs behind nginx/cloudflared and auto-detected URLs are wrong.</small>
+                        </div>
+                    </div>
+                </div>
                 <div class="form-group">
                     <p>TLS Enabled?</p>
                     <input type="radio" name="tls_enabled" id="tls-radiobox-no" value="False" onclick="enable_file_form(!this.checked)" {% if not config.tls_enabled %}checked{% endif %} />

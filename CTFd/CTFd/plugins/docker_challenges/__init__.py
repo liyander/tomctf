@@ -19,7 +19,7 @@ from CTFd.api.v1.scoreboard import ScoreboardDetail
 import CTFd.utils.scores
 from CTFd.api.v1.challenges import ChallengeList, Challenge
 from flask_restx import Namespace, Resource
-from flask import request, Blueprint, jsonify, abort, render_template, url_for, redirect, session
+from flask import request, Blueprint, jsonify, abort, render_template, url_for, redirect, session, Response, stream_with_context
 # from flask_wtf import FlaskForm
 from wtforms import (
     FileField,
@@ -47,6 +47,7 @@ import json
 import hashlib
 import random
 import re
+from urllib.parse import urlsplit, urlunsplit
 from CTFd.plugins import register_admin_plugin_menu_bar
 
 from CTFd.forms import BaseForm
@@ -144,6 +145,178 @@ def remove_port_forward(port):
     if srv:
         try: srv.close()
         except Exception: pass
+
+
+def _config_enabled(value, default=True):
+    if value is None:
+        return default
+    return str(value).strip().lower() in ("1", "true", "yes", "on", "enabled")
+
+
+def docker_proxy_enabled():
+    """Whether players should receive CTFd-owned proxy URLs instead of raw host ports."""
+    try:
+        from CTFd.utils import get_config
+        return _config_enabled(get_config("docker_proxy_enabled"), default=True)
+    except Exception:
+        return True
+
+
+def get_docker_api_host(docker):
+    if not docker or not docker.hostname:
+        return ""
+    host = str(docker.hostname).strip()
+    if "://" not in host:
+        host = "tcp://" + host
+    parsed = urlsplit(host)
+    return parsed.hostname or str(docker.hostname).split(":")[0]
+
+
+def get_proxy_upstream_host(docker, tracker=None):
+    """Host CTFd should dial to reach published challenge ports."""
+    try:
+        from CTFd.utils import get_config
+        configured = (get_config("docker_proxy_upstream_host") or "").strip()
+        if configured:
+            return configured
+    except Exception:
+        pass
+    if tracker and tracker.host:
+        return str(tracker.host).split(":")[0]
+    if docker and docker.display_host:
+        return str(docker.display_host).split(":")[0]
+    return get_docker_api_host(docker)
+
+
+def get_proxy_public_base():
+    try:
+        from CTFd.utils import get_config
+        base = (get_config("docker_proxy_public_base") or "").strip()
+        return base.rstrip("/")
+    except Exception:
+        return ""
+
+
+def build_proxy_url(tracker_id, port):
+    path = url_for("docker_challenge_proxy.proxy_instance", tracker_id=tracker_id, port=port, path="")
+    public_base = get_proxy_public_base()
+    if public_base:
+        return public_base + path
+    return url_for("docker_challenge_proxy.proxy_instance", tracker_id=tracker_id, port=port, path="", _external=True)
+
+
+def define_challenge_proxy(app):
+    challenge_proxy = Blueprint("docker_challenge_proxy", __name__)
+
+    def _owns_tracker(tracker):
+        if not authed():
+            return False
+        if is_teams_mode():
+            team = get_current_team()
+            return team is not None and str(tracker.team_id) == str(team.id)
+        user = get_current_user()
+        return user is not None and str(tracker.user_id) == str(user.id)
+
+    @challenge_proxy.route("/challenge-proxy/<int:tracker_id>/<port>/", defaults={"path": ""}, methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"])
+    @challenge_proxy.route("/challenge-proxy/<int:tracker_id>/<port>/<path:path>", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"])
+    @authed_only
+    def proxy_instance(tracker_id, port, path):
+        tracker = DockerChallengeTracker.query.filter_by(id=tracker_id).first_or_404()
+        if not _owns_tracker(tracker):
+            abort(403)
+
+        port = str(port).split("/")[0].strip()
+        allowed_ports = [p.split("/")[0].strip() for p in str(tracker.ports or "").split(",") if p.strip()]
+        if port not in allowed_ports:
+            abort(404)
+
+        docker = DockerConfig.query.filter_by(id=1).first()
+        upstream_host = get_proxy_upstream_host(docker, tracker)
+        if not upstream_host:
+            return Response("Docker proxy upstream host is not configured", status=502)
+
+        query = request.query_string.decode("utf-8", errors="ignore")
+        upstream_url = urlunsplit(("http", f"{upstream_host}:{port}", "/" + path, query, ""))
+
+        hop_by_hop = {
+            "connection",
+            "keep-alive",
+            "proxy-authenticate",
+            "proxy-authorization",
+            "te",
+            "trailers",
+            "transfer-encoding",
+            "upgrade",
+            "host",
+            "content-length",
+        }
+        headers = {
+            key: value
+            for key, value in request.headers
+            if key.lower() not in hop_by_hop
+        }
+        headers["Host"] = f"{upstream_host}:{port}"
+        headers["X-Forwarded-For"] = request.headers.get("X-Forwarded-For", request.remote_addr or "")
+        headers["X-Forwarded-Host"] = request.host
+        headers["X-Forwarded-Proto"] = request.scheme
+        headers["X-Forwarded-Prefix"] = url_for(
+            "docker_challenge_proxy.proxy_instance",
+            tracker_id=tracker_id,
+            port=port,
+            path="",
+        ).rstrip("/")
+
+        try:
+            upstream = requests.request(
+                method=request.method,
+                url=upstream_url,
+                headers=headers,
+                data=request.get_data(),
+                cookies=request.cookies,
+                allow_redirects=False,
+                stream=True,
+                timeout=(5, 120),
+            )
+        except requests.RequestException:
+            return Response("Challenge instance is not reachable yet. Try again in a moment.", status=502)
+
+        excluded = {
+            "connection",
+            "keep-alive",
+            "proxy-authenticate",
+            "proxy-authorization",
+            "te",
+            "trailers",
+            "transfer-encoding",
+            "upgrade",
+            "content-encoding",
+        }
+        response_headers = []
+        proxy_prefix = url_for(
+            "docker_challenge_proxy.proxy_instance",
+            tracker_id=tracker_id,
+            port=port,
+            path="",
+        )
+        for key, value in upstream.headers.items():
+            lower = key.lower()
+            if lower in excluded:
+                continue
+            if lower == "location":
+                parsed = urlsplit(value)
+                if parsed.netloc == f"{upstream_host}:{port}":
+                    value = urlunsplit(("", "", proxy_prefix.rstrip("/") + parsed.path, parsed.query, parsed.fragment))
+                elif value.startswith("/"):
+                    value = proxy_prefix.rstrip("/") + value
+            response_headers.append((key, value))
+
+        return Response(
+            stream_with_context(upstream.iter_content(chunk_size=8192)),
+            status=upstream.status_code,
+            headers=response_headers,
+        )
+
+    app.register_blueprint(challenge_proxy)
 
 
 class DockerConfig(db.Model):
@@ -308,6 +481,7 @@ def define_docker_admin(app):
     @admin_docker_config.route("/admin/docker_config", methods=["GET", "POST"])
     @admins_only
     def docker_config():
+        from CTFd.utils import get_config, set_config
         docker = DockerConfig.query.filter_by(id=1).first()
         form = DockerConfigForm()
         if request.method == "POST":
@@ -344,6 +518,9 @@ def define_docker_admin(app):
             b.repositories = ','.join(selected_repositories) if selected_repositories else None
             db.session.add(b)
             db.session.commit()
+            set_config("docker_proxy_enabled", request.form.get("docker_proxy_enabled", "true"))
+            set_config("docker_proxy_upstream_host", request.form.get("docker_proxy_upstream_host", "").strip())
+            set_config("docker_proxy_public_base", request.form.get("docker_proxy_public_base", "").strip().rstrip("/"))
             docker = DockerConfig.query.filter_by(id=1).first()
         try:
             if docker:
@@ -369,7 +546,12 @@ def define_docker_admin(app):
                 selected_repos = []
         else:
             selected_repos = []
-        return render_template("docker_config.html", config=dconfig, form=form, repos=selected_repos)
+        proxy_config = {
+            "enabled": get_config("docker_proxy_enabled") if get_config("docker_proxy_enabled") is not None else "true",
+            "upstream_host": get_config("docker_proxy_upstream_host") or "",
+            "public_base": get_config("docker_proxy_public_base") or "",
+        }
+        return render_template("docker_config.html", config=dconfig, form=form, repos=selected_repos, proxy_config=proxy_config)
 
     app.register_blueprint(admin_docker_config)
 
@@ -979,7 +1161,8 @@ class DockerStatus(Resource):
             return {"success": False, "message": "Authentication required", "data": []}, 403
 
         docker = DockerConfig.query.filter_by(id=1).first()
-        docker_host = (docker.display_host or str(docker.hostname).split(':')[0]) if docker and docker.hostname else ""
+        docker_host = (docker.display_host or get_docker_api_host(docker)) if docker and docker.hostname else ""
+        use_proxy = docker_proxy_enabled()
         if is_teams_mode():
             session = get_current_team()
             tracker = DockerChallengeTracker.query.filter_by(team_id=session.id)
@@ -1045,6 +1228,8 @@ class DockerStatus(Resource):
                 'instance_id': i.instance_id,
                 'ports': ports_list,
                 'host': docker_host,
+                'connection_mode': 'proxy' if use_proxy else 'direct',
+                'connection_url': build_proxy_url(i.id, ports_list[0]) if use_proxy and ports_list else '',
                 'container_expiry': chal_expiry
             })
         return {
@@ -1145,6 +1330,7 @@ def load(app):
     define_outro_admin(app)
     register_admin_plugin_menu_bar('Outro', '/admin/outro_config')
     define_docker_status(app)
+    define_challenge_proxy(app)
     CTFd_API_v1.add_namespace(docker_namespace, '/docker')
     CTFd_API_v1.add_namespace(container_namespace, '/container')
     CTFd_API_v1.add_namespace(active_docker_namespace, '/docker_status')

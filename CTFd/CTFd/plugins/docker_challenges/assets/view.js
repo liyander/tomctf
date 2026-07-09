@@ -80,7 +80,10 @@ function get_docker_status(container) {
 
                 const host = String(item.host || '').trim();
                 const firstPort = ports.length > 0 ? String(ports[0]).split('/')[0] : '';
-                const hostPort = (host && firstPort) ? `${host}:${firstPort}` : '';
+                const isProxyMode = item.connection_mode === 'proxy' && item.connection_url;
+                const hostPort = isProxyMode
+                    ? String(item.connection_url || '').trim()
+                    : ((host && firstPort) ? `${host}:${firstPort}` : '');
                 
                 ports.forEach(port => {
                     port = String(port);
@@ -96,8 +99,14 @@ function get_docker_status(container) {
 
                 const inputId = `${instancePrefix}_hostport_input`;
 
+                const openButton = isProxyMode
+                    ? `<a href="${hostPort}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,230,118,0.12);color:#00e676;border:1px solid rgba(0,230,118,0.24);border-radius:8px;padding:7px 14px;margin-bottom:.6rem;text-decoration:none">
+                         <i class="fas fa-external-link-alt"></i> Open Instance
+                       </a>`
+                    : '';
+
                 const hostPortField = hostPort
-                    ? `<div class="input-group input-group-sm justify-content-center" style="max-width:340px;margin:0 auto">
+                    ? `${openButton}<div class="input-group input-group-sm justify-content-center" style="max-width:420px;margin:0 auto">
                          <input type="text" id="${inputId}" class="form-control text-center" value="${hostPort}" readonly onclick="this.select()" style="cursor:text;background:rgba(255,255,255,0.06);color:#e0e0e0;border-color:rgba(255,255,255,0.12);border-radius:6px 0 0 6px;font-family:monospace;letter-spacing:.5px">
                          <button type="button" class="btn btn-outline-light btn-sm" id="${copyId}" style="border-color:rgba(255,255,255,0.12);border-radius:0 6px 6px 0"><i class="fas fa-copy"></i></button>
                        </div>`
@@ -147,7 +156,9 @@ function get_docker_status(container) {
                 // Update the DOM with connection info information (if present).
                 // Some themes/challenge templates may not render `.challenge-connection-info`.
                 var $link = CTFd.lib.$('.challenge-connection-info');
-                if ($link.length > 0) {
+                if (isProxyMode && $link.length > 0) {
+                    $link.html(`<a href="${hostPort}" target="_blank" rel="noopener noreferrer">${hostPort}</a>`);
+                } else if ($link.length > 0) {
                     const currentHtml = $link.html();
                     if (typeof currentHtml === 'string') {
                         $link.html(currentHtml.replace(/host/gi, item.host));
