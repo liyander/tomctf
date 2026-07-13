@@ -29,6 +29,20 @@
           </p>
         </div>
 
+        <div class="registration-phase-alert mb-4" role="alert">
+          <div class="phase-alert-icon">
+            <i class="fas fa-bolt"></i>
+          </div>
+          <div>
+            <h2>Registration Notice</h2>
+            <p>
+              The CTF will be conducted in two phases. Only the first 100 registrations
+              will be considered for Phase 1. Remaining registrations will be placed in
+              Phase 2, so complete your registration as soon as possible.
+            </p>
+          </div>
+        </div>
+
         <!-- Auth Card -->
         <div class="auth-card">
           <div class="auth-card-glow"></div>
@@ -249,6 +263,70 @@
     width: 40px;
     height: 1px;
     background: linear-gradient(90deg, transparent, #8b0000, transparent);
+  }
+
+  .registration-phase-alert {
+    position: relative;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 1rem 1.1rem;
+    border-radius: 16px;
+    background:
+      linear-gradient(135deg, rgba(236, 19, 19, 0.16), rgba(255, 171, 64, 0.08)),
+      rgba(10, 5, 5, 0.82);
+    border: 1px solid rgba(236, 19, 19, 0.32);
+    box-shadow:
+      0 16px 40px rgba(0, 0, 0, 0.28),
+      inset 0 0 24px rgba(236, 19, 19, 0.06);
+    color: #f7e8d0;
+  }
+
+  .registration-phase-alert::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(236, 19, 19, 0.16), transparent);
+    opacity: 0.55;
+  }
+
+  .phase-alert-icon {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    color: #ffdd8a;
+    background: rgba(236, 19, 19, 0.14);
+    border: 1px solid rgba(255, 221, 138, 0.24);
+    box-shadow: 0 0 18px rgba(236, 19, 19, 0.18);
+  }
+
+  .registration-phase-alert h2,
+  .registration-phase-alert p {
+    position: relative;
+    z-index: 1;
+  }
+
+  .registration-phase-alert h2 {
+    margin: 0 0 0.35rem;
+    color: #fff4dc;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .registration-phase-alert p {
+    margin: 0;
+    color: #dfcbb3;
+    font-size: 0.92rem;
+    line-height: 1.55;
   }
 
   /* ---- Auth Card ---- */
