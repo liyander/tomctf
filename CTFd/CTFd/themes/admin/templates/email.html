@@ -37,7 +37,7 @@
 				{% if status and (status.running or status.total) %}data-active="1"{% endif %}>
 			</div>
 
-			<form method="POST" autocomplete="off">
+			<form method="POST" autocomplete="off" id="bulk-email-form">
 				<input type="hidden" name="nonce" value="{{ Session.nonce }}">
 
 				<div class="form-group">
@@ -59,6 +59,14 @@
 				</div>
 
 				<div class="form-group">
+					<b>Format</b>
+					<select name="format" id="email-format" class="form-control custom-select">
+						<option value="plain" {% if email_format != 'html' %}selected{% endif %}>Plain text</option>
+						<option value="html" {% if email_format == 'html' %}selected{% endif %}>HTML template (rich design)</option>
+					</select>
+				</div>
+
+				<div class="form-group">
 					<b>Subject</b>
 					<input type="text" name="subject" class="form-control" value="{{ subject or '' }}"
 						placeholder="Email subject" required>
@@ -66,15 +74,54 @@
 
 				<div class="form-group">
 					<b>Message</b>
-					<textarea name="message" class="form-control" rows="10"
-						placeholder="Write your message here..." required>{{ message or '' }}</textarea>
-					<small class="form-text text-muted">
-						Plain text only. Sent using the mail server configured in Config &raquo; Email.
+					<textarea name="message" class="form-control" rows="8"
+						placeholder="Write your message here...">{{ message or '' }}</textarea>
+					<small class="form-text text-muted" id="message-help">
+						Plain text. In HTML mode this fills the <code>{{ '{{message}}' }}</code> placeholder in the template.
 					</small>
 				</div>
 
+				<!-- HTML template controls (shown only in HTML mode) -->
+				<div id="html-controls" style="display:none;">
+					<div class="form-group">
+						<b>Template</b>
+						<div class="input-group">
+							<select id="template-select" class="form-control custom-select">
+								<option value="">— Choose a template to load —</option>
+								{% for key, tmpl in templates_meta.items() %}
+								<option value="{{ key }}" data-desc="{{ tmpl.description }}">{{ tmpl.name }}</option>
+								{% endfor %}
+							</select>
+							<div class="input-group-append">
+								<button type="button" class="btn btn-outline-secondary" id="load-template-btn">Load</button>
+							</div>
+						</div>
+						<small class="form-text text-muted" id="template-desc"></small>
+					</div>
+
+					<div class="form-group">
+						<b>HTML content</b>
+						<span class="text-muted"><small>(fully customizable)</small></span>
+						<textarea name="html" id="html-editor" class="form-control text-monospace" rows="14"
+							placeholder="Select a template above and customize it here, or paste your own HTML..."
+							style="font-size:13px;">{{ html_content or '' }}</textarea>
+						<small class="form-text text-muted">
+							Placeholders: <code>{{ '{{ctf_name}}' }}</code>, <code>{{ '{{subject}}' }}</code>,
+							<code>{{ '{{message}}' }}</code>, <code>{{ '{{name}}' }}</code>,
+							<code>{{ '{{email}}' }}</code>, <code>{{ '{{year}}' }}</code>.
+						</small>
+					</div>
+
+					<div class="form-group">
+						<button type="button" class="btn btn-outline-info" id="preview-btn"
+							data-preview-url="{{ url_for('admin.email_preview') }}">
+							<i class="fas fa-eye"></i> Preview
+						</button>
+					</div>
+				</div>
+
 				<div class="form-group">
-					<button type="submit" class="btn btn-primary"
+					<button type="submit" class="btn btn-primary" id="send-btn"
 						{% if not mail_configured %}disabled{% endif %}
 						onclick="return confirm('Send this email to the selected recipients?');">
 						<i class="fas fa-paper-plane"></i> Send Email
@@ -85,6 +132,26 @@
 		</div>
 	</div>
 </div>
+
+<!-- Preview modal -->
+<div class="modal fade" id="preview-modal" tabindex="-1" role="dialog" aria-hidden="true">
+	<div class="modal-dialog modal-lg" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Email Preview</h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
+			<div class="modal-body" style="background:#e9ecef;">
+				<iframe id="preview-frame" title="Email preview"
+					style="width:100%;height:60vh;border:0;background:#fff;border-radius:6px;"></iframe>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script type="application/json" id="email-templates-data">{{ templates_html | tojson }}</script>
 
 <script nonce="{{ Session.nonce if Session and Session.nonce }}">
 (function () {
@@ -180,6 +247,89 @@
 
 	// Kick off polling if a job is (or was just) active
 	poll();
+
+	// ---- HTML template / format / preview handling ----
+	var formatSelect = document.getElementById("email-format");
+	var htmlControls = document.getElementById("html-controls");
+	var messageField = document.querySelector("#bulk-email-form textarea[name='message']");
+	var messageHelp = document.getElementById("message-help");
+	var templateSelect = document.getElementById("template-select");
+	var templateDesc = document.getElementById("template-desc");
+	var loadTemplateBtn = document.getElementById("load-template-btn");
+	var htmlEditor = document.getElementById("html-editor");
+	var previewBtn = document.getElementById("preview-btn");
+	var previewFrame = document.getElementById("preview-frame");
+
+	var templatesData = {};
+	try {
+		var dataEl = document.getElementById("email-templates-data");
+		if (dataEl) templatesData = JSON.parse(dataEl.textContent || "{}");
+	} catch (e) { templatesData = {}; }
+
+	function applyFormat() {
+		if (!formatSelect) return;
+		var isHtml = formatSelect.value === "html";
+		if (htmlControls) htmlControls.style.display = isHtml ? "block" : "none";
+		if (messageField) messageField.required = !isHtml;
+		if (messageHelp) {
+			messageHelp.style.display = isHtml ? "block" : "block";
+		}
+	}
+
+	if (formatSelect) {
+		formatSelect.addEventListener("change", applyFormat);
+		applyFormat();
+	}
+
+	if (templateSelect) {
+		templateSelect.addEventListener("change", function () {
+			var opt = templateSelect.options[templateSelect.selectedIndex];
+			templateDesc.textContent = opt ? (opt.getAttribute("data-desc") || "") : "";
+		});
+	}
+
+	function loadTemplate() {
+		var id = templateSelect ? templateSelect.value : "";
+		if (!id) return;
+		var html = templatesData[id];
+		if (typeof html !== "string") return;
+		if (htmlEditor.value.trim() &&
+			!confirm("Replace the current HTML content with this template?")) {
+			return;
+		}
+		htmlEditor.value = html;
+	}
+
+	if (loadTemplateBtn) loadTemplateBtn.addEventListener("click", loadTemplate);
+
+	function showPreview() {
+		if (!previewBtn) return;
+		var url = previewBtn.getAttribute("data-preview-url");
+		var payload = {
+			html: htmlEditor ? htmlEditor.value : "",
+			subject: (document.querySelector("#bulk-email-form input[name='subject']") || {}).value || "",
+			message: messageField ? messageField.value : ""
+		};
+		fetch(url, {
+			method: "POST",
+			credentials: "same-origin",
+			headers: { "Content-Type": "application/json", "CSRF-Token": nonce },
+			body: JSON.stringify(payload)
+		})
+			.then(function (r) { return r.json(); })
+			.then(function (data) {
+				if (previewFrame) previewFrame.srcdoc = (data && data.html) || "";
+				if (window.jQuery && window.jQuery("#preview-modal").modal) {
+					window.jQuery("#preview-modal").modal("show");
+				} else {
+					var m = document.getElementById("preview-modal");
+					if (m) { m.style.display = "block"; m.classList.add("show"); }
+				}
+			})
+			.catch(function () { alert("Could not generate preview."); });
+	}
+
+	if (previewBtn) previewBtn.addEventListener("click", showPreview);
 })();
 </script>
 {% endblock %}

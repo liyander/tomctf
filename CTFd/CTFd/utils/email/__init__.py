@@ -30,13 +30,13 @@ PROVIDERS = {"smtp": SMTPEmailProvider, "mailgun": MailgunEmailProvider}
 DEFAULT_ALLOWED_EMAIL_DOMAINS = ["srishakthi.ac.in", "siet.ac.in"]
 
 
-def sendmail(addr, text, subject="Message from {ctf_name}"):
+def sendmail(addr, text, subject="Message from {ctf_name}", html=None):
     subject = safe_format(subject, ctf_name=get_config("ctf_name"))
     provider = get_mail_provider()
     EmailProvider = PROVIDERS.get(provider)
     if EmailProvider is None:
         return False, "No mail settings configured"
-    return EmailProvider.sendmail(addr, text, subject)
+    return EmailProvider.sendmail(addr, text, subject, html=html)
 
 
 def password_change_alert(email):
