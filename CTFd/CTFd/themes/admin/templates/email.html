@@ -45,11 +45,25 @@
 					Sent {{ status.sent }} / {{ status.total }},
 					failed {{ status.failed }}.
 					<a href="{{ url_for('admin.email') }}" class="ml-2">Refresh</a>
+					<form method="POST" action="{{ url_for('admin.email_stop') }}" class="d-inline ml-2">
+						<input type="hidden" name="nonce" value="{{ Session.nonce }}">
+						<button type="submit" class="btn btn-sm btn-danger"
+							onclick="return confirm('Stop sending the remaining emails?');">
+							<i class="fas fa-stop"></i> Stop
+						</button>
+					</form>
 				{% else %}
-					<strong>Last send finished.</strong>
+					{% if status.cancelled %}
+						<strong>Sending stopped.</strong>
+					{% else %}
+						<strong>Last send finished.</strong>
+					{% endif %}
 					Sent <strong>{{ status.sent }}</strong> of {{ status.total }}.
 					{% if status.failed %}
 						<span class="text-danger">Failed {{ status.failed }}.</span>
+					{% endif %}
+					{% if status.cancelled %}
+						<span class="text-muted">(Remaining recipients were not emailed.)</span>
 					{% endif %}
 				{% endif %}
 				{% if status.last_error %}

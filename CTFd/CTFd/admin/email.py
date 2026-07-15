@@ -1,7 +1,7 @@
 import datetime
 import threading
 
-from flask import current_app, render_template, request
+from flask import current_app, redirect, render_template, request, url_for
 
 from CTFd.admin import admin
 from CTFd.cache import cache
@@ -11,6 +11,7 @@ from CTFd.utils.decorators import admins_only
 from CTFd.utils.email import sendmail
 
 BULK_EMAIL_STATUS_KEY = "bulk_email_status"
+BULK_EMAIL_CANCEL_KEY = "bulk_email_cancel"
 
 
 def _get_bulk_email_status():
@@ -22,10 +23,23 @@ def _set_bulk_email_status(status):
     cache.set(BULK_EMAIL_STATUS_KEY, status, timeout=3600)
 
 
+def _request_bulk_email_cancel():
+    cache.set(BULK_EMAIL_CANCEL_KEY, True, timeout=3600)
+
+
+def _clear_bulk_email_cancel():
+    cache.set(BULK_EMAIL_CANCEL_KEY, False, timeout=3600)
+
+
+def _is_bulk_email_cancelled():
+    return bool(cache.get(BULK_EMAIL_CANCEL_KEY))
+
+
 def _send_bulk_email(app, addresses, subject, message):
     with app.app_context():
         status = {
             "running": True,
+            "cancelled": False,
             "total": len(addresses),
             "sent": 0,
             "failed": 0,
@@ -36,6 +50,11 @@ def _send_bulk_email(app, addresses, subject, message):
         _set_bulk_email_status(status)
 
         for address in addresses:
+            # Stop sending if the admin requested a cancel
+            if _is_bulk_email_cancelled():
+                status["cancelled"] = True
+                break
+
             result, response = sendmail(addr=address, text=message, subject=subject)
             if result:
                 status["sent"] += 1
@@ -47,6 +66,7 @@ def _send_bulk_email(app, addresses, subject, message):
         status["running"] = False
         status["finished"] = datetime.datetime.utcnow().isoformat()
         _set_bulk_email_status(status)
+        _clear_bulk_email_cancel()
 
 
 @admin.route("/admin/email", methods=["GET", "POST"])
@@ -107,6 +127,9 @@ def email():
             query = query.filter_by(verified=False)
         addresses = [user.email for user in query.all() if user.email]
 
+        # Clear any leftover cancel request from a previous run
+        _clear_bulk_email_cancel()
+
         # Send in a background thread so the request returns immediately instead
         # of blocking the browser while every message is delivered.
         app = current_app._get_current_object()
@@ -140,3 +163,12 @@ def email():
         recipient_counts=recipient_counts,
         status=_get_bulk_email_status(),
     )
+
+
+@admin.route("/admin/email/stop", methods=["POST"])
+@admins_only
+def email_stop():
+    status = _get_bulk_email_status()
+    if status and status.get("running"):
+        _request_bulk_email_cancel()
+    return redirect(url_for("admin.email"))
