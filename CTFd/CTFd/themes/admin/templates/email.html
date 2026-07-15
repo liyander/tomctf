@@ -30,47 +30,12 @@
 			</div>
 			{% endif %}
 
-			{% if just_started %}
-			<div class="alert alert-info" role="alert">
-				Started sending <strong>{{ status.total }}</strong> email(s) in the background.
-				This page will not block &mdash; <a href="{{ url_for('admin.email') }}">refresh</a>
-				to see progress and results.
+			<div id="bulk-email-status"
+				data-status-url="{{ url_for('admin.email_status') }}"
+				data-stop-url="{{ url_for('admin.email_stop') }}"
+				data-nonce="{{ Session.nonce }}"
+				{% if status and (status.running or status.total) %}data-active="1"{% endif %}>
 			</div>
-			{% endif %}
-
-			{% if status %}
-			<div class="alert {% if status.running %}alert-info{% elif status.failed and not status.sent %}alert-danger{% elif status.failed %}alert-warning{% else %}alert-success{% endif %}" role="alert">
-				{% if status.running %}
-					<strong>Sending in progress&hellip;</strong>
-					Sent {{ status.sent }} / {{ status.total }},
-					failed {{ status.failed }}.
-					<a href="{{ url_for('admin.email') }}" class="ml-2">Refresh</a>
-					<form method="POST" action="{{ url_for('admin.email_stop') }}" class="d-inline ml-2">
-						<input type="hidden" name="nonce" value="{{ Session.nonce }}">
-						<button type="submit" class="btn btn-sm btn-danger"
-							onclick="return confirm('Stop sending the remaining emails?');">
-							<i class="fas fa-stop"></i> Stop
-						</button>
-					</form>
-				{% else %}
-					{% if status.cancelled %}
-						<strong>Sending stopped.</strong>
-					{% else %}
-						<strong>Last send finished.</strong>
-					{% endif %}
-					Sent <strong>{{ status.sent }}</strong> of {{ status.total }}.
-					{% if status.failed %}
-						<span class="text-danger">Failed {{ status.failed }}.</span>
-					{% endif %}
-					{% if status.cancelled %}
-						<span class="text-muted">(Remaining recipients were not emailed.)</span>
-					{% endif %}
-				{% endif %}
-				{% if status.last_error %}
-					<div class="mt-2"><small><strong>Last error:</strong> {{ status.last_error }}</small></div>
-				{% endif %}
-			</div>
-			{% endif %}
 
 			<form method="POST" autocomplete="off">
 				<input type="hidden" name="nonce" value="{{ Session.nonce }}">
@@ -120,4 +85,101 @@
 		</div>
 	</div>
 </div>
+
+<script nonce="{{ Session.nonce if Session and Session.nonce }}">
+(function () {
+	var el = document.getElementById("bulk-email-status");
+	if (!el) return;
+
+	var statusUrl = el.getAttribute("data-status-url");
+	var stopUrl = el.getAttribute("data-stop-url");
+	var nonce = el.getAttribute("data-nonce");
+	var pollTimer = null;
+
+	function escapeHtml(str) {
+		return String(str == null ? "" : str)
+			.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+	}
+
+	function render(s) {
+		if (!s || (!s.running && !s.total)) {
+			el.innerHTML = "";
+			return;
+		}
+		var cls, head, extra = "";
+		if (s.running) {
+			cls = "alert-info";
+			head = "Sending in progress…";
+		} else if (s.cancelled) {
+			cls = (s.failed && !s.sent) ? "alert-danger" : "alert-warning";
+			head = "Sending stopped.";
+			extra = ' <span class="text-muted">(Remaining recipients were not emailed.)</span>';
+		} else if (s.failed && !s.sent) {
+			cls = "alert-danger";
+			head = "Last send finished.";
+		} else if (s.failed) {
+			cls = "alert-warning";
+			head = "Last send finished.";
+		} else {
+			cls = "alert-success";
+			head = "Last send finished.";
+		}
+
+		var html = '<div class="alert ' + cls + '" role="alert">';
+		html += "<strong>" + head + "</strong> ";
+		html += "Sent " + s.sent + " / " + s.total;
+		if (s.failed) {
+			html += ', <span class="text-danger">failed ' + s.failed + "</span>";
+		}
+		html += ".";
+		html += extra;
+		if (s.running) {
+			html += ' <button type="button" id="bulk-email-stop" class="btn btn-sm btn-danger ml-2">'
+				+ '<i class="fas fa-stop"></i> Stop</button>';
+		}
+		if (s.last_error) {
+			html += '<div class="mt-2"><small><strong>Last error:</strong> '
+				+ escapeHtml(s.last_error) + "</small></div>";
+		}
+		html += "</div>";
+		el.innerHTML = html;
+
+		var stopBtn = document.getElementById("bulk-email-stop");
+		if (stopBtn) {
+			stopBtn.addEventListener("click", stopSending);
+		}
+	}
+
+	function poll() {
+		fetch(statusUrl, { headers: { "Accept": "application/json" }, credentials: "same-origin" })
+			.then(function (r) { return r.json(); })
+			.then(function (s) {
+				render(s);
+				if (s.running) {
+					pollTimer = setTimeout(poll, 1500);
+				}
+			})
+			.catch(function () {
+				pollTimer = setTimeout(poll, 3000);
+			});
+	}
+
+	function stopSending() {
+		var btn = document.getElementById("bulk-email-stop");
+		if (btn) { btn.disabled = true; btn.textContent = "Stopping…"; }
+		fetch(stopUrl, {
+			method: "POST",
+			credentials: "same-origin",
+			headers: { "Content-Type": "application/json", "CSRF-Token": nonce },
+			body: "{}"
+		})
+			.then(function (r) { return r.json(); })
+			.then(function (data) { if (data && data.status) render(data.status); })
+			.catch(function () {});
+	}
+
+	// Kick off polling if a job is (or was just) active
+	poll();
+})();
+</script>
 {% endblock %}
