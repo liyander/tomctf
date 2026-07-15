@@ -216,6 +216,94 @@
     display: block;
     color: rgba(236,19,19,0.3);
   }
+
+  .edit-profile-btn {
+    background: rgba(139,0,0,0.35);
+    border: 1px solid rgba(236,19,19,0.4);
+    color: #ff6b6b;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0.45rem 1.25rem;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+  }
+  .edit-profile-btn:hover {
+    background: linear-gradient(135deg, #8b0000, #ec1313);
+    border-color: #ec1313;
+    color: #fff;
+    box-shadow: 0 0 15px rgba(236,19,19,0.3);
+  }
+
+  #edit-profile-modal .modal-content {
+    background: #1a0a0a;
+    border: 1px solid rgba(139,0,0,0.5);
+    color: #d4c5b0;
+  }
+  #edit-profile-modal .modal-header {
+    border-bottom: 1px solid rgba(139,0,0,0.3);
+  }
+  #edit-profile-modal .modal-title {
+    font-family: 'Space Grotesk', sans-serif;
+    color: #ec1313;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 1rem;
+  }
+  #edit-profile-modal .modal-footer {
+    border-top: 1px solid rgba(139,0,0,0.3);
+  }
+  #edit-profile-modal .form-label {
+    color: #ec1313;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.35rem;
+  }
+  #edit-profile-modal .form-control {
+    background: rgba(5,3,3,0.8);
+    border: 1px solid rgba(139,0,0,0.25);
+    color: #d4c5b0;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.9rem;
+    border-radius: 10px;
+    padding: 0.6rem 1rem;
+  }
+  #edit-profile-modal .form-control:focus {
+    border-color: #ec1313;
+    box-shadow: 0 0 0 2px rgba(236,19,19,0.12);
+    background: rgba(5,3,3,0.9);
+    color: #fff;
+    outline: none;
+  }
+  #edit-profile-modal .form-text {
+    color: rgba(212,197,176,0.4);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.75rem;
+  }
+  #edit-profile-modal .btn-primary {
+    background: linear-gradient(135deg, #8b0000, #ec1313);
+    border: none;
+    border-radius: 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    padding: 0.6rem 1.75rem;
+  }
+  #edit-profile-modal .btn-secondary {
+    background: transparent;
+    border: 1px solid rgba(139,0,0,0.4);
+    color: rgba(212,197,176,0.7);
+    border-radius: 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.85rem;
+  }
 </style>
 
   <div class="profile-hero">
@@ -300,6 +388,58 @@
                 title="{{ user.website }}"></i>
           </a>
         {% endif %}
+      </div>
+
+      <div class="pt-3">
+        <button type="button" class="btn edit-profile-btn" data-bs-toggle="modal" data-bs-target="#edit-profile-modal">
+          <i class="fas fa-pen me-1"></i> {% trans %}Edit Profile{% endtrans %}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="edit-profile-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form method="POST" action="{{ url_for('users.profile_update') }}" accept-charset="utf-8" autocomplete="off">
+          <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+          <div class="modal-header">
+            <h5 class="modal-title">
+              <i class="fas fa-user-edit me-2"></i>{% trans %}Edit Profile{% endtrans %}
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label" for="edit-profile-name">{% trans %}User Name{% endtrans %}</label>
+              <input type="text" class="form-control" id="edit-profile-name" name="name"
+                  value="{{ user.name }}" maxlength="128" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="edit-profile-register-number">Register Number</label>
+              <input type="text" class="form-control" id="edit-profile-register-number" name="register_number"
+                  value="{{ register_number }}" pattern="[0-9]{12}" maxlength="12" inputmode="numeric"
+                  title="12-digit register number" required>
+              <div class="form-text">Must be exactly 12 digits.</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="edit-profile-email">{% trans %}Email{% endtrans %}</label>
+              <input type="email" class="form-control" id="edit-profile-email" name="email"
+                  value="{{ user.email }}" maxlength="128" required>
+            </div>
+            <hr style="border-color:rgba(139,0,0,0.3);">
+            <div class="mb-1">
+              <label class="form-label" for="edit-profile-confirm">{% trans %}Current Password{% endtrans %}</label>
+              <input type="password" class="form-control" id="edit-profile-confirm" name="confirm"
+                  autocomplete="current-password" required>
+              <div class="form-text">{% trans %}Confirm your current password to save changes{% endtrans %}</div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans %}Cancel{% endtrans %}</button>
+            <button type="submit" class="btn btn-primary">{% trans %}Save Changes{% endtrans %}</button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
