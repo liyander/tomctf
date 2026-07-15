@@ -1,16 +1,18 @@
 """
-Beautiful, customizable HTML email templates used by the admin Bulk Email page.
+Cyber-themed HTML email templates used by the admin Bulk Email page.
 
 Each template is a full HTML document with inline, email-client-friendly CSS.
 Templates use double-brace placeholders that are substituted at send time (and
 in the preview):
 
-    {{ctf_name}} - the name of the CTF (from config)
-    {{subject}}  - the email subject
-    {{message}}  - the body the admin typed (plain text; newlines become <br>)
-    {{name}}     - the recipient's username (per recipient; "there" in preview)
-    {{email}}    - the recipient's email address
-    {{year}}     - the current year
+    {{ctf_name}}        - the name of the CTF (configurable on the compose form)
+    {{subject}}         - the email subject
+    {{message}}         - the body the admin typed (plain text; newlines become <br>)
+    {{name}}            - the recipient's username (per recipient)
+    {{email}}           - the recipient's email address (per recipient)
+    {{register_number}} - the recipient's register number (per recipient)
+    {{date}}            - configurable date (defaults to today)
+    {{year}}            - the current year
 
 Admins can select a template to load its HTML into the editor and then freely
 customize the markup before previewing/sending.
@@ -73,106 +75,6 @@ def render_email_html(
 
 # --- Templates ---------------------------------------------------------------
 
-_ANNOUNCEMENT = """<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#f2f4f8;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f4f8;padding:24px 0;">
-    <tr><td align="center">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-        <tr><td style="background:#1f2937;padding:28px 32px;">
-          <h1 style="margin:0;color:#ffffff;font-size:22px;letter-spacing:0.5px;">{{ctf_name}}</h1>
-        </td></tr>
-        <tr><td style="padding:32px;color:#374151;font-size:16px;line-height:1.6;">
-          <p style="margin-top:0;font-size:18px;color:#111827;"><strong>Hi {{name}},</strong></p>
-          {{message}}
-        </td></tr>
-        <tr><td style="padding:20px 32px;background:#f9fafb;border-top:1px solid #eef0f3;color:#9ca3af;font-size:12px;text-align:center;">
-          You are receiving this email because you registered for {{ctf_name}}.<br>
-          &copy; {{year}} {{ctf_name}}. All rights reserved.
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>"""
-
-_EVENT = """<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#0b1020;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0b1020;padding:24px 0;">
-    <tr><td align="center">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#111634;border-radius:16px;overflow:hidden;">
-        <tr><td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:44px 32px;text-align:center;">
-          <p style="margin:0 0 8px;color:#e0e7ff;font-size:13px;letter-spacing:2px;text-transform:uppercase;">You're invited</p>
-          <h1 style="margin:0;color:#ffffff;font-size:28px;">{{subject}}</h1>
-        </td></tr>
-        <tr><td style="padding:32px;color:#c7cbe0;font-size:16px;line-height:1.7;">
-          <p style="margin-top:0;color:#ffffff;font-size:18px;"><strong>Hey {{name}}!</strong></p>
-          {{message}}
-          <div style="text-align:center;margin:32px 0 8px;">
-            <a href="#" style="display:inline-block;background:#6366f1;color:#ffffff;text-decoration:none;padding:14px 36px;border-radius:999px;font-weight:bold;font-size:16px;">Register / Join Now</a>
-          </div>
-        </td></tr>
-        <tr><td style="padding:20px 32px;color:#6b7280;font-size:12px;text-align:center;border-top:1px solid #23294d;">
-          &copy; {{year}} {{ctf_name}}
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>"""
-
-_MINIMAL = """<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#ffffff;font-family:Georgia,'Times New Roman',serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:40px 0;">
-    <tr><td align="center">
-      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;">
-        <tr><td style="border-bottom:2px solid #111827;padding-bottom:16px;">
-          <h1 style="margin:0;color:#111827;font-size:24px;">{{ctf_name}}</h1>
-        </td></tr>
-        <tr><td style="padding:28px 0;color:#374151;font-size:17px;line-height:1.7;">
-          <p style="margin-top:0;">Dear {{name}},</p>
-          {{message}}
-          <p style="margin-bottom:0;">&mdash; The {{ctf_name}} Team</p>
-        </td></tr>
-        <tr><td style="padding-top:16px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:12px;">
-          &copy; {{year}} {{ctf_name}}
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>"""
-
-_DARK = """<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#0d1117;font-family:Consolas,Menlo,Monaco,monospace;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0d1117;padding:24px 0;">
-    <tr><td align="center">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#161b22;border:1px solid #30363d;border-radius:10px;overflow:hidden;">
-        <tr><td style="padding:24px 28px;border-bottom:1px solid #30363d;">
-          <span style="color:#3fb950;font-size:14px;">&gt;_</span>
-          <span style="color:#e6edf3;font-size:18px;font-weight:bold;margin-left:8px;">{{ctf_name}}</span>
-        </td></tr>
-        <tr><td style="padding:28px;color:#c9d1d9;font-size:15px;line-height:1.7;">
-          <p style="margin-top:0;color:#58a6ff;">// Hello {{name}},</p>
-          {{message}}
-        </td></tr>
-        <tr><td style="padding:18px 28px;border-top:1px solid #30363d;color:#8b949e;font-size:12px;">
-          {{ctf_name}} &bull; {{year}}
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>"""
-
-
 _TOMCTF_MENACE = """<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -214,6 +116,175 @@ _TOMCTF_MENACE = """<!DOCTYPE html>
 </body>
 </html>"""
 
+_RED_VS_BLUE = """<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#07070d;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#07070d;padding:32px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="620" cellpadding="0" cellspacing="0" style="max-width:620px;width:100%;background:#0d0d16;border-radius:14px;overflow:hidden;box-shadow:0 10px 50px rgba(0,0,0,0.7);">
+        <!-- Split header: red vs blue -->
+        <tr>
+          <td style="padding:0;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td width="50%" style="background:linear-gradient(135deg,#3b0000,#b91c1c);padding:26px 10px;text-align:center;">
+                  <p style="margin:0;color:#fecaca;font-size:11px;letter-spacing:4px;">OFFENSE</p>
+                  <h2 style="margin:6px 0 0;color:#ffffff;font-size:22px;letter-spacing:2px;text-shadow:0 0 12px rgba(255,60,60,0.9);">RED TEAM</h2>
+                </td>
+                <td width="50%" style="background:linear-gradient(225deg,#001a3b,#1d4ed8);padding:26px 10px;text-align:center;">
+                  <p style="margin:0;color:#bfdbfe;font-size:11px;letter-spacing:4px;">DEFENSE</p>
+                  <h2 style="margin:6px 0 0;color:#ffffff;font-size:22px;letter-spacing:2px;text-shadow:0 0 12px rgba(60,130,255,0.9);">BLUE TEAM</h2>
+                </td>
+              </tr>
+            </table>
+            <div style="height:4px;background:linear-gradient(90deg,#b91c1c 0%,#b91c1c 48%,#ffffff 50%,#1d4ed8 52%,#1d4ed8 100%);"></div>
+          </td>
+        </tr>
+        <tr><td style="padding:30px 34px 6px;text-align:center;">
+          <p style="margin:0;color:#71717a;font-size:12px;letter-spacing:5px;text-transform:uppercase;">{{ctf_name}} presents</p>
+          <h1 style="margin:10px 0 0;color:#f4f4f5;font-size:26px;letter-spacing:1px;">{{subject}}</h1>
+        </td></tr>
+        <tr><td style="padding:22px 34px;color:#d4d4d8;font-size:15px;line-height:1.75;">
+          <p style="margin-top:0;"><strong style="color:#f87171;">Operative {{name}}</strong> <span style="color:#71717a;">// pick your side.</span></p>
+          {{message}}
+        </td></tr>
+        <tr><td style="padding:4px 34px 30px;text-align:center;">
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+            <tr>
+              <td style="padding:0 8px;">
+                <div style="border:1px solid #b91c1c;background:rgba(185,28,28,0.12);color:#f87171;padding:11px 26px;font-size:12px;letter-spacing:3px;border-radius:6px;font-weight:bold;">ATTACK</div>
+              </td>
+              <td style="color:#52525b;font-size:14px;font-weight:bold;">VS</td>
+              <td style="padding:0 8px;">
+                <div style="border:1px solid #1d4ed8;background:rgba(29,78,216,0.12);color:#60a5fa;padding:11px 26px;font-size:12px;letter-spacing:3px;border-radius:6px;font-weight:bold;">DEFEND</div>
+              </td>
+            </tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:16px 34px;background:#08080f;border-top:1px solid #1c1c2a;text-align:center;">
+          <p style="margin:0;color:#52525b;font-size:11px;letter-spacing:1px;">{{ctf_name}} &bull; {{date}} &bull; {{year}}</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
+_BREACH = """<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#000000;font-family:Consolas,Menlo,Monaco,'Courier New',monospace;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#000000;padding:32px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#020a02;border:1px solid #00ff41;border-radius:8px;overflow:hidden;box-shadow:0 0 35px rgba(0,255,65,0.25);">
+        <!-- Terminal title bar -->
+        <tr><td style="background:#0a1a0a;padding:10px 16px;border-bottom:1px solid #00ff41;">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ff5f56;margin-right:5px;"></span>
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ffbd2e;margin-right:5px;"></span>
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#27c93f;"></span>
+          <span style="color:#00ff41;font-size:12px;margin-left:12px;">root@{{ctf_name}}:~#</span>
+        </td></tr>
+        <tr><td style="padding:26px 28px 10px;">
+          <p style="margin:0;color:#00ff41;font-size:13px;line-height:1.9;">
+            <span style="color:#008f11;">$</span> ./initiate_breach.sh --target {{name}}<br>
+            <span style="color:#008f11;">[*]</span> scanning target............ <span style="color:#00ff41;">DONE</span><br>
+            <span style="color:#008f11;">[*]</span> bypassing perimeter........ <span style="color:#00ff41;">DONE</span><br>
+            <span style="color:#008f11;">[!]</span> <span style="color:#39ff14;font-weight:bold;">ACCESS GRANTED</span>
+          </p>
+        </td></tr>
+        <tr><td style="padding:8px 28px 4px;text-align:center;">
+          <h1 style="margin:0;color:#39ff14;font-size:26px;letter-spacing:4px;text-transform:uppercase;text-shadow:0 0 14px rgba(57,255,20,0.8);">SYSTEM BREACHED</h1>
+          <p style="margin:8px 0 0;color:#008f11;font-size:13px;letter-spacing:2px;">{{subject}}</p>
+        </td></tr>
+        <tr><td style="padding:20px 28px;color:#b7ffc9;font-size:14px;line-height:1.8;">
+          <p style="margin-top:0;color:#00ff41;">&gt; incoming payload for <span style="text-decoration:underline;">{{name}}</span>:</p>
+          {{message}}
+          <p style="margin-bottom:0;color:#008f11;">&gt; transmission ends. leave no trace. <span style="color:#39ff14;">_</span></p>
+        </td></tr>
+        <tr><td style="padding:14px 28px;background:#010401;border-top:1px dashed #008f11;text-align:center;">
+          <p style="margin:0;color:#008f11;font-size:11px;letter-spacing:2px;">{{ctf_name}} // {{date}} // uid={{email}}</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
+_CLASSIFIED = """<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#181512;font-family:'Courier New',Courier,monospace;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#181512;padding:32px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#f0e9d8;border-radius:4px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,0.8);">
+        <tr><td style="background:#1c1a17;padding:14px 26px;">
+          <table role="presentation" width="100%"><tr>
+            <td style="color:#c8b98a;font-size:12px;letter-spacing:3px;">FILE #{{year}}-{{register_number}}</td>
+            <td align="right" style="color:#c8b98a;font-size:12px;letter-spacing:3px;">{{date}}</td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:30px 34px 8px;text-align:center;">
+          <div style="display:inline-block;border:4px double #a11212;color:#a11212;padding:8px 30px;font-size:24px;font-weight:bold;letter-spacing:8px;transform:rotate(-3deg);">TOP&nbsp;SECRET</div>
+          <p style="margin:18px 0 0;color:#57534e;font-size:12px;letter-spacing:4px;">EYES ONLY &mdash; OPERATION: {{ctf_name}}</p>
+        </td></tr>
+        <tr><td style="padding:20px 34px 6px;">
+          <table role="presentation" width="100%" style="border:1px solid #a8a29e;border-collapse:collapse;">
+            <tr>
+              <td style="border:1px solid #a8a29e;padding:8px 12px;color:#44403c;font-size:12px;width:40%;"><strong>AGENT:</strong> {{name}}</td>
+              <td style="border:1px solid #a8a29e;padding:8px 12px;color:#44403c;font-size:12px;"><strong>CONTACT:</strong> {{email}}</td>
+            </tr>
+            <tr>
+              <td style="border:1px solid #a8a29e;padding:8px 12px;color:#44403c;font-size:12px;"><strong>ID:</strong> {{register_number}}</td>
+              <td style="border:1px solid #a8a29e;padding:8px 12px;color:#44403c;font-size:12px;"><strong>RE:</strong> {{subject}}</td>
+            </tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:20px 34px;color:#292524;font-size:14px;line-height:1.8;">
+          <p style="margin-top:0;"><strong>BRIEFING FOLLOWS:</strong></p>
+          {{message}}
+          <p style="margin-bottom:0;color:#78716c;font-size:12px;">This document will self-destruct after the event. Unauthorized disclosure is punishable by challenge flags.</p>
+        </td></tr>
+        <tr><td style="padding:14px 34px;background:#1c1a17;text-align:center;">
+          <p style="margin:0;color:#a8956a;font-size:11px;letter-spacing:3px;">CLASSIFIED &bull; {{ctf_name}} COMMAND &bull; {{year}}</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
+_NEON_GRID = """<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#0a0118;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0a0118;padding:32px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#120826;border:1px solid #7c3aed;border-radius:16px;overflow:hidden;box-shadow:0 0 45px rgba(124,58,237,0.4);">
+        <tr><td style="background:linear-gradient(180deg,#2e1065 0%,#120826 100%);padding:40px 32px 30px;text-align:center;">
+          <p style="margin:0 0 12px;color:#22d3ee;font-size:12px;letter-spacing:6px;text-transform:uppercase;text-shadow:0 0 10px rgba(34,211,238,0.9);">&#9650; enter the grid &#9650;</p>
+          <h1 style="margin:0;font-size:32px;letter-spacing:2px;text-transform:uppercase;color:#f0abfc;text-shadow:0 0 20px rgba(240,171,252,0.8),0 0 40px rgba(124,58,237,0.6);">{{ctf_name}}</h1>
+          <div style="margin:18px auto 0;width:180px;height:2px;background:linear-gradient(90deg,transparent,#22d3ee,transparent);"></div>
+        </td></tr>
+        <tr><td style="padding:10px 32px 0;text-align:center;">
+          <p style="margin:0;color:#a78bfa;font-size:16px;letter-spacing:1px;">{{subject}}</p>
+        </td></tr>
+        <tr><td style="padding:22px 32px;color:#ddd6fe;font-size:15px;line-height:1.75;">
+          <p style="margin-top:0;"><span style="color:#22d3ee;font-weight:bold;">{{name}}</span><span style="color:#7c3aed;"> :: connection established</span></p>
+          {{message}}
+        </td></tr>
+        <tr><td style="padding:4px 32px 30px;text-align:center;">
+          <div style="display:inline-block;background:linear-gradient(90deg,#7c3aed,#d946ef);color:#ffffff;padding:13px 40px;border-radius:999px;font-size:14px;font-weight:bold;letter-spacing:2px;box-shadow:0 0 22px rgba(217,70,239,0.6);">JACK IN</div>
+        </td></tr>
+        <tr><td style="padding:16px 32px;background:#0d051c;border-top:1px solid #2e1065;text-align:center;">
+          <p style="margin:0;color:#6d28d9;font-size:11px;letter-spacing:2px;">{{ctf_name}} &loz; {{date}} &loz; {{year}}</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
 
 # Ordered mapping of template id -> metadata + HTML
 EMAIL_TEMPLATES = {
@@ -222,25 +293,25 @@ EMAIL_TEMPLATES = {
         "description": "Menacing dark-red cyberpunk look matching the TomCTF site theme.",
         "html": _TOMCTF_MENACE,
     },
-    "announcement": {
-        "name": "Announcement",
-        "description": "Clean branded header with a light body. Great for updates.",
-        "html": _ANNOUNCEMENT,
+    "redvsblue": {
+        "name": "Red vs Blue",
+        "description": "Split red team / blue team battle design. Attack vs defend.",
+        "html": _RED_VS_BLUE,
     },
-    "event": {
-        "name": "Event Invitation",
-        "description": "Bold gradient hero with a call-to-action button.",
-        "html": _EVENT,
+    "breach": {
+        "name": "System Breach",
+        "description": "Green-on-black hacker terminal with a breach log intro.",
+        "html": _BREACH,
     },
-    "minimal": {
-        "name": "Minimal",
-        "description": "Simple, elegant, serif typography. Letter-style.",
-        "html": _MINIMAL,
+    "classified": {
+        "name": "Classified Dossier",
+        "description": "Top-secret file with agent details table and stamp.",
+        "html": _CLASSIFIED,
     },
-    "dark": {
-        "name": "Dark / Terminal",
-        "description": "Dark hacker-style theme with monospace font.",
-        "html": _DARK,
+    "neon": {
+        "name": "Neon Grid",
+        "description": "Synthwave purple/cyan cyber grid with glowing CTA.",
+        "html": _NEON_GRID,
     },
 }
 
