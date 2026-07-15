@@ -133,20 +133,19 @@
 	</div>
 </div>
 
-<!-- Preview modal -->
-<div class="modal fade" id="preview-modal" tabindex="-1" role="dialog" aria-hidden="true">
-	<div class="modal-dialog modal-lg" role="document">
-		<div class="modal-content">
-			<div class="modal-header">
-				<h5 class="modal-title">Email Preview</h5>
-				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
-					<span aria-hidden="true">&times;</span>
-				</button>
-			</div>
-			<div class="modal-body" style="background:#e9ecef;">
-				<iframe id="preview-frame" title="Email preview"
-					style="width:100%;height:60vh;border:0;background:#fff;border-radius:6px;"></iframe>
-			</div>
+<!-- Preview overlay (self-contained; does not depend on Bootstrap JS) -->
+<div id="preview-overlay" data-ctf-name="{{ get_ctf_name() }}"
+	style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.65);padding:4vh 4vw;">
+	<div style="max-width:760px;margin:0 auto;background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 12px 48px rgba(0,0,0,0.5);display:flex;flex-direction:column;max-height:92vh;">
+		<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid #e5e7eb;">
+			<strong style="font-size:16px;color:#111827;">Email Preview</strong>
+			<button type="button" id="preview-close"
+				style="border:0;background:transparent;font-size:26px;line-height:1;cursor:pointer;color:#6b7280;padding:0 6px;"
+				aria-label="Close">&times;</button>
+		</div>
+		<div style="padding:14px;background:#e9ecef;flex:1;overflow:auto;">
+			<iframe id="preview-frame" title="Email preview"
+				style="width:100%;height:65vh;border:0;background:#fff;border-radius:6px;"></iframe>
 		</div>
 	</div>
 </div>
@@ -302,34 +301,71 @@
 
 	if (loadTemplateBtn) loadTemplateBtn.addEventListener("click", loadTemplate);
 
-	function showPreview() {
-		if (!previewBtn) return;
-		var url = previewBtn.getAttribute("data-preview-url");
-		var payload = {
-			html: htmlEditor ? htmlEditor.value : "",
-			subject: (document.querySelector("#bulk-email-form input[name='subject']") || {}).value || "",
-			message: messageField ? messageField.value : ""
-		};
-		fetch(url, {
-			method: "POST",
-			credentials: "same-origin",
-			headers: { "Content-Type": "application/json", "CSRF-Token": nonce },
-			body: JSON.stringify(payload)
-		})
-			.then(function (r) { return r.json(); })
-			.then(function (data) {
-				if (previewFrame) previewFrame.srcdoc = (data && data.html) || "";
-				if (window.jQuery && window.jQuery("#preview-modal").modal) {
-					window.jQuery("#preview-modal").modal("show");
-				} else {
-					var m = document.getElementById("preview-modal");
-					if (m) { m.style.display = "block"; m.classList.add("show"); }
-				}
-			})
-			.catch(function () { alert("Could not generate preview."); });
+	// ---- Preview (client-side render into a self-contained overlay) ----
+	var previewOverlay = document.getElementById("preview-overlay");
+	var previewClose = document.getElementById("preview-close");
+
+	function messageToHtml(message) {
+		if (!message) return "";
+		var blocks = String(message).replace(/\r\n/g, "\n").split(/\n\s*\n/);
+		var out = [];
+		for (var i = 0; i < blocks.length; i++) {
+			var b = blocks[i].trim();
+			if (!b) continue;
+			out.push("<p>" + escapeHtml(b).replace(/\n/g, "<br>") + "</p>");
+		}
+		return out.join("\n");
 	}
 
-	if (previewBtn) previewBtn.addEventListener("click", showPreview);
+	function renderPreviewHtml() {
+		var html = htmlEditor ? htmlEditor.value : "";
+		var subject = (document.querySelector("#bulk-email-form input[name='subject']") || {}).value || "";
+		var message = messageField ? messageField.value : "";
+		var ctfName = (previewOverlay && previewOverlay.getAttribute("data-ctf-name")) || "Your CTF";
+
+		// If there is no HTML (plain text mode / empty editor), preview the message as simple text
+		if (!html.trim()) {
+			html = "<body style=\"font-family:sans-serif;padding:24px;\">{{message}}</body>";
+		}
+
+		var replacements = {
+			"{{ctf_name}}": escapeHtml(ctfName),
+			"{{subject}}": escapeHtml(subject || "Subject preview"),
+			"{{message}}": messageToHtml(message),
+			"{{name}}": "there",
+			"{{email}}": "player@example.com",
+			"{{year}}": String(new Date().getFullYear())
+		};
+		for (var token in replacements) {
+			html = html.split(token).join(replacements[token]);
+		}
+		return html;
+	}
+
+	function openPreview() {
+		if (!previewOverlay || !previewFrame) return;
+		previewFrame.srcdoc = renderPreviewHtml();
+		previewOverlay.style.display = "block";
+		document.body.style.overflow = "hidden";
+	}
+
+	function closePreview() {
+		if (!previewOverlay) return;
+		previewOverlay.style.display = "none";
+		document.body.style.overflow = "";
+	}
+
+	if (previewBtn) previewBtn.addEventListener("click", openPreview);
+	if (previewClose) previewClose.addEventListener("click", closePreview);
+	if (previewOverlay) {
+		// Click on the dark backdrop (not the dialog) closes the preview
+		previewOverlay.addEventListener("click", function (e) {
+			if (e.target === previewOverlay) closePreview();
+		});
+	}
+	document.addEventListener("keydown", function (e) {
+		if (e.key === "Escape") closePreview();
+	});
 })();
 </script>
 {% endblock %}

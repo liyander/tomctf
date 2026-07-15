@@ -153,8 +153,55 @@ _DARK = """<!DOCTYPE html>
 </html>"""
 
 
+_TOMCTF_MENACE = """<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#050303;font-family:Consolas,Menlo,Monaco,monospace;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#050303;padding:32px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#0a0505;border:1px solid #8b0000;border-radius:12px;overflow:hidden;box-shadow:0 0 40px rgba(236,19,19,0.35);">
+        <tr><td style="background:#050303;padding:6px 0;">
+          <div style="height:3px;background:linear-gradient(90deg,#050303,#ec1313,#8b0000,#ec1313,#050303);"></div>
+        </td></tr>
+        <tr><td style="padding:36px 32px 20px;text-align:center;">
+          <p style="margin:0 0 10px;color:#8b0000;font-size:11px;letter-spacing:6px;text-transform:uppercase;">// transmission incoming //</p>
+          <h1 style="margin:0;color:#ec1313;font-size:30px;letter-spacing:3px;text-transform:uppercase;text-shadow:0 0 18px rgba(236,19,19,0.8);">{{ctf_name}}</h1>
+          <p style="margin:14px 0 0;color:#ff4444;font-size:14px;letter-spacing:1px;">{{subject}}</p>
+        </td></tr>
+        <tr><td style="padding:8px 32px;">
+          <div style="border-top:1px dashed #8b0000;"></div>
+        </td></tr>
+        <tr><td style="padding:24px 32px;color:#d4d4d4;font-size:15px;line-height:1.8;">
+          <p style="margin-top:0;color:#ec1313;"><strong>&gt; TARGET IDENTIFIED: {{name}}</strong></p>
+          {{message}}
+        </td></tr>
+        <tr><td style="padding:8px 32px 28px;text-align:center;">
+          <div style="display:inline-block;border:1px solid #ec1313;color:#ec1313;padding:12px 34px;font-size:13px;letter-spacing:3px;text-transform:uppercase;border-radius:4px;box-shadow:0 0 20px rgba(236,19,19,0.3),inset 0 0 12px rgba(236,19,19,0.12);">
+            The clock is ticking
+          </div>
+        </td></tr>
+        <tr><td style="padding:18px 32px;background:#050303;border-top:1px solid #1a0a0a;text-align:center;">
+          <p style="margin:0;color:#8E8E93;font-size:11px;letter-spacing:1px;">
+            {{ctf_name}} &bull; {{year}} &bull; <span style="color:#8b0000;">we are watching</span>
+          </p>
+        </td></tr>
+        <tr><td style="background:#050303;padding:0 0 6px;">
+          <div style="height:3px;background:linear-gradient(90deg,#050303,#8b0000,#ec1313,#8b0000,#050303);"></div>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
+
 # Ordered mapping of template id -> metadata + HTML
 EMAIL_TEMPLATES = {
+    "tomctf": {
+        "name": "TomCTF Menace",
+        "description": "Menacing dark-red cyberpunk look matching the TomCTF site theme.",
+        "html": _TOMCTF_MENACE,
+    },
     "announcement": {
         "name": "Announcement",
         "description": "Clean branded header with a light body. Great for updates.",
