@@ -211,6 +211,8 @@ class ServerConfig(object):
 
     MAIL_PROVIDER: str = empty_str_cast(config_ini["email"].get("MAIL_PROVIDER"))
 
+    MAIL_TIMEOUT: int = empty_str_cast(config_ini["email"].get("MAIL_TIMEOUT"), default=30)
+
     # === LOGS ===
     LOG_FOLDER: str = empty_str_cast(config_ini["logs"]["LOG_FOLDER"]) \
         or os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")

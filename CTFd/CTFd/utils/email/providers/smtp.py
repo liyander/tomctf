@@ -35,6 +35,13 @@ class SMTPEmailProvider(EmailProvider):
         if auth:
             data["auth"] = auth
 
+        # Gmail (and other hosted SMTP servers) can take longer than a few
+        # seconds to complete the TLS + login handshake, so allow the timeout
+        # to be configured and use a safer default than the original 3s.
+        timeout = get_app_config("MAIL_TIMEOUT")
+        if timeout:
+            data["timeout"] = int(timeout)
+
         try:
             smtp = get_smtp(**data)
 
@@ -65,11 +72,13 @@ class SMTPEmailProvider(EmailProvider):
             return False, str(e)
 
 
-def get_smtp(host, port, username=None, password=None, TLS=None, SSL=None, auth=None):
+def get_smtp(
+    host, port, username=None, password=None, TLS=None, SSL=None, auth=None, timeout=30
+):
     if SSL is None:
-        smtp = smtplib.SMTP(host, port, timeout=3)
+        smtp = smtplib.SMTP(host, port, timeout=timeout)
     else:
-        smtp = smtplib.SMTP_SSL(host, port, timeout=3)
+        smtp = smtplib.SMTP_SSL(host, port, timeout=timeout)
 
     if TLS:
         smtp.starttls()
