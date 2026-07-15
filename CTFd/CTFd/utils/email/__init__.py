@@ -24,6 +24,11 @@ from CTFd.utils.security.email import (
 
 PROVIDERS = {"smtp": SMTPEmailProvider, "mailgun": MailgunEmailProvider}
 
+# Registration is restricted to college email addresses. If no domain whitelist
+# is configured in Settings > Email, these domains are enforced by default so
+# that only institutional emails are ever allowed to register.
+DEFAULT_ALLOWED_EMAIL_DOMAINS = ["srishakthi.ac.in", "siet.ac.in"]
+
 
 def sendmail(addr, text, subject="Message from {ctf_name}"):
     subject = safe_format(subject, ctf_name=get_config("ctf_name"))
@@ -130,7 +135,11 @@ def check_email_is_whitelisted(email_address):
 
     if domain_whitelist:
         domain_whitelist = [d.strip() for d in domain_whitelist.split(",")]
+    else:
+        # No whitelist configured - fall back to the enforced college domains
+        domain_whitelist = list(DEFAULT_ALLOWED_EMAIL_DOMAINS)
 
+    if domain_whitelist:
         for allowed_domain in domain_whitelist:
             if allowed_domain.startswith("*."):
                 # domains should never container the "*" char

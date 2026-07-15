@@ -1,0 +1,96 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+	<div class="container">
+		<h1>Bulk Email</h1>
+	</div>
+</div>
+<div class="container">
+	<div class="row">
+		<div class="col-md-12">
+
+			{% if not mail_configured %}
+			<div class="alert alert-warning" role="alert">
+				<strong>No mail server is configured.</strong>
+				Go to <a href="{{ url_for('admin.config') }}#email">Config &raquo; Email</a> and set up a mail
+				server before sending. A free option is Gmail SMTP
+				(<code>smtp.gmail.com</code>, port <code>587</code>, TLS on, using an
+				<a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">App Password</a>).
+			</div>
+			{% endif %}
+
+			{% if errors %}
+			<div class="alert alert-danger" role="alert">
+				<ul class="mb-0">
+					{% for error in errors %}
+					<li>{{ error }}</li>
+					{% endfor %}
+				</ul>
+			</div>
+			{% endif %}
+
+			{% if sent is defined %}
+			<div class="alert alert-success" role="alert">
+				Sent <strong>{{ sent }}</strong> email(s) successfully.
+				{% if failed %}
+				<span class="text-danger">Failed to send {{ failed }}.</span>
+				{% endif %}
+			</div>
+			{% if failed_addresses %}
+			<div class="alert alert-warning" role="alert">
+				<strong>Failed recipients (showing up to 20):</strong>
+				<div><small>{{ failed_addresses | join(", ") }}</small></div>
+			</div>
+			{% endif %}
+			{% endif %}
+
+			<form method="POST" autocomplete="off">
+				<input type="hidden" name="nonce" value="{{ Session.nonce }}">
+
+				<div class="form-group">
+					<b>Recipients</b>
+					<select name="recipients" class="form-control custom-select">
+						<option value="all" {% if recipients == 'all' %}selected{% endif %}>
+							All users ({{ recipient_counts.all }})
+						</option>
+						<option value="verified" {% if recipients == 'verified' %}selected{% endif %}>
+							Verified users only ({{ recipient_counts.verified }})
+						</option>
+						<option value="unverified" {% if recipients == 'unverified' %}selected{% endif %}>
+							Unverified users only ({{ recipient_counts.unverified }})
+						</option>
+					</select>
+					<small class="form-text text-muted">
+						Banned users are always excluded. Emails are sent one message per recipient.
+					</small>
+				</div>
+
+				<div class="form-group">
+					<b>Subject</b>
+					<input type="text" name="subject" class="form-control" value="{{ subject or '' }}"
+						placeholder="Email subject" required>
+				</div>
+
+				<div class="form-group">
+					<b>Message</b>
+					<textarea name="message" class="form-control" rows="10"
+						placeholder="Write your message here..." required>{{ message or '' }}</textarea>
+					<small class="form-text text-muted">
+						Plain text only. Sent using the mail server configured in Config &raquo; Email.
+					</small>
+				</div>
+
+				<div class="form-group">
+					<button type="submit" class="btn btn-primary"
+						{% if not mail_configured %}disabled{% endif %}
+						onclick="return confirm('Send this email to the selected recipients?');">
+						<i class="fas fa-paper-plane"></i> Send Email
+					</button>
+				</div>
+			</form>
+
+		</div>
+	</div>
+</div>
+{% endblock %}

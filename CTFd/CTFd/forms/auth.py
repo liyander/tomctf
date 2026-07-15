@@ -33,7 +33,10 @@ def RegistrationForm(*args, **kwargs):
         )
         email = EmailField(
             _l("Email"),
-            description="Never shown to the public",
+            description=_l(
+                "Use your college email (@srishakthi.ac.in or @siet.ac.in). "
+                "Never shown to the public."
+            ),
             validators=[InputRequired()],
         )
         register_number = StringField(

@@ -170,6 +170,7 @@
 				<div id="admin-core-panel" class="admin-side-panel">
 					<a class="nav-link text-light" href="{{ url_for('admin.statistics') }}">Statistics</a>
 					<a class="nav-link text-light" href="{{ url_for('admin.notifications') }}">Notifications</a>
+						<a class="nav-link text-light" href="{{ url_for('admin.email') }}">Bulk Email</a>
 					<a class="nav-link text-light" href="{{ url_for('admin.pages_listing') }}">Pages</a>
 					<a class="nav-link text-light" href="{{ url_for('admin.users_listing') }}">Users</a>
 					{% if get_config('user_mode') == 'teams' %}

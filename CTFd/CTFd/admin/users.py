@@ -2,7 +2,13 @@ from flask import render_template, request, url_for
 from sqlalchemy.sql import not_
 
 from CTFd.admin import admin
-from CTFd.models import Challenges, Tracking, Users
+from CTFd.models import (
+    Challenges,
+    Tracking,
+    UserFieldEntries,
+    UserFields,
+    Users,
+)
 from CTFd.utils import get_config
 from CTFd.utils.decorators import admins_only
 from CTFd.utils.modes import TEAMS_MODE
@@ -39,9 +45,23 @@ def users_listing():
     args = dict(request.args)
     args.pop("page", 1)
 
+    # Build a map of {user_id: register_number} for the users on this page
+    register_numbers = {}
+    register_number_field = UserFields.query.filter_by(
+        name="Register Number"
+    ).first()
+    if register_number_field and users.items:
+        user_ids = [user.id for user in users.items]
+        entries = UserFieldEntries.query.filter(
+            UserFieldEntries.field_id == register_number_field.id,
+            UserFieldEntries.user_id.in_(user_ids),
+        ).all()
+        register_numbers = {entry.user_id: entry.value for entry in entries}
+
     return render_template(
         "admin/users/users.html",
         users=users,
+        register_numbers=register_numbers,
         prev_page=url_for(request.endpoint, page=users.prev_num, **args),
         next_page=url_for(request.endpoint, page=users.next_num, **args),
         q=q,
