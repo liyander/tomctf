@@ -123,22 +123,26 @@ _RED_VS_BLUE = """<!DOCTYPE html>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#07070d;padding:32px 0;">
     <tr><td align="center">
       <table role="presentation" width="620" cellpadding="0" cellspacing="0" style="max-width:620px;width:100%;background:#0d0d16;border-radius:14px;overflow:hidden;box-shadow:0 10px 50px rgba(0,0,0,0.7);">
-        <!-- Split header: red vs blue -->
+        <!-- Split header: red vs blue over the green network -->
         <tr>
           <td style="padding:0;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td width="50%" style="background:linear-gradient(135deg,#3b0000,#b91c1c);padding:26px 10px;text-align:center;">
+                <td width="37%" style="background:linear-gradient(135deg,#3b0000,#b91c1c);padding:26px 8px;text-align:center;">
                   <p style="margin:0;color:#fecaca;font-size:11px;letter-spacing:4px;">OFFENSE</p>
-                  <h2 style="margin:6px 0 0;color:#ffffff;font-size:22px;letter-spacing:2px;text-shadow:0 0 12px rgba(255,60,60,0.9);">RED TEAM</h2>
+                  <h2 style="margin:6px 0 0;color:#ffffff;font-size:21px;letter-spacing:2px;text-shadow:0 0 12px rgba(255,60,60,0.9);">RED TEAM</h2>
                 </td>
-                <td width="50%" style="background:linear-gradient(225deg,#001a3b,#1d4ed8);padding:26px 10px;text-align:center;">
+                <td width="26%" style="background:linear-gradient(180deg,#02180a,#065f46);padding:26px 6px;text-align:center;border-left:1px solid rgba(16,185,129,0.5);border-right:1px solid rgba(16,185,129,0.5);">
+                  <p style="margin:0;color:#a7f3d0;font-size:11px;letter-spacing:4px;">THE FIELD</p>
+                  <h2 style="margin:6px 0 0;color:#34d399;font-size:18px;letter-spacing:2px;text-shadow:0 0 14px rgba(52,211,153,0.9);">NETWORK</h2>
+                </td>
+                <td width="37%" style="background:linear-gradient(225deg,#001a3b,#1d4ed8);padding:26px 8px;text-align:center;">
                   <p style="margin:0;color:#bfdbfe;font-size:11px;letter-spacing:4px;">DEFENSE</p>
-                  <h2 style="margin:6px 0 0;color:#ffffff;font-size:22px;letter-spacing:2px;text-shadow:0 0 12px rgba(60,130,255,0.9);">BLUE TEAM</h2>
+                  <h2 style="margin:6px 0 0;color:#ffffff;font-size:21px;letter-spacing:2px;text-shadow:0 0 12px rgba(60,130,255,0.9);">BLUE TEAM</h2>
                 </td>
               </tr>
             </table>
-            <div style="height:4px;background:linear-gradient(90deg,#b91c1c 0%,#b91c1c 48%,#ffffff 50%,#1d4ed8 52%,#1d4ed8 100%);"></div>
+            <div style="height:4px;background:linear-gradient(90deg,#b91c1c 0%,#b91c1c 34%,#10b981 50%,#1d4ed8 66%,#1d4ed8 100%);"></div>
           </td>
         </tr>
         <tr><td style="padding:30px 34px 6px;text-align:center;">
@@ -146,7 +150,7 @@ _RED_VS_BLUE = """<!DOCTYPE html>
           <h1 style="margin:10px 0 0;color:#f4f4f5;font-size:26px;letter-spacing:1px;">{{subject}}</h1>
         </td></tr>
         <tr><td style="padding:22px 34px;color:#d4d4d8;font-size:15px;line-height:1.75;">
-          <p style="margin-top:0;"><strong style="color:#f87171;">Operative {{name}}</strong> <span style="color:#71717a;">// pick your side.</span></p>
+          <p style="margin-top:0;"><strong style="color:#f87171;">Operative {{name}}</strong> <span style="color:#71717a;">// pick your side. the</span> <span style="color:#34d399;">network</span> <span style="color:#71717a;">is the battlefield.</span></p>
           {{message}}
         </td></tr>
         <tr><td style="padding:4px 34px 30px;text-align:center;">
@@ -155,7 +159,9 @@ _RED_VS_BLUE = """<!DOCTYPE html>
               <td style="padding:0 8px;">
                 <div style="border:1px solid #b91c1c;background:rgba(185,28,28,0.12);color:#f87171;padding:11px 26px;font-size:12px;letter-spacing:3px;border-radius:6px;font-weight:bold;">ATTACK</div>
               </td>
-              <td style="color:#52525b;font-size:14px;font-weight:bold;">VS</td>
+              <td style="padding:0 8px;">
+                <div style="border:1px solid #10b981;background:rgba(16,185,129,0.12);color:#34d399;padding:11px 26px;font-size:12px;letter-spacing:3px;border-radius:6px;font-weight:bold;box-shadow:0 0 14px rgba(16,185,129,0.35);">NETWORK</div>
+              </td>
               <td style="padding:0 8px;">
                 <div style="border:1px solid #1d4ed8;background:rgba(29,78,216,0.12);color:#60a5fa;padding:11px 26px;font-size:12px;letter-spacing:3px;border-radius:6px;font-weight:bold;">DEFEND</div>
               </td>
@@ -163,7 +169,7 @@ _RED_VS_BLUE = """<!DOCTYPE html>
           </table>
         </td></tr>
         <tr><td style="padding:16px 34px;background:#08080f;border-top:1px solid #1c1c2a;text-align:center;">
-          <p style="margin:0;color:#52525b;font-size:11px;letter-spacing:1px;">{{ctf_name}} &bull; {{date}} &bull; {{year}}</p>
+          <p style="margin:0;color:#52525b;font-size:11px;letter-spacing:1px;">{{ctf_name}} <span style="color:#10b981;">&bull;</span> {{date}} <span style="color:#10b981;">&bull;</span> {{year}}</p>
         </td></tr>
       </table>
     </td></tr>
