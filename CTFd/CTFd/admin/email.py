@@ -6,7 +6,7 @@ import threading
 from flask import current_app, jsonify, render_template, request
 
 from CTFd.admin import admin
-from CTFd.models import Users
+from CTFd.models import UserFieldEntries, UserFields, Users
 from CTFd.utils import get_config
 from CTFd.utils.config import can_send_mail
 from CTFd.utils.decorators import admins_only
@@ -35,7 +35,28 @@ _bulk_email_status = {
 
 DEFAULT_TEXT_FALLBACK = "Please view this email in an HTML-capable email client."
 
-BUILTIN_PLACEHOLDERS = {"ctf_name", "subject", "message", "name", "email", "year"}
+BUILTIN_PLACEHOLDERS = {
+    "ctf_name",
+    "subject",
+    "message",
+    "name",
+    "email",
+    "year",
+    "date",
+    "register_number",
+}
+
+
+def _register_numbers_for(user_ids):
+    """Return {user_id: register_number} for the given users."""
+    field = UserFields.query.filter_by(name="Register Number").first()
+    if not field or not user_ids:
+        return {}
+    entries = UserFieldEntries.query.filter(
+        UserFieldEntries.field_id == field.id,
+        UserFieldEntries.user_id.in_(user_ids),
+    ).all()
+    return {entry.user_id: entry.value for entry in entries}
 
 
 def _parse_custom_placeholders(raw):
@@ -68,9 +89,19 @@ def _status_snapshot():
         return dict(_bulk_email_status)
 
 
-def _send_bulk_email(app, recipients, subject, message, html_template, placeholders=None):
+def _send_bulk_email(
+    app,
+    recipients,
+    subject,
+    message,
+    html_template,
+    placeholders=None,
+    ctf_name_override=None,
+    date_value=None,
+):
     with app.app_context():
-        ctf_name = get_config("ctf_name")
+        ctf_name = ctf_name_override or get_config("ctf_name")
+        date_str = date_value or datetime.date.today().strftime("%d %B %Y")
         for recipient in recipients:
             # Stop before sending the next message if a cancel was requested
             if _bulk_email_cancel.is_set():
@@ -79,6 +110,9 @@ def _send_bulk_email(app, recipients, subject, message, html_template, placehold
                 break
 
             if html_template:
+                extra = dict(placeholders or {})
+                extra["date"] = date_str
+                extra["register_number"] = recipient.get("register_number") or ""
                 body_html = render_email_html(
                     html_template,
                     ctf_name=ctf_name,
@@ -86,7 +120,7 @@ def _send_bulk_email(app, recipients, subject, message, html_template, placehold
                     message=message,
                     name=recipient["name"],
                     email=recipient["email"],
-                    extra=placeholders,
+                    extra=extra,
                 )
                 text = message or DEFAULT_TEXT_FALLBACK
                 result, response = sendmail(
@@ -153,6 +187,8 @@ def email():
         html_content = request.form.get("html", "")
         placeholders_json = request.form.get("placeholders", "")
         custom_placeholders = _parse_custom_placeholders(placeholders_json)
+        ctf_name_override = request.form.get("ctf_name", "").strip()
+        date_value = request.form.get("date_value", "").strip()
 
         status = _status_snapshot()
         already_running = status.get("running")
@@ -188,6 +224,8 @@ def email():
                 email_format=email_format,
                 html_content=html_content,
                 placeholders_json=placeholders_json,
+                ctf_name_value=ctf_name_override,
+                date_value=date_value,
                 status=status,
             )
 
@@ -197,10 +235,15 @@ def email():
             query = query.filter_by(verified=True)
         elif recipients == "unverified":
             query = query.filter_by(verified=False)
+        users = [user for user in query.all() if user.email]
+        register_numbers = _register_numbers_for([user.id for user in users])
         recipient_list = [
-            {"name": user.name, "email": user.email}
-            for user in query.all()
-            if user.email
+            {
+                "name": user.name,
+                "email": user.email,
+                "register_number": register_numbers.get(user.id, ""),
+            }
+            for user in users
         ]
 
         html_template = html_content if email_format == "html" else None
@@ -225,7 +268,12 @@ def email():
         app = current_app._get_current_object()
         thread = threading.Thread(
             target=_send_bulk_email,
-            args=(app, recipient_list, subject, message, html_template, custom_placeholders),
+            args=(app, recipient_list, subject, message, html_template),
+            kwargs={
+                "placeholders": custom_placeholders,
+                "ctf_name_override": ctf_name_override,
+                "date_value": date_value,
+            },
             daemon=True,
         )
         thread.start()

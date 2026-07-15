@@ -99,16 +99,50 @@
 						<small class="form-text text-muted" id="template-desc"></small>
 					</div>
 
+					<div class="form-row">
+						<div class="form-group col-md-6">
+							<b>CTF name</b>
+							<span class="text-muted"><small>(used by <code>{{ '{{ctf_name}}' }}</code>)</small></span>
+							<input type="text" name="ctf_name" id="ctf-name-input" class="form-control"
+								value="{{ ctf_name_value or get_ctf_name() }}">
+						</div>
+						<div class="form-group col-md-6">
+							<b>Date</b>
+							<span class="text-muted"><small>(used by <code>{{ '{{date}}' }}</code>; empty = today)</small></span>
+							<input type="text" name="date_value" id="date-input" class="form-control"
+								value="{{ date_value or '' }}" placeholder="e.g. 15 July 2026">
+						</div>
+					</div>
+
 					<div class="form-group">
 						<b>HTML content</b>
 						<span class="text-muted"><small>(fully customizable)</small></span>
+						<div class="input-group input-group-sm mb-1" style="max-width:420px;">
+							<div class="input-group-prepend">
+								<span class="input-group-text">Insert placeholder</span>
+							</div>
+							<select id="insert-placeholder" class="form-control custom-select">
+								<option value="name">Username</option>
+								<option value="email">Email address</option>
+								<option value="register_number">Register number</option>
+								<option value="ctf_name">CTF name</option>
+								<option value="date">Date</option>
+								<option value="year">Year</option>
+								<option value="subject">Subject</option>
+								<option value="message">Message</option>
+							</select>
+							<div class="input-group-append">
+								<button type="button" class="btn btn-outline-secondary" id="insert-placeholder-btn">Insert</button>
+							</div>
+						</div>
 						<textarea name="html" id="html-editor" class="form-control text-monospace" rows="14"
 							placeholder="Select a template above and customize it here, or paste your own HTML..."
 							style="font-size:13px;">{{ html_content or '' }}</textarea>
 						<small class="form-text text-muted">
-							Placeholders: <code>{{ '{{ctf_name}}' }}</code>, <code>{{ '{{subject}}' }}</code>,
-							<code>{{ '{{message}}' }}</code>, <code>{{ '{{name}}' }}</code>,
-							<code>{{ '{{email}}' }}</code>, <code>{{ '{{year}}' }}</code>.
+							Per-recipient: <code>{{ '{{name}}' }}</code>, <code>{{ '{{email}}' }}</code>,
+							<code>{{ '{{register_number}}' }}</code>.
+							Global: <code>{{ '{{ctf_name}}' }}</code>, <code>{{ '{{date}}' }}</code>,
+							<code>{{ '{{year}}' }}</code>, <code>{{ '{{subject}}' }}</code>, <code>{{ '{{message}}' }}</code>.
 						</small>
 					</div>
 
@@ -297,32 +331,50 @@
 		applyFormat();
 	}
 
-	if (templateSelect) {
-		templateSelect.addEventListener("change", function () {
-			var opt = templateSelect.options[templateSelect.selectedIndex];
-			templateDesc.textContent = opt ? (opt.getAttribute("data-desc") || "") : "";
-		});
-	}
-
 	function loadTemplate() {
 		var id = templateSelect ? templateSelect.value : "";
 		if (!id) return;
 		var html = templatesData[id];
 		if (typeof html !== "string") return;
-		if (htmlEditor.value.trim() &&
+		if (htmlEditor.value.trim() && htmlEditor.value !== htmlEditor.dataset.loadedTemplate &&
 			!confirm("Replace the current HTML content with this template?")) {
 			return;
 		}
 		htmlEditor.value = html;
+		htmlEditor.dataset.loadedTemplate = html;
+	}
+
+	if (templateSelect) {
+		// Selecting a template loads it immediately (Load button kept as fallback)
+		templateSelect.addEventListener("change", function () {
+			var opt = templateSelect.options[templateSelect.selectedIndex];
+			templateDesc.textContent = opt ? (opt.getAttribute("data-desc") || "") : "";
+			loadTemplate();
+		});
 	}
 
 	if (loadTemplateBtn) loadTemplateBtn.addEventListener("click", loadTemplate);
+
+	// ---- Insert placeholder token at the cursor in the HTML editor ----
+	var insertSelect = document.getElementById("insert-placeholder");
+	var insertBtn = document.getElementById("insert-placeholder-btn");
+	function insertPlaceholder() {
+		if (!insertSelect || !htmlEditor) return;
+		var token = "{{" + insertSelect.value + "}}";
+		var start = htmlEditor.selectionStart || 0;
+		var end = htmlEditor.selectionEnd || 0;
+		var v = htmlEditor.value;
+		htmlEditor.value = v.slice(0, start) + token + v.slice(end);
+		htmlEditor.focus();
+		htmlEditor.selectionStart = htmlEditor.selectionEnd = start + token.length;
+	}
+	if (insertBtn) insertBtn.addEventListener("click", insertPlaceholder);
 
 	// ---- Custom placeholders ----
 	var placeholderRows = document.getElementById("placeholder-rows");
 	var placeholdersJson = document.getElementById("placeholders-json");
 	var addPlaceholderBtn = document.getElementById("add-placeholder-btn");
-	var BUILTIN_TOKENS = ["ctf_name", "subject", "message", "name", "email", "year"];
+	var BUILTIN_TOKENS = ["ctf_name", "subject", "message", "name", "email", "year", "date", "register_number"];
 
 	function addPlaceholderRow(key, value) {
 		if (!placeholderRows) return;
@@ -399,7 +451,13 @@
 		var html = htmlEditor ? htmlEditor.value : "";
 		var subject = (document.querySelector("#bulk-email-form input[name='subject']") || {}).value || "";
 		var message = messageField ? messageField.value : "";
-		var ctfName = (previewOverlay && previewOverlay.getAttribute("data-ctf-name")) || "Your CTF";
+		var ctfNameInput = document.getElementById("ctf-name-input");
+		var dateInput = document.getElementById("date-input");
+		var ctfName = (ctfNameInput && ctfNameInput.value.trim())
+			|| (previewOverlay && previewOverlay.getAttribute("data-ctf-name"))
+			|| "Your CTF";
+		var dateValue = (dateInput && dateInput.value.trim())
+			|| new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
 		// If there is no HTML (plain text mode / empty editor), preview the message as simple text
 		if (!html.trim()) {
@@ -410,8 +468,10 @@
 			"{{ctf_name}}": escapeHtml(ctfName),
 			"{{subject}}": escapeHtml(subject || "Subject preview"),
 			"{{message}}": messageToHtml(message),
-			"{{name}}": "there",
-			"{{email}}": "player@example.com",
+			"{{name}}": "SamplePlayer",
+			"{{email}}": "player@srishakthi.ac.in",
+			"{{register_number}}": "731121000000",
+			"{{date}}": escapeHtml(dateValue),
 			"{{year}}": String(new Date().getFullYear())
 		};
 		// Custom placeholders (cannot override built-ins; values are escaped)
