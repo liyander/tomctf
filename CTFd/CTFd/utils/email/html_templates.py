@@ -34,18 +34,38 @@ def _message_to_html(message):
 
 
 def render_email_html(
-    html, ctf_name="", subject="", message="", name="", email="", escape_message=True
+    html,
+    ctf_name="",
+    subject="",
+    message="",
+    name="",
+    email="",
+    escape_message=True,
+    extra=None,
 ):
-    """Substitute the template placeholders and return the final HTML."""
+    """Substitute the template placeholders and return the final HTML.
+
+    ``extra`` is an optional dict of admin-defined custom placeholders
+    ({"discord_link": "https://..."} becomes ``{{discord_link}}``). Built-in
+    placeholders always win over custom ones with the same name.
+    """
     rendered_message = _message_to_html(message) if escape_message else (message or "")
-    replacements = {
-        "{{ctf_name}}": escape(ctf_name or ""),
-        "{{subject}}": escape(subject or ""),
-        "{{message}}": rendered_message,
-        "{{name}}": escape(name or ""),
-        "{{email}}": escape(email or ""),
-        "{{year}}": str(datetime.datetime.utcnow().year),
-    }
+    replacements = {}
+    if extra:
+        for key, value in extra.items():
+            replacements["{{" + str(key) + "}}"] = escape(str(value))
+    # Built-ins are applied last into the dict so they override any custom
+    # placeholder that tries to reuse a reserved name.
+    replacements.update(
+        {
+            "{{ctf_name}}": escape(ctf_name or ""),
+            "{{subject}}": escape(subject or ""),
+            "{{message}}": rendered_message,
+            "{{name}}": escape(name or ""),
+            "{{email}}": escape(email or ""),
+            "{{year}}": str(datetime.datetime.utcnow().year),
+        }
+    )
     for token, value in replacements.items():
         html = html.replace(token, value)
     return html

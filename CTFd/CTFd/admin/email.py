@@ -1,4 +1,6 @@
 import datetime
+import json
+import re
 import threading
 
 from flask import current_app, jsonify, render_template, request
@@ -33,13 +35,40 @@ _bulk_email_status = {
 
 DEFAULT_TEXT_FALLBACK = "Please view this email in an HTML-capable email client."
 
+BUILTIN_PLACEHOLDERS = {"ctf_name", "subject", "message", "name", "email", "year"}
+
+
+def _parse_custom_placeholders(raw):
+    """Parse the JSON placeholder map submitted by the form.
+
+    Only simple {str: str} pairs with token-safe names are kept; built-in
+    placeholder names are reserved.
+    """
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except (ValueError, TypeError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    placeholders = {}
+    for key, value in data.items():
+        key = str(key).strip()
+        if not re.fullmatch(r"[A-Za-z0-9_]+", key):
+            continue
+        if key in BUILTIN_PLACEHOLDERS:
+            continue
+        placeholders[key] = str(value)
+    return placeholders
+
 
 def _status_snapshot():
     with _bulk_email_lock:
         return dict(_bulk_email_status)
 
 
-def _send_bulk_email(app, recipients, subject, message, html_template):
+def _send_bulk_email(app, recipients, subject, message, html_template, placeholders=None):
     with app.app_context():
         ctf_name = get_config("ctf_name")
         for recipient in recipients:
@@ -57,6 +86,7 @@ def _send_bulk_email(app, recipients, subject, message, html_template):
                     message=message,
                     name=recipient["name"],
                     email=recipient["email"],
+                    extra=placeholders,
                 )
                 text = message or DEFAULT_TEXT_FALLBACK
                 result, response = sendmail(
@@ -121,6 +151,8 @@ def email():
         recipients = request.form.get("recipients", "all")
         email_format = request.form.get("format", "plain")
         html_content = request.form.get("html", "")
+        placeholders_json = request.form.get("placeholders", "")
+        custom_placeholders = _parse_custom_placeholders(placeholders_json)
 
         status = _status_snapshot()
         already_running = status.get("running")
@@ -155,6 +187,7 @@ def email():
                 recipients=recipients,
                 email_format=email_format,
                 html_content=html_content,
+                placeholders_json=placeholders_json,
                 status=status,
             )
 
@@ -192,7 +225,7 @@ def email():
         app = current_app._get_current_object()
         thread = threading.Thread(
             target=_send_bulk_email,
-            args=(app, recipient_list, subject, message, html_template),
+            args=(app, recipient_list, subject, message, html_template, custom_placeholders),
             daemon=True,
         )
         thread.start()
@@ -209,6 +242,11 @@ def email_preview():
     html_content = data.get("html", "")
     subject = data.get("subject", "")
     message = data.get("message", "")
+    placeholders = data.get("placeholders")
+    if isinstance(placeholders, dict):
+        placeholders = _parse_custom_placeholders(json.dumps(placeholders))
+    else:
+        placeholders = {}
     rendered = render_email_html(
         html_content,
         ctf_name=get_config("ctf_name") or "Your CTF",
@@ -216,6 +254,7 @@ def email_preview():
         message=message,
         name="there",
         email="player@example.com",
+        extra=placeholders,
     )
     return jsonify({"html": rendered})
 

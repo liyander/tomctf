@@ -113,6 +113,22 @@
 					</div>
 
 					<div class="form-group">
+						<b>Custom placeholders</b>
+						<span class="text-muted"><small>(optional — define your own <code>{{ '{{token}}' }}</code> values)</small></span>
+						<div id="placeholder-rows"></div>
+						<input type="hidden" name="placeholders" id="placeholders-json"
+							value="{{ placeholders_json or '' }}">
+						<button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="add-placeholder-btn">
+							<i class="fas fa-plus"></i> Add placeholder
+						</button>
+						<small class="form-text text-muted">
+							Example: name <code>discord_link</code>, value <code>https://discord.gg/...</code> —
+							then use <code>{{ '{{discord_link}}' }}</code> anywhere in the HTML.
+							Built-in placeholders cannot be overridden.
+						</small>
+					</div>
+
+					<div class="form-group">
 						<button type="button" class="btn btn-outline-info" id="preview-btn"
 							data-preview-url="{{ url_for('admin.email_preview') }}">
 							<i class="fas fa-eye"></i> Preview
@@ -153,6 +169,7 @@
 <script type="application/json" id="email-templates-data">{{ templates_html | tojson }}</script>
 
 <script nonce="{{ Session.nonce if Session and Session.nonce }}">
+{% raw %}
 (function () {
 	var el = document.getElementById("bulk-email-status");
 	if (!el) return;
@@ -301,6 +318,67 @@
 
 	if (loadTemplateBtn) loadTemplateBtn.addEventListener("click", loadTemplate);
 
+	// ---- Custom placeholders ----
+	var placeholderRows = document.getElementById("placeholder-rows");
+	var placeholdersJson = document.getElementById("placeholders-json");
+	var addPlaceholderBtn = document.getElementById("add-placeholder-btn");
+	var BUILTIN_TOKENS = ["ctf_name", "subject", "message", "name", "email", "year"];
+
+	function addPlaceholderRow(key, value) {
+		if (!placeholderRows) return;
+		var row = document.createElement("div");
+		row.className = "form-row mt-2 placeholder-row";
+		row.innerHTML =
+			'<div class="col-4"><input type="text" class="form-control form-control-sm ph-key" placeholder="token name (e.g. discord_link)"></div>' +
+			'<div class="col-7"><input type="text" class="form-control form-control-sm ph-value" placeholder="value"></div>' +
+			'<div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger ph-remove" title="Remove">&times;</button></div>';
+		row.querySelector(".ph-key").value = key || "";
+		row.querySelector(".ph-value").value = value || "";
+		row.querySelector(".ph-remove").addEventListener("click", function () {
+			row.remove();
+		});
+		placeholderRows.appendChild(row);
+	}
+
+	function collectPlaceholders() {
+		var result = {};
+		if (!placeholderRows) return result;
+		var rows = placeholderRows.querySelectorAll(".placeholder-row");
+		for (var i = 0; i < rows.length; i++) {
+			var key = rows[i].querySelector(".ph-key").value.trim();
+			var value = rows[i].querySelector(".ph-value").value;
+			if (!key) continue;
+			// Token names: letters, numbers, underscores only; built-ins protected
+			key = key.replace(/^\{\{|\}\}$/g, "");
+			if (!/^[A-Za-z0-9_]+$/.test(key)) continue;
+			if (BUILTIN_TOKENS.indexOf(key) !== -1) continue;
+			result[key] = value;
+		}
+		return result;
+	}
+
+	if (addPlaceholderBtn) {
+		addPlaceholderBtn.addEventListener("click", function () { addPlaceholderRow("", ""); });
+	}
+
+	// Restore rows after a validation-error re-render
+	if (placeholdersJson && placeholdersJson.value) {
+		try {
+			var saved = JSON.parse(placeholdersJson.value);
+			for (var k in saved) addPlaceholderRow(k, saved[k]);
+		} catch (e) { /* ignore malformed */ }
+	}
+
+	// Serialize placeholder rows into the hidden field on submit
+	var bulkForm = document.getElementById("bulk-email-form");
+	if (bulkForm) {
+		bulkForm.addEventListener("submit", function () {
+			if (placeholdersJson) {
+				placeholdersJson.value = JSON.stringify(collectPlaceholders());
+			}
+		});
+	}
+
 	// ---- Preview (client-side render into a self-contained overlay) ----
 	var previewOverlay = document.getElementById("preview-overlay");
 	var previewClose = document.getElementById("preview-close");
@@ -336,6 +414,11 @@
 			"{{email}}": "player@example.com",
 			"{{year}}": String(new Date().getFullYear())
 		};
+		// Custom placeholders (cannot override built-ins; values are escaped)
+		var custom = collectPlaceholders();
+		for (var key in custom) {
+			replacements["{{" + key + "}}"] = escapeHtml(custom[key]);
+		}
 		for (var token in replacements) {
 			html = html.split(token).join(replacements[token]);
 		}
@@ -367,5 +450,6 @@
 		if (e.key === "Escape") closePreview();
 	});
 })();
+{% endraw %}
 </script>
 {% endblock %}
