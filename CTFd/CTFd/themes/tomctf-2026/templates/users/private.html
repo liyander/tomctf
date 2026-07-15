@@ -226,24 +226,46 @@
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 1px;
-    padding: 0.45rem 1.25rem;
+    padding: 0.5rem 1.5rem;
     border-radius: 20px;
     transition: all 0.3s ease;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
   .edit-profile-btn:hover {
     background: linear-gradient(135deg, #8b0000, #ec1313);
     border-color: #ec1313;
     color: #fff;
-    box-shadow: 0 0 15px rgba(236,19,19,0.3);
+    box-shadow: 0 0 20px rgba(236,19,19,0.4), 0 4px 15px rgba(0,0,0,0.4);
+    transform: translateY(-2px);
+  }
+  .edit-profile-btn:active {
+    transform: translateY(0);
   }
 
+  #edit-profile-modal .modal-dialog {
+    transition: transform 0.25s ease-out;
+  }
   #edit-profile-modal .modal-content {
-    background: #1a0a0a;
-    border: 1px solid rgba(139,0,0,0.5);
+    background: linear-gradient(160deg, #1a0a0a 0%, #120707 60%, #0d0505 100%);
+    border: 1px solid rgba(236,19,19,0.25);
+    border-radius: 16px;
     color: #d4c5b0;
+    box-shadow: 0 0 40px rgba(236,19,19,0.15), 0 25px 60px rgba(0,0,0,0.7);
+    overflow: hidden;
+  }
+  #edit-profile-modal .modal-content::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #ec1313, transparent);
+    opacity: 0.8;
   }
   #edit-profile-modal .modal-header {
+    background: rgba(139,0,0,0.15);
     border-bottom: 1px solid rgba(139,0,0,0.3);
+    padding: 1.1rem 1.5rem;
   }
   #edit-profile-modal .modal-title {
     font-family: 'Space Grotesk', sans-serif;
@@ -251,9 +273,41 @@
     text-transform: uppercase;
     letter-spacing: 1px;
     font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+  }
+  #edit-profile-modal .modal-title .title-icon {
+    width: 34px; height: 34px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(139,0,0,0.6), rgba(236,19,19,0.35));
+    border: 1px solid rgba(236,19,19,0.35);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.75rem;
+    box-shadow: 0 0 12px rgba(236,19,19,0.2);
+  }
+  #edit-profile-modal .modal-title .title-icon i {
+    font-size: 0.85rem;
+    color: #ff6b6b;
+  }
+  #edit-profile-modal .btn-close {
+    filter: invert(1) grayscale(100%) brightness(1.5);
+    opacity: 0.5;
+    transition: opacity 0.2s;
+  }
+  #edit-profile-modal .btn-close:hover {
+    opacity: 1;
+  }
+  #edit-profile-modal .modal-body {
+    padding: 1.5rem;
   }
   #edit-profile-modal .modal-footer {
     border-top: 1px solid rgba(139,0,0,0.3);
+    background: rgba(5,3,3,0.4);
+    padding: 1rem 1.5rem;
+    gap: 0.5rem;
   }
   #edit-profile-modal .form-label {
     color: #ec1313;
@@ -262,7 +316,16 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 1px;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  #edit-profile-modal .form-label i {
+    color: rgba(236,19,19,0.6);
+    font-size: 0.75rem;
+    width: 14px;
+    text-align: center;
   }
   #edit-profile-modal .form-control {
     background: rgba(5,3,3,0.8);
@@ -271,19 +334,53 @@
     font-family: 'Space Grotesk', sans-serif;
     font-size: 0.9rem;
     border-radius: 10px;
-    padding: 0.6rem 1rem;
+    padding: 0.65rem 1rem;
+    transition: all 0.25s ease;
+  }
+  #edit-profile-modal .form-control:hover {
+    border-color: rgba(236,19,19,0.4);
   }
   #edit-profile-modal .form-control:focus {
     border-color: #ec1313;
-    box-shadow: 0 0 0 2px rgba(236,19,19,0.12);
-    background: rgba(5,3,3,0.9);
+    box-shadow: 0 0 0 3px rgba(236,19,19,0.12), 0 0 15px rgba(236,19,19,0.08);
+    background: rgba(5,3,3,0.95);
     color: #fff;
     outline: none;
+  }
+  #edit-profile-modal .form-control::placeholder {
+    color: rgba(212,197,176,0.25);
   }
   #edit-profile-modal .form-text {
     color: rgba(212,197,176,0.4);
     font-family: 'Space Grotesk', sans-serif;
     font-size: 0.75rem;
+    margin-top: 0.35rem;
+  }
+  #edit-profile-modal .security-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.4rem 0 1.1rem;
+  }
+  #edit-profile-modal .security-divider::before,
+  #edit-profile-modal .security-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(139,0,0,0.5), transparent);
+  }
+  #edit-profile-modal .security-divider span {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: rgba(212,197,176,0.35);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    white-space: nowrap;
+  }
+  #edit-profile-modal .security-divider span i {
+    color: rgba(236,19,19,0.5);
+    margin-right: 0.35rem;
   }
   #edit-profile-modal .btn-primary {
     background: linear-gradient(135deg, #8b0000, #ec1313);
@@ -295,6 +392,15 @@
     text-transform: uppercase;
     font-size: 0.85rem;
     padding: 0.6rem 1.75rem;
+    box-shadow: 0 4px 15px rgba(236,19,19,0.25);
+    transition: all 0.25s ease;
+  }
+  #edit-profile-modal .btn-primary:hover {
+    box-shadow: 0 6px 25px rgba(236,19,19,0.4);
+    transform: translateY(-1px);
+  }
+  #edit-profile-modal .btn-primary:active {
+    transform: translateY(0);
   }
   #edit-profile-modal .btn-secondary {
     background: transparent;
@@ -303,6 +409,13 @@
     border-radius: 10px;
     font-family: 'Space Grotesk', sans-serif;
     font-size: 0.85rem;
+    padding: 0.6rem 1.25rem;
+    transition: all 0.25s ease;
+  }
+  #edit-profile-modal .btn-secondary:hover {
+    background: rgba(139,0,0,0.15);
+    border-color: rgba(236,19,19,0.4);
+    color: #d4c5b0;
   }
 </style>
 
@@ -405,33 +518,44 @@
           <input type="hidden" name="nonce" value="{{ Session.nonce }}">
           <div class="modal-header">
             <h5 class="modal-title">
-              <i class="fas fa-user-edit me-2"></i>{% trans %}Edit Profile{% endtrans %}
+              <span class="title-icon"><i class="fas fa-user-edit"></i></span>
+              {% trans %}Edit Profile{% endtrans %}
             </h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <div class="mb-3">
-              <label class="form-label" for="edit-profile-name">{% trans %}User Name{% endtrans %}</label>
+              <label class="form-label" for="edit-profile-name">
+                <i class="fas fa-user"></i>{% trans %}User Name{% endtrans %}
+              </label>
               <input type="text" class="form-control" id="edit-profile-name" name="name"
-                  value="{{ user.name }}" maxlength="128" required>
+                  value="{{ user.name }}" maxlength="128" placeholder="Your display name" required>
             </div>
             <div class="mb-3">
-              <label class="form-label" for="edit-profile-register-number">Register Number</label>
+              <label class="form-label" for="edit-profile-register-number">
+                <i class="fas fa-id-card"></i>Register Number
+              </label>
               <input type="text" class="form-control" id="edit-profile-register-number" name="register_number"
                   value="{{ register_number }}" pattern="[0-9]{12}" maxlength="12" inputmode="numeric"
-                  title="12-digit register number" required>
+                  title="12-digit register number" placeholder="12-digit register number" required>
               <div class="form-text">Must be exactly 12 digits.</div>
             </div>
-            <div class="mb-3">
-              <label class="form-label" for="edit-profile-email">{% trans %}Email{% endtrans %}</label>
-              <input type="email" class="form-control" id="edit-profile-email" name="email"
-                  value="{{ user.email }}" maxlength="128" required>
-            </div>
-            <hr style="border-color:rgba(139,0,0,0.3);">
             <div class="mb-1">
-              <label class="form-label" for="edit-profile-confirm">{% trans %}Current Password{% endtrans %}</label>
+              <label class="form-label" for="edit-profile-email">
+                <i class="fas fa-envelope"></i>{% trans %}Email{% endtrans %}
+              </label>
+              <input type="email" class="form-control" id="edit-profile-email" name="email"
+                  value="{{ user.email }}" maxlength="128" placeholder="you@example.com" required>
+            </div>
+            <div class="security-divider">
+              <span><i class="fas fa-lock"></i>{% trans %}Verify Identity{% endtrans %}</span>
+            </div>
+            <div class="mb-1">
+              <label class="form-label" for="edit-profile-confirm">
+                <i class="fas fa-key"></i>{% trans %}Current Password{% endtrans %}
+              </label>
               <input type="password" class="form-control" id="edit-profile-confirm" name="confirm"
-                  autocomplete="current-password" required>
+                  autocomplete="current-password" placeholder="••••••••" required>
               <div class="form-text">{% trans %}Confirm your current password to save changes{% endtrans %}</div>
             </div>
           </div>
