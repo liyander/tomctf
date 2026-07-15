@@ -38,9 +38,11 @@ class SMTPEmailProvider(EmailProvider):
         # Gmail (and other hosted SMTP servers) can take longer than a few
         # seconds to complete the TLS + login handshake, so allow the timeout
         # to be configured and use a safer default than the original 3s.
-        timeout = get_app_config("MAIL_TIMEOUT")
-        if timeout:
-            data["timeout"] = int(timeout)
+        # Note: don't name this "timeout" - that would shadow the imported
+        # socket.timeout exception used in the except clause below.
+        mail_timeout = get_app_config("MAIL_TIMEOUT")
+        if mail_timeout:
+            data["timeout"] = int(mail_timeout)
 
         try:
             smtp = get_smtp(**data)
