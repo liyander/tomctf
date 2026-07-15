@@ -19,7 +19,11 @@ customize the markup before previewing/sending.
 """
 
 import datetime
+import re
 from html import escape
+
+
+_PLACEHOLDER_RE = re.compile(r"{{([A-Za-z0-9_]+)}}")
 
 
 def _message_to_html(message):
@@ -42,6 +46,8 @@ def render_email_html(
     message="",
     name="",
     email="",
+    date="",
+    register_number="",
     escape_message=True,
     extra=None,
 ):
@@ -52,25 +58,32 @@ def render_email_html(
     placeholders always win over custom ones with the same name.
     """
     rendered_message = _message_to_html(message) if escape_message else (message or "")
-    replacements = {}
-    if extra:
-        for key, value in extra.items():
-            replacements["{{" + str(key) + "}}"] = escape(str(value))
-    # Built-ins are applied last into the dict so they override any custom
-    # placeholder that tries to reuse a reserved name.
+    today = datetime.date.today().strftime("%d %B %Y")
+    custom = {str(key): escape(str(value)) for key, value in (extra or {}).items()}
+
+    # Keep compatibility with the bulk-mail sender, which historically passed
+    # these two values through ``extra``.
+    date = date or custom.pop("date", "") or today
+    register_number = register_number or custom.pop("register_number", "")
+    replacements = custom
     replacements.update(
         {
-            "{{ctf_name}}": escape(ctf_name or ""),
-            "{{subject}}": escape(subject or ""),
-            "{{message}}": rendered_message,
-            "{{name}}": escape(name or ""),
-            "{{email}}": escape(email or ""),
-            "{{year}}": str(datetime.datetime.utcnow().year),
+            "ctf_name": escape(ctf_name or ""),
+            "subject": escape(subject or ""),
+            "message": rendered_message,
+            "name": escape(name or ""),
+            "email": escape(email or ""),
+            "date": escape(str(date)),
+            "register_number": escape(str(register_number)),
+            "year": str(datetime.datetime.now(datetime.timezone.utc).year),
         }
     )
-    for token, value in replacements.items():
-        html = html.replace(token, value)
-    return html
+
+    # One regex pass prevents values containing placeholder-like text from
+    # being substituted a second time. Unknown placeholders remain editable.
+    return _PLACEHOLDER_RE.sub(
+        lambda match: replacements.get(match.group(1), match.group(0)), html
+    )
 
 
 # --- Templates ---------------------------------------------------------------
@@ -291,6 +304,147 @@ _NEON_GRID = """<!DOCTYPE html>
 </body>
 </html>"""
 
+_ZERO_DAY = """<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#05070b;font-family:Arial,Helvetica,sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;color:#05070b;">Priority zero-day intelligence from {{ctf_name}}.</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#05070b;padding:32px 10px;">
+    <tr><td align="center">
+      <table role="presentation" width="620" cellpadding="0" cellspacing="0" style="max-width:620px;width:100%;background:#0b1018;border:1px solid #293241;border-radius:10px;overflow:hidden;">
+        <tr><td style="background:#f97316;padding:9px 28px;color:#160800;font-size:11px;font-weight:bold;letter-spacing:4px;text-align:center;">CRITICAL // ZERO-DAY ADVISORY // PRIORITY 0</td></tr>
+        <tr><td style="padding:30px 32px 18px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td>
+              <p style="margin:0 0 7px;color:#64748b;font:12px Consolas,monospace;letter-spacing:2px;">CVE-{{year}}-0CTF</p>
+              <h1 style="margin:0;color:#f8fafc;font-size:28px;line-height:1.2;">{{subject}}</h1>
+            </td>
+            <td width="92" align="right"><div style="border:2px solid #f97316;color:#fb923c;padding:9px 6px;text-align:center;font:bold 22px Consolas,monospace;border-radius:5px;">10.0<div style="font-size:8px;letter-spacing:2px;margin-top:4px;">SEVERITY</div></div></td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:0 32px;"><div style="height:1px;background:#293241;"></div></td></tr>
+        <tr><td style="padding:22px 32px;color:#cbd5e1;font-size:15px;line-height:1.75;">
+          <p style="margin-top:0;color:#94a3b8;">Researcher <strong style="color:#fb923c;">{{name}}</strong>, a high-impact condition has been detected in the challenge infrastructure.</p>
+          {{message}}
+        </td></tr>
+        <tr><td style="padding:0 32px 28px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#111827;border-left:3px solid #f97316;"><tr><td style="padding:13px 16px;color:#94a3b8;font:12px Consolas,monospace;line-height:1.7;">
+            VECTOR&nbsp;&nbsp; NETWORK / USER INTERACTION<br>
+            STATUS&nbsp;&nbsp; <span style="color:#fb923c;">UNPATCHED &mdash; EXPLOIT RESPONSIBLY</span><br>
+            DISCLOSED {{date}}
+          </td></tr></table>
+        </td></tr>
+        <tr><td style="padding:16px 32px;background:#070b11;text-align:center;color:#475569;font-size:10px;letter-spacing:2px;">{{ctf_name}} VULNERABILITY RESEARCH // {{year}}</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
+_SOC_COMMAND = """<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#06111a;font-family:Arial,Helvetica,sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;color:#06111a;">Security operations dispatch for {{name}}.</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#06111a;padding:32px 10px;">
+    <tr><td align="center">
+      <table role="presentation" width="620" cellpadding="0" cellspacing="0" style="max-width:620px;width:100%;background:#091923;border:1px solid #164e63;border-radius:12px;overflow:hidden;box-shadow:0 0 35px rgba(6,182,212,.15);">
+        <tr><td style="padding:24px 30px;background:#07141d;border-bottom:1px solid #164e63;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td><p style="margin:0;color:#22d3ee;font-size:11px;font-weight:bold;letter-spacing:4px;">&#9678; SECURITY OPERATIONS CENTER</p><h1 style="margin:7px 0 0;color:#ecfeff;font-size:22px;">{{ctf_name}}</h1></td>
+            <td align="right"><span style="display:inline-block;background:#083344;border:1px solid #06b6d4;color:#67e8f9;padding:7px 10px;border-radius:4px;font:10px Consolas,monospace;letter-spacing:2px;">STATUS: ACTIVE</span></td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:24px 30px 10px;">
+          <p style="margin:0;color:#64748b;font:11px Consolas,monospace;letter-spacing:2px;">INCIDENT / {{register_number}} &nbsp;&bull;&nbsp; {{date}}</p>
+          <h2 style="margin:9px 0 0;color:#f8fafc;font-size:25px;">{{subject}}</h2>
+        </td></tr>
+        <tr><td style="padding:15px 30px 22px;color:#cbd5e1;font-size:15px;line-height:1.75;">
+          <p style="margin-top:0;">Analyst <strong style="color:#67e8f9;">{{name}}</strong>, this secure dispatch requires your attention.</p>
+          {{message}}
+        </td></tr>
+        <tr><td style="padding:0 30px 28px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td width="31%" style="background:#0c2430;border-top:2px solid #22d3ee;padding:12px;text-align:center;color:#64748b;font-size:9px;letter-spacing:2px;">DETECT<div style="color:#67e8f9;font-size:13px;font-weight:bold;margin-top:6px;">SIGNAL</div></td>
+            <td width="3%"></td>
+            <td width="32%" style="background:#0c2430;border-top:2px solid #a78bfa;padding:12px;text-align:center;color:#64748b;font-size:9px;letter-spacing:2px;">ANALYZE<div style="color:#c4b5fd;font-size:13px;font-weight:bold;margin-top:6px;">THREAT</div></td>
+            <td width="3%"></td>
+            <td width="31%" style="background:#0c2430;border-top:2px solid #34d399;padding:12px;text-align:center;color:#64748b;font-size:9px;letter-spacing:2px;">RESPOND<div style="color:#6ee7b7;font-size:13px;font-weight:bold;margin-top:6px;">CONTAIN</div></td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:15px 30px;background:#061018;border-top:1px solid #12303d;color:#45606d;font:10px Consolas,monospace;text-align:center;letter-spacing:2px;">AUTHORIZED RECIPIENT: {{email}} // SOC-{{year}}</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
+_MISSION_BRIEF = """<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#07100a;font-family:Arial,Helvetica,sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;color:#07100a;">Your next operation has been assigned.</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#07100a;padding:32px 10px;">
+    <tr><td align="center">
+      <table role="presentation" width="620" cellpadding="0" cellspacing="0" style="max-width:620px;width:100%;background:#101810;border:1px solid #3f6212;border-radius:4px;overflow:hidden;">
+        <tr><td style="padding:12px 28px;background:#365314;color:#ecfccb;font:10px Consolas,monospace;letter-spacing:3px;">
+          <table role="presentation" width="100%"><tr><td>FIELD OPERATIONS // {{ctf_name}}</td><td align="right">{{date}}</td></tr></table>
+        </td></tr>
+        <tr><td style="padding:32px 32px 16px;text-align:center;">
+          <div style="display:inline-block;border:1px solid #65a30d;border-radius:50%;width:66px;height:66px;line-height:66px;color:#bef264;font:bold 26px Consolas,monospace;box-shadow:inset 0 0 0 5px #17230f;">M-{{register_number}}</div>
+          <p style="margin:16px 0 7px;color:#84a45c;font-size:10px;letter-spacing:5px;">NEW OBJECTIVE UNLOCKED</p>
+          <h1 style="margin:0;color:#f7fee7;font-size:27px;text-transform:uppercase;letter-spacing:1px;">{{subject}}</h1>
+        </td></tr>
+        <tr><td style="padding:16px 32px;color:#d9f99d;font-size:15px;line-height:1.8;">
+          <p style="margin-top:0;color:#a3b58c;">Operator <strong style="color:#bef264;">{{name}}</strong>, command has issued the following mission parameters:</p>
+          {{message}}
+        </td></tr>
+        <tr><td style="padding:0 32px 28px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px dashed #4d7c0f;"><tr><td style="padding:14px 18px;color:#78905d;font:11px Consolas,monospace;line-height:1.8;">
+            RULE 01 &nbsp;<span style="color:#bef264;">ENUMERATE EVERYTHING</span><br>
+            RULE 02 &nbsp;<span style="color:#bef264;">TRUST NO INPUT</span><br>
+            RULE 03 &nbsp;<span style="color:#bef264;">CAPTURE THE FLAG</span>
+          </td></tr></table>
+        </td></tr>
+        <tr><td style="padding:15px 32px;background:#090f08;text-align:center;color:#536445;font-size:10px;letter-spacing:3px;">PLAN // EXPLOIT // DOCUMENT // EXFILTRATE</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
+_FLAG_CAPTURED = """<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#080510;font-family:Arial,Helvetica,sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;color:#080510;">Achievement unlocked in {{ctf_name}}.</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#080510;padding:32px 10px;">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#120c20;border:1px solid #f59e0b;border-radius:14px;overflow:hidden;box-shadow:0 0 42px rgba(245,158,11,.22);">
+        <tr><td style="height:5px;background:#f59e0b;font-size:0;">&nbsp;</td></tr>
+        <tr><td style="padding:38px 32px 18px;text-align:center;">
+          <div style="font-size:52px;line-height:1;color:#fbbf24;text-shadow:0 0 22px rgba(251,191,36,.65);">&#9873;</div>
+          <p style="margin:13px 0 7px;color:#c084fc;font-size:11px;font-weight:bold;letter-spacing:5px;">ACHIEVEMENT UNLOCKED</p>
+          <h1 style="margin:0;color:#fef3c7;font-size:30px;letter-spacing:2px;">FLAG CAPTURED</h1>
+          <p style="margin:10px 0 0;color:#f59e0b;font-size:15px;">{{subject}}</p>
+        </td></tr>
+        <tr><td style="padding:15px 34px 20px;color:#e9d5ff;font-size:15px;line-height:1.75;text-align:left;">
+          <p style="margin-top:0;text-align:center;color:#a78bfa;">Outstanding work, <strong style="color:#fbbf24;">{{name}}</strong>.</p>
+          {{message}}
+        </td></tr>
+        <tr><td style="padding:0 34px 30px;text-align:center;">
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;background:#1d1430;border:1px solid #6d28d9;border-radius:8px;"><tr>
+            <td style="padding:14px 22px;border-right:1px solid #6d28d9;"><div style="color:#7c6a96;font-size:9px;letter-spacing:2px;">PLAYER</div><div style="color:#f5d0fe;font-size:13px;margin-top:5px;">{{name}}</div></td>
+            <td style="padding:14px 22px;"><div style="color:#7c6a96;font-size:9px;letter-spacing:2px;">OPERATION</div><div style="color:#f5d0fe;font-size:13px;margin-top:5px;">{{ctf_name}}</div></td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="padding:16px 32px;background:#0c0815;text-align:center;color:#5b4b72;font-size:10px;letter-spacing:2px;">KEEP HACKING // KEEP LEARNING // {{year}}</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
 
 # Ordered mapping of template id -> metadata + HTML
 EMAIL_TEMPLATES = {
@@ -318,6 +472,26 @@ EMAIL_TEMPLATES = {
         "name": "Neon Grid",
         "description": "Synthwave purple/cyan cyber grid with glowing CTA.",
         "html": _NEON_GRID,
+    },
+    "zeroday": {
+        "name": "Zero-Day Advisory",
+        "description": "Critical vulnerability bulletin styled like a CVE intelligence alert.",
+        "html": _ZERO_DAY,
+    },
+    "soc": {
+        "name": "SOC Command Center",
+        "description": "Polished security-operations dispatch with incident status panels.",
+        "html": _SOC_COMMAND,
+    },
+    "mission": {
+        "name": "Mission Brief",
+        "description": "Tactical field-operations briefing for challenges and event missions.",
+        "html": _MISSION_BRIEF,
+    },
+    "captured": {
+        "name": "Flag Captured",
+        "description": "Gold and ultraviolet achievement email for winners and milestones.",
+        "html": _FLAG_CAPTURED,
     },
 }
 
