@@ -30,19 +30,32 @@
 			</div>
 			{% endif %}
 
-			{% if sent is defined %}
-			<div class="alert alert-success" role="alert">
-				Sent <strong>{{ sent }}</strong> email(s) successfully.
-				{% if failed %}
-				<span class="text-danger">Failed to send {{ failed }}.</span>
-				{% endif %}
-			</div>
-			{% if failed_addresses %}
-			<div class="alert alert-warning" role="alert">
-				<strong>Failed recipients (showing up to 20):</strong>
-				<div><small>{{ failed_addresses | join(", ") }}</small></div>
+			{% if just_started %}
+			<div class="alert alert-info" role="alert">
+				Started sending <strong>{{ status.total }}</strong> email(s) in the background.
+				This page will not block &mdash; <a href="{{ url_for('admin.email') }}">refresh</a>
+				to see progress and results.
 			</div>
 			{% endif %}
+
+			{% if status %}
+			<div class="alert {% if status.running %}alert-info{% elif status.failed and not status.sent %}alert-danger{% elif status.failed %}alert-warning{% else %}alert-success{% endif %}" role="alert">
+				{% if status.running %}
+					<strong>Sending in progress&hellip;</strong>
+					Sent {{ status.sent }} / {{ status.total }},
+					failed {{ status.failed }}.
+					<a href="{{ url_for('admin.email') }}" class="ml-2">Refresh</a>
+				{% else %}
+					<strong>Last send finished.</strong>
+					Sent <strong>{{ status.sent }}</strong> of {{ status.total }}.
+					{% if status.failed %}
+						<span class="text-danger">Failed {{ status.failed }}.</span>
+					{% endif %}
+				{% endif %}
+				{% if status.last_error %}
+					<div class="mt-2"><small><strong>Last error:</strong> {{ status.last_error }}</small></div>
+				{% endif %}
+			</div>
 			{% endif %}
 
 			<form method="POST" autocomplete="off">
