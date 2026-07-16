@@ -41,14 +41,17 @@ def RegistrationForm(*args, **kwargs):
         )
         register_number = StringField(
             _l("Register Number"),
-            description=_l("Your 12-digit institutional register number"),
+            description=_l(
+                "Your 12-digit institutional register number starting with 7140"
+            ),
             validators=[InputRequired()],
             render_kw={
                 "inputmode": "numeric",
-                "pattern": "[0-9]{12}",
+                "pattern": "7140[0-9]{8}",
                 "minlength": "12",
                 "maxlength": "12",
                 "autocomplete": "off",
+                "title": "12 digits starting with 7140, e.g. 714023149048",
             },
         )
         password = PasswordField(

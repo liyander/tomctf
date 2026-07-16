@@ -1,0 +1,88 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+  <div class="container">
+    <h1>Support Tickets</h1>
+    <p>Review and respond to concerns raised by players.</p>
+  </div>
+</div>
+
+<div class="container pb-5">
+  <div class="mb-4">
+    <div class="btn-group" role="group">
+      <a href="{{ url_for('tickets.admin_listing') }}"
+         class="btn btn-sm {{ 'btn-primary' if active_status == '' else 'btn-outline-primary' }}">
+        All <span class="badge bg-dark ms-1">{{ counts[''] }}</span>
+      </a>
+      {% for status in statuses %}
+        <a href="{{ url_for('tickets.admin_listing', status=status) }}"
+           class="btn btn-sm {{ 'btn-primary' if active_status == status else 'btn-outline-primary' }}">
+          {{ status.replace('_', ' ') | title }}
+          <span class="badge bg-dark ms-1">{{ counts[status] }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if tickets %}
+    {% for ticket in tickets %}
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <strong>#{{ ticket.id }} — {{ ticket.subject }}</strong>
+            <span class="badge bg-secondary ms-2">{{ ticket.category }}</span>
+            <span class="badge ms-1
+              {% if ticket.status == 'open' %}bg-warning text-dark
+              {% elif ticket.status == 'in_progress' %}bg-info text-dark
+              {% elif ticket.status == 'resolved' %}bg-success
+              {% else %}bg-secondary{% endif %}">
+              {{ ticket.status.replace('_', ' ') | title }}
+            </span>
+          </div>
+          <small class="text-muted">
+            {% if ticket.user %}
+              <a href="{{ url_for('admin.users_detail', user_id=ticket.user.id) }}">
+                {{ ticket.user.name }}
+              </a> &middot;
+            {% endif %}
+            {{ ticket.created.strftime('%b %d, %Y %H:%M') }} UTC
+          </small>
+        </div>
+        <div class="card-body">
+          <p style="white-space: pre-wrap; overflow-wrap: anywhere;">{{ ticket.description }}</p>
+
+          <hr>
+
+          <form method="POST"
+                action="{{ url_for('tickets.admin_update', ticket_id=ticket.id, status=active_status) }}">
+            <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+            <div class="row g-2 align-items-end">
+              <div class="col-md-7">
+                <label class="form-label"><small>Response to player</small></label>
+                <textarea class="form-control" name="admin_response" rows="2"
+                    maxlength="5000" placeholder="Visible to the player on their tickets page">{{ ticket.admin_response or '' }}</textarea>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label"><small>Status</small></label>
+                <select class="form-select" name="status">
+                  {% for status in statuses %}
+                    <option value="{{ status }}" {{ 'selected' if ticket.status == status else '' }}>
+                      {{ status.replace('_', ' ') | title }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Save</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="alert alert-info">No tickets{{ ' with this status' if active_status else '' }} yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

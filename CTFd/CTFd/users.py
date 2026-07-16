@@ -130,8 +130,10 @@ def profile_update():
             errors.append("Your email address is not from an allowed domain")
 
     register_number_field = get_register_number_field()
-    if re.fullmatch(r"[0-9]{12}", register_number) is None:
-        errors.append("Register number must contain exactly 12 digits")
+    if re.fullmatch(r"7140[0-9]{8}", register_number) is None:
+        errors.append(
+            "Register number must be 12 digits starting with 7140 (e.g. 714023149048)"
+        )
     elif register_number_field and UserFieldEntries.query.filter(
         UserFieldEntries.field_id == register_number_field.id,
         UserFieldEntries.value == register_number,

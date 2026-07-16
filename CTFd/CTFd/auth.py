@@ -356,8 +356,12 @@ def register():
             errors.append(_l("Your user name cannot be an email address"))
         if emails:
             errors.append(_l("That email has already been used"))
-        if re.fullmatch(r"[0-9]{12}", register_number) is None:
-            errors.append(_l("Register number must contain exactly 12 digits"))
+        if re.fullmatch(r"7140[0-9]{8}", register_number) is None:
+            errors.append(
+                _l(
+                    "Register number must be 12 digits starting with 7140 (e.g. 714023149048)"
+                )
+            )
         elif register_numbers:
             errors.append(_l("That register number has already been used"))
         if pass_short:

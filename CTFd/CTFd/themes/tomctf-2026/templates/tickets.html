@@ -1,0 +1,384 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .tickets-hero {
+    background: linear-gradient(135deg, #050303 0%, #1a0a0a 50%, #0d0505 100%);
+    border-bottom: 2px solid #8b0000;
+    padding: 3rem 0;
+    padding-top: calc(3rem + 70px);
+    margin-top: -70px;
+    position: relative;
+    overflow: hidden;
+  }
+  .tickets-hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(236,19,19,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .tickets-hero .stranger-title {
+    font-family: 'Stranger Things', 'Creepster', cursive;
+    font-size: 3.8rem;
+    background: linear-gradient(135deg, #ec1313, #ff4444, #ec1313);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 25px rgba(236,19,19,0.5));
+  }
+  .tickets-hero .hero-icon {
+    color: #ec1313;
+    font-size: 2.2rem;
+    filter: drop-shadow(0 0 8px rgba(236,19,19,0.5));
+  }
+  .tickets-hero .hero-subtitle {
+    color: rgba(255,255,255,0.5);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.05rem;
+    letter-spacing: 1px;
+  }
+
+  .tickets-tabs {
+    background: rgba(26,10,10,0.7);
+    border: 1px solid rgba(139,0,0,0.3);
+    border-radius: 12px;
+    padding: 0.5rem;
+    backdrop-filter: blur(10px);
+    display: inline-flex;
+    gap: 0.35rem;
+  }
+  .tickets-tabs .nav-link {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.5);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 0.6rem 1.25rem;
+    transition: all 0.3s ease;
+    letter-spacing: 0.5px;
+  }
+  .tickets-tabs .nav-link:hover {
+    color: #ec1313;
+    background: rgba(236,19,19,0.06);
+  }
+  .tickets-tabs .nav-link.active {
+    background: linear-gradient(135deg, rgba(139,0,0,0.4), rgba(236,19,19,0.2));
+    color: #ec1313;
+    border-color: rgba(236,19,19,0.3);
+    box-shadow: 0 0 10px rgba(236,19,19,0.1);
+  }
+
+  .tickets-card {
+    background: rgba(26,10,10,0.7);
+    border: 1px solid rgba(139,0,0,0.3);
+    border-radius: 12px;
+    padding: 2rem;
+    backdrop-filter: blur(10px);
+  }
+  .tickets-card .form-label {
+    color: #ec1313;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  .tickets-card .form-label i {
+    color: rgba(236,19,19,0.6);
+    font-size: 0.75rem;
+    width: 14px;
+    text-align: center;
+  }
+  .tickets-card .form-control,
+  .tickets-card .form-select {
+    background: rgba(5,3,3,0.8);
+    border: 1px solid rgba(139,0,0,0.25);
+    color: #d4c5b0;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.9rem;
+    border-radius: 10px;
+    padding: 0.65rem 1rem;
+    height: auto;
+    line-height: 1.4;
+    transition: all 0.25s ease;
+  }
+  .tickets-card .form-control:hover,
+  .tickets-card .form-select:hover {
+    border-color: rgba(236,19,19,0.4);
+  }
+  .tickets-card .form-control:focus,
+  .tickets-card .form-select:focus {
+    border-color: #ec1313;
+    box-shadow: 0 0 0 3px rgba(236,19,19,0.12);
+    background: rgba(5,3,3,0.95);
+    color: #fff;
+    outline: none;
+  }
+  .tickets-card .form-control::placeholder {
+    color: rgba(212,197,176,0.25);
+  }
+  .tickets-card .form-text {
+    color: rgba(212,197,176,0.4);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.75rem;
+  }
+  .tickets-card .btn-primary {
+    background: linear-gradient(135deg, #8b0000, #ec1313);
+    border: none;
+    border-radius: 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 0.7rem 2rem;
+    box-shadow: 0 4px 15px rgba(236,19,19,0.2);
+    transition: all 0.25s ease;
+  }
+  .tickets-card .btn-primary:hover {
+    box-shadow: 0 6px 25px rgba(236,19,19,0.35);
+    transform: translateY(-1px);
+  }
+
+  .ticket-item {
+    background: rgba(26,10,10,0.5);
+    border: 1px solid rgba(139,0,0,0.3);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+  }
+  .ticket-item:hover {
+    border-color: rgba(236,19,19,0.45);
+    box-shadow: 0 0 15px rgba(236,19,19,0.08);
+  }
+  .ticket-item .ticket-subject {
+    color: #fff;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 0.15rem;
+  }
+  .ticket-item .ticket-meta {
+    color: rgba(255,255,255,0.4);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+  }
+  .ticket-item .ticket-desc {
+    color: rgba(212,197,176,0.8);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.88rem;
+    margin: 0.65rem 0 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .ticket-badge {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 0.3rem 0.75rem;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .ticket-badge.category {
+    background: rgba(139,0,0,0.35);
+    border: 1px solid rgba(236,19,19,0.3);
+    color: #ff6b6b;
+  }
+  .ticket-badge.status-open {
+    background: rgba(255,149,0,0.12);
+    border: 1px solid rgba(255,149,0,0.4);
+    color: #ff9500;
+  }
+  .ticket-badge.status-in_progress {
+    background: rgba(236,19,19,0.12);
+    border: 1px solid rgba(236,19,19,0.4);
+    color: #ff6b6b;
+  }
+  .ticket-badge.status-resolved {
+    background: rgba(52,199,89,0.12);
+    border: 1px solid rgba(52,199,89,0.4);
+    color: #34c759;
+  }
+  .ticket-badge.status-closed {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.5);
+  }
+  .ticket-response {
+    background: rgba(5,3,3,0.6);
+    border: 1px solid rgba(139,0,0,0.25);
+    border-left: 3px solid #ec1313;
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    margin-top: 0.85rem;
+  }
+  .ticket-response .response-label {
+    color: #ec1313;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 0.3rem;
+  }
+  .ticket-response .response-text {
+    color: rgba(212,197,176,0.85);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.88rem;
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .tickets-empty {
+    color: rgba(255,255,255,0.3);
+    font-family: 'Space Grotesk', sans-serif;
+    text-align: center;
+    padding: 3rem 0;
+  }
+  .tickets-empty i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+    color: rgba(236,19,19,0.3);
+  }
+</style>
+
+  <div class="tickets-hero">
+    <div class="container text-center">
+      <i class="fas fa-life-ring hero-icon mb-2"></i>
+      <h1><span class="stranger-title">Support</span></h1>
+      <p class="hero-subtitle mb-0">Raise a concern about technical issues, challenges and more</p>
+    </div>
+  </div>
+
+  <div class="container py-4">
+    {% include "components/errors.html" %}
+
+    <div class="text-center mb-4">
+      <div class="tickets-tabs nav nav-pills" role="tablist">
+        <button class="nav-link active" id="raise-concern-tab" data-bs-toggle="pill"
+            data-bs-target="#raise-concern" role="tab">
+          <i class="fas fa-bullhorn me-2"></i>Raise a Concern
+        </button>
+        <button class="nav-link" id="my-tickets-tab" data-bs-toggle="pill"
+            data-bs-target="#my-tickets" role="tab">
+          <i class="fas fa-ticket-alt me-2"></i>My Tickets
+          <span class="ticket-badge category ms-1">{{ tickets | length }}</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+        <div class="tab-content">
+
+          <div class="tab-pane fade show active" id="raise-concern" role="tabpanel">
+            <div class="tickets-card">
+              <form method="POST" action="{{ url_for('tickets.create') }}" accept-charset="utf-8">
+                <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+
+                <div class="mb-3">
+                  <label class="form-label" for="ticket-category">
+                    <i class="fas fa-tag"></i>Category
+                  </label>
+                  <select class="form-select" id="ticket-category" name="category" required>
+                    {% for category in categories %}
+                      <option value="{{ category }}">{{ category }}</option>
+                    {% endfor %}
+                  </select>
+                  <div class="form-text">Pick the area your concern relates to.</div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label" for="ticket-subject">
+                    <i class="fas fa-heading"></i>Subject
+                  </label>
+                  <input type="text" class="form-control" id="ticket-subject" name="subject"
+                      maxlength="256" placeholder="Short summary of the issue" required>
+                </div>
+
+                <div class="mb-4">
+                  <label class="form-label" for="ticket-description">
+                    <i class="fas fa-align-left"></i>Description
+                  </label>
+                  <textarea class="form-control" id="ticket-description" name="description"
+                      rows="6" maxlength="5000" required
+                      placeholder="Describe the issue in detail — what happened, which challenge or page it concerns, and any error messages you saw."></textarea>
+                  <div class="form-text">Max 5000 characters. The more detail, the faster we can help.</div>
+                </div>
+
+                <div class="d-flex justify-content-end">
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane me-2"></i>Submit Ticket
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="tab-pane fade" id="my-tickets" role="tabpanel">
+            {% if tickets %}
+              {% for ticket in tickets %}
+                <div class="ticket-item">
+                  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                    <div>
+                      <div class="ticket-subject">#{{ ticket.id }} — {{ ticket.subject }}</div>
+                      <div class="ticket-meta">
+                        Submitted {{ ticket.created.strftime('%b %d, %Y %H:%M') }} UTC
+                      </div>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                      <span class="ticket-badge category">{{ ticket.category }}</span>
+                      <span class="ticket-badge status-{{ ticket.status }}">
+                        {{ ticket.status.replace('_', ' ') }}
+                      </span>
+                    </div>
+                  </div>
+                  <p class="ticket-desc">{{ ticket.description }}</p>
+                  {% if ticket.admin_response %}
+                    <div class="ticket-response">
+                      <div class="response-label">
+                        <i class="fas fa-reply me-1"></i>Team Response
+                      </div>
+                      <p class="response-text">{{ ticket.admin_response }}</p>
+                    </div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="tickets-card">
+                <div class="tickets-empty">
+                  <i class="fas fa-ghost"></i>
+                  <h3 style="color: rgba(255,255,255,0.4);">No tickets yet</h3>
+                  <p class="mb-0">Raise a concern and it will show up here with its status.</p>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Deep-link to the My Tickets tab (used after submitting a ticket)
+    if (window.location.hash === "#my-tickets") {
+      window.addEventListener("DOMContentLoaded", function () {
+        var tab = document.getElementById("my-tickets-tab");
+        if (tab) tab.click();
+      });
+    }
+  </script>
+{% endblock %}

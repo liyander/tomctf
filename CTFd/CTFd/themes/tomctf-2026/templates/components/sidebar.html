@@ -386,6 +386,8 @@
         {% endif %}
         {% endif %}
 
+        <a class="nav-link {% if request.path.startswith('/tickets') %}active{% endif %}" href="{{ url_for('tickets.listing') }}"><i class="fas fa-life-ring me-2"></i><span class="label">Raise a Concern</span></a>
+
         {% if (Configs.credits_visible | string | lower) != 'false' %}
         <a class="nav-link {% if request.path.startswith('/credits') %}active{% endif %}" href="{{ url_for('views.credits_page') }}"><i class="fas fa-heart me-2"></i><span class="label">Credits</span></a>
         {% endif %}

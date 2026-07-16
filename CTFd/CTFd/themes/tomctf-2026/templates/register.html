@@ -92,9 +92,27 @@
                     <i class="fas fa-id-card"></i>
                     {{ form.register_number.label.text }}
                   </label>
-                  {{ form.register_number(class="auth-input", value=register_number, placeholder="e.g. 714023149048", aria_describedby="register-number-hint") }}
+                  {{ form.register_number(class="auth-input", value=register_number or "7140", placeholder="7140________", aria_describedby="register-number-hint") }}
                   <div class="input-glow"></div>
-                  <small class="auth-hint" id="register-number-hint">{% trans %}Enter exactly 12 digits, without spaces or symbols{% endtrans %}</small>
+                  <small class="auth-hint" id="register-number-hint">{% trans %}Starts with 7140, then your remaining 8 digits — e.g. 714023149048{% endtrans %}</small>
+                  <script>
+                    (function () {
+                      var input = document.getElementById("{{ form.register_number.id }}");
+                      if (!input) return;
+                      var PREFIX = "7140";
+                      var enforcePrefix = function () {
+                        var digits = input.value.replace(/[^0-9]/g, "");
+                        if (digits.indexOf(PREFIX) !== 0) {
+                          // Keep the fixed 7140 prefix and whatever the user typed after it
+                          digits = PREFIX + digits.replace(/^7?1?4?0?/, "");
+                        }
+                        input.value = digits.slice(0, 12);
+                      };
+                      input.addEventListener("input", enforcePrefix);
+                      input.addEventListener("blur", enforcePrefix);
+                      enforcePrefix();
+                    })();
+                  </script>
                 </div>
 
                 <!-- Password -->
