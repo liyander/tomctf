@@ -533,19 +533,16 @@
       opacity: 0.7;
     }
 
-    /* --- Page-load fade for main content --- */
+    /* --- Page-load fade for main content ---
+       Opacity only, and no forwards fill: a persistent transform/filter
+       animation would create a stacking context on <main> and trap
+       Bootstrap modals underneath the body-level .modal-backdrop. */
     @keyframes tomPageIn {
-      from {
-        opacity: 0;
-        transform: translateY(8px);
-      }
-      to {
-        opacity: 1;
-        transform: none;
-      }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
     .tom-main-content {
-      animation: tomPageIn 0.35s ease-out both;
+      animation: tomPageIn 0.35s ease-out backwards;
     }
 
     /* --- Buttons: consistent press feedback --- */
