@@ -356,6 +356,33 @@
 	{% endif %}
 	{% endfor %}
 {% include "admin/loader.html" %}
+<script>
+	// Unread support-ticket badge on the Plugins > Tickets link
+	(function () {
+		var link = document.querySelector('#admin-plugin-panel a[href$="/admin/tickets"]');
+		if (!link) return;
+		fetch("/api/v1/tickets/admin-unread", { credentials: "same-origin" })
+			.then(function (r) { return r.ok ? r.json() : null; })
+			.then(function (body) {
+				var count = (body && body.data && body.data.count) || 0;
+				if (count > 0) {
+					var badge = document.createElement("span");
+					badge.className = "badge badge-danger bg-danger ml-1 ms-1";
+					badge.textContent = count > 9 ? "9+" : String(count);
+					link.appendChild(badge);
+					// Also surface it on the collapsed "Plugins" toggle
+					var toggle = document.querySelector('.admin-side-toggle[data-target="admin-plugin-panel"] span');
+					if (toggle && toggle.textContent.trim() === "Plugins") {
+						var dot = document.createElement("span");
+						dot.className = "badge badge-danger bg-danger ml-1 ms-1";
+						dot.textContent = badge.textContent;
+						toggle.appendChild(dot);
+					}
+				}
+			})
+			.catch(function () {});
+	})();
+</script>
 </body>
 
 </html>

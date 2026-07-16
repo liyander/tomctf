@@ -133,6 +133,36 @@
     }
   }
 
+  .tom-tickets-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    margin-left: 0.5rem;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #8b0000, #ec1313);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    box-shadow: 0 0 8px rgba(236, 19, 19, 0.5);
+    animation: tomTicketsPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes tomTicketsPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(236, 19, 19, 0.55); }
+    70% { box-shadow: 0 0 0 7px rgba(236, 19, 19, 0); }
+  }
+  .tom-tickets-badge.d-none {
+    display: none;
+  }
+  body.tom-sidebar-collapsed .tom-sidebar .tom-tickets-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    margin-left: 0;
+  }
+
   .tom-auth-actions .btn {
     display: flex;
     align-items: center;
@@ -386,7 +416,7 @@
         {% endif %}
         {% endif %}
 
-        <a class="nav-link {% if request.path.startswith('/tickets') %}active{% endif %}" href="{{ url_for('tickets.listing') }}"><i class="fas fa-life-ring me-2"></i><span class="label">Raise a Concern</span></a>
+        <a class="nav-link {% if request.path.startswith('/tickets') %}active{% endif %}" href="{{ url_for('tickets.listing') }}" id="tomTicketsNavLink"><i class="fas fa-life-ring me-2"></i><span class="label">Raise a Concern</span><span class="tom-tickets-badge d-none" id="tomTicketsBadge"></span></a>
 
         {% if (Configs.credits_visible | string | lower) != 'false' %}
         <a class="nav-link {% if request.path.startswith('/credits') %}active{% endif %}" href="{{ url_for('views.credits_page') }}"><i class="fas fa-heart me-2"></i><span class="label">Credits</span></a>
@@ -631,6 +661,32 @@
       window.addEventListener("tom:container-state-changed", () => {
         loadRunningLab();
       });
+    }
+
+    // Support-ticket update badge on the "Raise a Concern" link
+    const ticketsBadge = document.getElementById("tomTicketsBadge");
+    const loadTicketsBadge = async () => {
+      try {
+        const response = await fetch("/api/v1/tickets/unread", {
+          method: "GET",
+          credentials: "same-origin"
+        });
+        if (!response.ok) return;
+        const body = await response.json();
+        const count = body?.data?.count || 0;
+        if (count > 0) {
+          ticketsBadge.textContent = count > 9 ? "9+" : String(count);
+          ticketsBadge.classList.remove("d-none");
+        } else {
+          ticketsBadge.classList.add("d-none");
+        }
+      } catch {
+        /* stay hidden */
+      }
+    };
+    if (ticketsBadge && window.init && window.init.userId) {
+      loadTicketsBadge();
+      window.setInterval(loadTicketsBadge, 60000);
     }
   })();
 </script>

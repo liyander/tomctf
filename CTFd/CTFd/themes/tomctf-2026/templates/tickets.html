@@ -252,6 +252,21 @@
     display: block;
     color: rgba(236,19,19,0.3);
   }
+
+  .ticket-item.ticket-unread {
+    border-color: rgba(236,19,19,0.55);
+    box-shadow: 0 0 18px rgba(236,19,19,0.15);
+  }
+  .ticket-badge.new-update {
+    background: linear-gradient(135deg, #8b0000, #ec1313);
+    border: 1px solid rgba(255,107,107,0.5);
+    color: #fff;
+    animation: ticketPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes ticketPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(236,19,19,0.4); }
+    50% { box-shadow: 0 0 12px 2px rgba(236,19,19,0.25); }
+  }
 </style>
 
   <div class="tickets-hero">
@@ -330,7 +345,7 @@
           <div class="tab-pane fade" id="my-tickets" role="tabpanel">
             {% if tickets %}
               {% for ticket in tickets %}
-                <div class="ticket-item">
+                <div class="ticket-item {% if ticket.id in unread_ids %}ticket-unread{% endif %}">
                   <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                     <div>
                       <div class="ticket-subject">#{{ ticket.id }} — {{ ticket.subject }}</div>
@@ -339,6 +354,9 @@
                       </div>
                     </div>
                     <div class="d-flex gap-2 flex-wrap">
+                      {% if ticket.id in unread_ids %}
+                        <span class="ticket-badge new-update"><i class="fas fa-bell me-1"></i>New Update</span>
+                      {% endif %}
                       <span class="ticket-badge category">{{ ticket.category }}</span>
                       <span class="ticket-badge status-{{ ticket.status }}">
                         {{ ticket.status.replace('_', ' ') }}
@@ -373,12 +391,16 @@
   </div>
 
   <script>
-    // Deep-link to the My Tickets tab (used after submitting a ticket)
-    if (window.location.hash === "#my-tickets") {
-      window.addEventListener("DOMContentLoaded", function () {
-        var tab = document.getElementById("my-tickets-tab");
-        if (tab) tab.click();
-      });
-    }
+    // Open My Tickets when deep-linked (after submitting) or when a ticket
+    // received a new admin response / status change.
+    (function () {
+      var hasUpdates = {{ 'true' if unread_ids else 'false' }};
+      if (window.location.hash === "#my-tickets" || hasUpdates) {
+        window.addEventListener("DOMContentLoaded", function () {
+          var tab = document.getElementById("my-tickets-tab");
+          if (tab) tab.click();
+        });
+      }
+    })();
   </script>
 {% endblock %}
