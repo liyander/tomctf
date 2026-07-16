@@ -23,6 +23,9 @@ TICKET_CATEGORIES = [
 
 TICKET_STATUSES = ["open", "in_progress", "resolved", "closed"]
 
+# Statuses in which the conversation on a ticket is still active
+ACTIVE_STATUSES = ("open", "in_progress")
+
 SUBJECT_MAX_LENGTH = 256
 DESCRIPTION_MAX_LENGTH = 5000
 
@@ -49,20 +52,52 @@ class SupportTickets(db.Model):
     updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     user = db.relationship("Users", foreign_keys=[user_id], lazy="joined")
+    messages = db.relationship(
+        "SupportTicketMessages",
+        backref="ticket",
+        order_by="SupportTicketMessages.created",
+        cascade="all, delete-orphan",
+        lazy="joined",
+    )
+
+    @property
+    def is_active(self):
+        return self.status in ACTIVE_STATUSES
 
 
-def notify_admins_by_email(ticket, owner):
-    """Best-effort email to all admins when a new ticket is raised."""
+class SupportTicketMessages(db.Model):
+    __tablename__ = "support_ticket_messages"
+
+    id = db.Column(db.Integer, primary_key=True)
+    ticket_id = db.Column(
+        db.Integer,
+        db.ForeignKey("support_tickets.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    sender = db.Column(db.String(16), nullable=False)  # "player" or "admin"
+    content = db.Column(db.Text, nullable=False)
+    created = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+def notify_admins_by_email(ticket, owner, message=None):
+    """Best-effort email to all admins on a new ticket or a player reply."""
     try:
         if not config.can_send_mail():
             return
         admins = Users.query.filter_by(type="admin", banned=False).all()
-        subject = f"[Support] New ticket #{ticket.id}: {ticket.subject}"
+        if message is None:
+            subject = f"[Support] New ticket #{ticket.id}: {ticket.subject}"
+            body = ticket.description
+            intro = f"{owner.name} raised a new support ticket."
+        else:
+            subject = f"[Support] New reply on ticket #{ticket.id}: {ticket.subject}"
+            body = message
+            intro = f"{owner.name} replied on their support ticket."
         text = (
-            f"{owner.name} raised a new support ticket.\n\n"
+            f"{intro}\n\n"
             f"Category: {ticket.category}\n"
             f"Subject: {ticket.subject}\n\n"
-            f"{ticket.description}\n\n"
+            f"{body}\n\n"
             f"Review it in the admin panel: /admin/tickets"
         )
         for admin in admins:
@@ -85,7 +120,10 @@ def notify_player_by_email(ticket):
             f"Subject: {ticket.subject}\n"
             f"Status: {ticket.status.replace('_', ' ')}\n"
         )
-        if ticket.admin_response:
+        admin_messages = [m for m in ticket.messages if m.sender == "admin"]
+        if admin_messages:
+            text += f"\nTeam response:\n{admin_messages[-1].content}\n"
+        elif ticket.admin_response:
             text += f"\nTeam response:\n{ticket.admin_response}\n"
         text += "\nView it on the Support page: /tickets"
         sendmail(addr=ticket.user.email, text=text, subject=subject)
@@ -170,6 +208,47 @@ def create():
     return redirect(url_for("tickets.listing", _anchor="my-tickets"))
 
 
+@tickets.route("/tickets/<int:ticket_id>/reply", methods=["POST"])
+@authed_only
+@ratelimit(method="POST", limit=20, interval=60)
+def reply(ticket_id):
+    user = get_current_user()
+    ticket = SupportTickets.query.filter_by(
+        id=ticket_id, user_id=user.id
+    ).first_or_404()
+
+    if not ticket.is_active:
+        error_for(
+            "tickets.listing",
+            f"Ticket #{ticket.id} is {ticket.status.replace('_', ' ')} — "
+            "replies are disabled. Raise a new concern if you still need help.",
+        )
+        return redirect(url_for("tickets.listing", _anchor="my-tickets"))
+
+    content = request.form.get("content", "").strip()
+    if len(content) == 0:
+        error_for("tickets.listing", "Please write a message before sending")
+        return redirect(url_for("tickets.listing", _anchor="my-tickets"))
+    if len(content) > DESCRIPTION_MAX_LENGTH:
+        error_for(
+            "tickets.listing",
+            f"Please keep messages under {DESCRIPTION_MAX_LENGTH} characters",
+        )
+        return redirect(url_for("tickets.listing", _anchor="my-tickets"))
+
+    db.session.add(
+        SupportTicketMessages(ticket_id=ticket.id, sender="player", content=content)
+    )
+    ticket.admin_unread = True
+    ticket.updated = datetime.utcnow()
+    db.session.commit()
+
+    notify_admins_by_email(ticket, user, message=content)
+
+    info_for("tickets.listing", f"Your reply was added to ticket #{ticket.id}")
+    return redirect(url_for("tickets.listing", _anchor="my-tickets"))
+
+
 @tickets.route("/api/v1/tickets/unread", methods=["GET"])
 @authed_only
 def unread_count():
@@ -223,18 +302,25 @@ def admin_update(ticket_id):
     ticket = SupportTickets.query.filter_by(id=ticket_id).first_or_404()
 
     status = request.form.get("status", "").strip()
-    response = request.form.get("admin_response", "").strip()
+    message = request.form.get("admin_message", "").strip()
 
     changed = False
     if status in TICKET_STATUSES and status != ticket.status:
         ticket.status = status
         changed = True
-    if (response or None) != ticket.admin_response:
-        ticket.admin_response = response or None
+    if message:
+        if len(message) > DESCRIPTION_MAX_LENGTH:
+            message = message[:DESCRIPTION_MAX_LENGTH]
+        db.session.add(
+            SupportTicketMessages(
+                ticket_id=ticket.id, sender="admin", content=message
+            )
+        )
         changed = True
 
     if changed:
         ticket.player_unread = True
+        ticket.updated = datetime.utcnow()
     ticket.admin_unread = False
     db.session.commit()
 
