@@ -10,6 +10,12 @@ CTFd.plugin.run((_CTFd) => {
         }
     });
     $('[data-toggle="tooltip"]').tooltip();
+    function syncTerminalShellField() {
+        const enabled = $("#access_mode").val() === "terminal";
+        $("#terminal-shell-group").toggle(enabled);
+    }
+    $("#access_mode").on("change", syncTerminalShellField);
+    syncTerminalShellField();
     CTFd.fetch("/api/v1/docker", { method: "GET" })
         .then(function (response) { return response.json(); })
         .then(function (result) {

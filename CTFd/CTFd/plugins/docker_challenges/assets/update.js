@@ -1,6 +1,12 @@
 CTFd.plugin.run((_CTFd) => {
     const $ = _CTFd.lib.$
     const md = _CTFd.lib.markdown()
+    function syncTerminalShellField() {
+        const enabled = $("#access_mode").val() === "terminal";
+        $("#terminal-shell-group").toggle(enabled);
+    }
+    $("#access_mode").on("change", syncTerminalShellField);
+    syncTerminalShellField();
     CTFd.fetch("/api/v1/docker", { method: "GET" })
         .then(function (response) { return response.json(); })
         .then(function (result) {

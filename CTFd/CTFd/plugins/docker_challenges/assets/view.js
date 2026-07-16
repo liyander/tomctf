@@ -36,6 +36,59 @@ function copyFromInput(inputId, btnEl) {
     }
 }
 
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function appendTerminalOutput(outputId, text, kind) {
+    const out = document.getElementById(outputId);
+    if (!out) return;
+    const color = kind === 'cmd' ? '#8be9fd' : (kind === 'err' ? '#ff7777' : '#e8e8e8');
+    out.innerHTML += `<span style="color:${color}">${escapeHtml(text)}</span>`;
+    out.scrollTop = out.scrollHeight;
+}
+
+function run_terminal_command(trackerId, inputId, outputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const command = input.value;
+    if (!command.trim()) return;
+    input.value = '';
+    appendTerminalOutput(outputId, `$ ${command}\n`, 'cmd');
+    input.disabled = true;
+    CTFd.fetch("/api/v1/docker_terminal", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            tracker_id: trackerId,
+            command: command,
+        }),
+    })
+        .then(async function (response) {
+            const contentType = (response.headers && response.headers.get && response.headers.get("content-type")) || "";
+            const payload = contentType.includes("application/json") ? await response.json() : { success: false, message: await response.text() };
+            if (!response.ok || !payload.success) {
+                throw new Error(payload.message || "Terminal command failed");
+            }
+            appendTerminalOutput(outputId, payload.output || "\n", 'out');
+        })
+        .catch(function (error) {
+            appendTerminalOutput(outputId, `${error.message || "Terminal command failed"}\n`, 'err');
+        })
+        .finally(function () {
+            input.disabled = false;
+            input.focus();
+        });
+}
+
 function createWarningModalBody(){
     // Creates the Warning Modal placeholder, that will be updated when stuff happens.
     if (CTFd.lib.$('#warningModalBody').length === 0) {
@@ -80,6 +133,7 @@ function get_docker_status(container) {
 
                 const host = String(item.host || '').trim();
                 const firstPort = ports.length > 0 ? String(ports[0]).split('/')[0] : '';
+                const isTerminalMode = item.terminal_enabled === true || item.access_mode === 'terminal';
                 const isProxyMode = item.connection_mode === 'proxy' && item.connection_url;
                 const hostPort = isProxyMode
                     ? String(item.connection_url || '').trim()
@@ -98,6 +152,8 @@ function get_docker_status(container) {
                 const revertId = `${instancePrefix}_revert_btn`;
 
                 const inputId = `${instancePrefix}_hostport_input`;
+                const terminalInputId = `${instancePrefix}_terminal_input`;
+                const terminalOutputId = `${instancePrefix}_terminal_output`;
 
                 const openButton = isProxyMode
                     ? `<a href="${hostPort}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,230,118,0.12);color:#00e676;border:1px solid rgba(0,230,118,0.24);border-radius:8px;padding:7px 14px;margin-bottom:.6rem;text-decoration:none">
@@ -112,6 +168,28 @@ function get_docker_status(container) {
                        </div>`
                     : `<div style="color:#aaa">Host: ${host} &middot; Port: (pending)</div>`;
 
+                const terminalField = `
+                    <div style="text-align:left;margin:.8rem auto 1rem;max-width:760px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:.4rem">
+                            <span style="font-size:.78rem;color:#8be9fd;text-transform:uppercase;letter-spacing:1px">
+                                <i class="fas fa-terminal" style="margin-right:5px"></i> Isolated Terminal
+                            </span>
+                            <span style="font-size:.72rem;color:#aaa">${escapeHtml(item.terminal_shell || '/bin/sh')}</span>
+                        </div>
+                        <pre id="${terminalOutputId}" style="height:260px;overflow:auto;white-space:pre-wrap;background:#06080d;color:#e8e8e8;border:1px solid rgba(139,233,253,.2);border-radius:10px;padding:12px;font-family:Consolas,Menlo,monospace;font-size:.82rem;line-height:1.45;margin:0 0 .5rem;box-shadow:inset 0 0 24px rgba(0,0,0,.35)">Welcome to your isolated challenge terminal.
+Run commands inside your own Docker instance. Other players cannot access this terminal.
+</pre>
+                        <div class="input-group input-group-sm">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text" style="background:#0b111c;color:#8be9fd;border-color:rgba(139,233,253,.2)">$</span>
+                            </div>
+                            <input id="${terminalInputId}" type="text" class="form-control" placeholder="Type a command, e.g. id, ls, nmap -sV 127.0.0.1" autocomplete="off" spellcheck="false" style="background:#0b111c;color:#e8e8e8;border-color:rgba(139,233,253,.2);font-family:Consolas,Menlo,monospace">
+                            <div class="input-group-append">
+                                <button id="${instancePrefix}_terminal_run" type="button" class="btn btn-outline-info btn-sm">Run</button>
+                            </div>
+                        </div>
+                    </div>`;
+
                 // Container info panel — admin controls the max duration
                 const containerExpiry = parseInt(item.container_expiry || 300);
 
@@ -121,7 +199,7 @@ function get_docker_status(container) {
                             <span style="width:8px;height:8px;border-radius:50%;background:#00e676;display:inline-block;box-shadow:0 0 6px #00e676"></span>
                             <span style="font-size:.85rem;font-weight:600;color:#e0e0e0;text-transform:uppercase;letter-spacing:1px">Instance Active</span>
                         </div>
-                        <div style="margin-bottom:.8rem">${hostPortField}</div>
+                        <div style="margin-bottom:.8rem">${isTerminalMode ? terminalField : hostPortField}</div>
                         <div id="${timerId}" style="font-size:.8rem;color:#aaa;margin-bottom:.8rem"></div>
                         <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
                             <button id="${revertId}" onclick="start_container('${item.docker_image}');" class="btn btn-sm" style="background:rgba(255,255,255,0.07);color:#e0e0e0;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px 16px;font-size:.8rem;transition:all .2s">
@@ -144,6 +222,26 @@ function get_docker_status(container) {
                     });
                 }
 
+                if (isTerminalMode) {
+                    const terminalInput = document.getElementById(terminalInputId);
+                    const terminalRun = document.getElementById(`${instancePrefix}_terminal_run`);
+                    const runTerminal = function () {
+                        run_terminal_command(item.id, terminalInputId, terminalOutputId);
+                    };
+                    if (terminalRun) {
+                        terminalRun.addEventListener('click', runTerminal);
+                    }
+                    if (terminalInput) {
+                        terminalInput.addEventListener('keydown', function (event) {
+                            if (event.key === 'Enter') {
+                                event.preventDefault();
+                                runTerminal();
+                            }
+                        });
+                        terminalInput.focus();
+                    }
+                }
+
                 const timerEl = document.getElementById(timerId);
                 const extendEl = document.getElementById(`${instancePrefix}_extend_btn`);
 
@@ -156,7 +254,9 @@ function get_docker_status(container) {
                 // Update the DOM with connection info information (if present).
                 // Some themes/challenge templates may not render `.challenge-connection-info`.
                 var $link = CTFd.lib.$('.challenge-connection-info');
-                if (isProxyMode && $link.length > 0) {
+                if (isTerminalMode && $link.length > 0) {
+                    $link.html(`<span><i class="fas fa-terminal"></i> Use the isolated terminal below for this challenge.</span>`);
+                } else if (isProxyMode && $link.length > 0) {
                     $link.html(`<a href="${hostPort}" target="_blank" rel="noopener noreferrer">${hostPort}</a>`);
                 } else if ($link.length > 0) {
                     const currentHtml = $link.html();
