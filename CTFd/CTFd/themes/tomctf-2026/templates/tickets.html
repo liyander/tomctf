@@ -95,6 +95,16 @@
     width: 14px;
     text-align: center;
   }
+  .tickets-card .form-label .label-help {
+    color: rgba(212,197,176,0.35);
+    font-size: 0.72rem;
+    width: auto;
+    cursor: help;
+    transition: color 0.2s ease;
+  }
+  .tickets-card .form-label .label-help:hover {
+    color: #ff6b6b;
+  }
   .tickets-card .form-control,
   .tickets-card .form-select {
     background: rgba(5,3,3,0.8);
@@ -208,11 +218,6 @@
     background: rgba(52,199,89,0.12);
     border: 1px solid rgba(52,199,89,0.4);
     color: #34c759;
-  }
-  .ticket-badge.status-closed {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.2);
-    color: rgba(255,255,255,0.5);
   }
   .ticket-response {
     background: rgba(5,3,3,0.6);
@@ -355,11 +360,13 @@
     <div class="text-center mb-4">
       <div class="tickets-tabs nav nav-pills" role="tablist">
         <button class="nav-link active" id="raise-concern-tab" data-bs-toggle="pill"
-            data-bs-target="#raise-concern" role="tab">
+            data-bs-target="#raise-concern" role="tab"
+            title="Submit a new concern to the organizing team — technical issues, challenge queries and more">
           <i class="fas fa-bullhorn me-2"></i>Raise a Concern
         </button>
         <button class="nav-link" id="my-tickets-tab" data-bs-toggle="pill"
-            data-bs-target="#my-tickets" role="tab">
+            data-bs-target="#my-tickets" role="tab"
+            title="View your submitted tickets, their status and the team's replies">
           <i class="fas fa-ticket-alt me-2"></i>My Tickets
           <span class="ticket-badge category ms-1">{{ tickets | length }}</span>
         </button>
@@ -376,8 +383,11 @@
                 <input type="hidden" name="nonce" value="{{ Session.nonce }}">
 
                 <div class="mb-3">
-                  <label class="form-label" for="ticket-category">
+                  <label class="form-label" for="ticket-category"
+                      title="Tells the team which area your concern is about so it reaches the right person faster">
                     <i class="fas fa-tag"></i>Category
+                    <i class="fas fa-question-circle label-help"
+                        title="Tells the team which area your concern is about so it reaches the right person faster"></i>
                   </label>
                   <select class="form-select" id="ticket-category" name="category" required>
                     {% for category in categories %}
@@ -388,20 +398,26 @@
                 </div>
 
                 <div class="mb-3">
-                  <label class="form-label" for="ticket-subject">
+                  <label class="form-label" for="ticket-subject"
+                      title="A short one-line summary of your issue — shown as the title of your ticket">
                     <i class="fas fa-heading"></i>Subject
+                    <i class="fas fa-question-circle label-help"
+                        title="A short one-line summary of your issue — shown as the title of your ticket"></i>
                   </label>
                   <input type="text" class="form-control" id="ticket-subject" name="subject"
-                      maxlength="256" placeholder="Short summary of the issue" required>
+                      maxlength="256" placeholder="e.g. Unable to submit flag for the Upside Down challenge" required>
                 </div>
 
                 <div class="mb-4">
-                  <label class="form-label" for="ticket-description">
+                  <label class="form-label" for="ticket-description"
+                      title="Explain your issue in detail — what you did, what happened, which challenge or page it concerns, and any error messages">
                     <i class="fas fa-align-left"></i>Description
+                    <i class="fas fa-question-circle label-help"
+                        title="Explain your issue in detail — what you did, what happened, which challenge or page it concerns, and any error messages"></i>
                   </label>
                   <textarea class="form-control" id="ticket-description" name="description"
                       rows="6" maxlength="5000" required
-                      placeholder="Describe the issue in detail — what happened, which challenge or page it concerns, and any error messages you saw."></textarea>
+                      placeholder="e.g. When I submit the flag on the Upside Down challenge it says 'incorrect' even though it matches the expected format. I tried from Chrome and Firefox around 7:30 PM."></textarea>
                   <div class="form-text">Max 5000 characters. The more detail, the faster we can help.</div>
                 </div>
 

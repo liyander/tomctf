@@ -21,7 +21,7 @@ TICKET_CATEGORIES = [
     "Other",
 ]
 
-TICKET_STATUSES = ["open", "in_progress", "resolved", "closed"]
+TICKET_STATUSES = ["open", "in_progress", "resolved"]
 
 # Statuses in which the conversation on a ticket is still active
 ACTIVE_STATUSES = ("open", "in_progress")
@@ -355,6 +355,12 @@ def ensure_schema(app):
     for column, statement in statements.items():
         if column not in existing:
             db.session.execute(db.text(statement))
+    # "closed" was folded into "resolved"; migrate any old tickets
+    db.session.execute(
+        db.text(
+            "UPDATE support_tickets SET status = 'resolved' WHERE status = 'closed'"
+        )
+    )
     db.session.commit()
 
 

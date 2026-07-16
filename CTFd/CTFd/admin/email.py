@@ -28,10 +28,19 @@ _bulk_email_status = {
     "total": 0,
     "sent": 0,
     "failed": 0,
+    "retries": 0,
     "last_error": None,
     "started": None,
     "finished": None,
 }
+
+# Transient SMTP errors (connection resets, throttling) are retried with
+# these backoff delays before a recipient is counted as failed.
+SEND_MAX_ATTEMPTS = 4
+SEND_BACKOFF_SECONDS = (2, 8, 20)
+# Small gap between consecutive emails so the SMTP provider doesn't
+# rate-limit / reset connections mid-run.
+SEND_SPACING_SECONDS = 0.5
 
 DEFAULT_TEXT_FALLBACK = "Please view this email in an HTML-capable email client."
 
@@ -89,6 +98,29 @@ def _status_snapshot():
         return dict(_bulk_email_status)
 
 
+def _sendmail_with_retry(**kwargs):
+    """Send one email, retrying transient failures with backoff.
+
+    Returns (result, response). Waits on the cancel event instead of
+    sleeping so a requested stop stays responsive during backoff.
+    """
+    result, response = False, "not attempted"
+    for attempt in range(SEND_MAX_ATTEMPTS):
+        try:
+            result, response = sendmail(**kwargs)
+        except Exception as e:  # provider bugs shouldn't kill the whole run
+            result, response = False, str(e)
+        if result:
+            return True, response
+        if attempt < SEND_MAX_ATTEMPTS - 1:
+            with _bulk_email_lock:
+                _bulk_email_status["retries"] += 1
+            # Cancel requested while backing off -> give up on this one
+            if _bulk_email_cancel.wait(SEND_BACKOFF_SECONDS[attempt]):
+                break
+    return False, response
+
+
 def _send_bulk_email(
     app,
     recipients,
@@ -123,14 +155,14 @@ def _send_bulk_email(
                     extra=extra,
                 )
                 text = message or DEFAULT_TEXT_FALLBACK
-                result, response = sendmail(
+                result, response = _sendmail_with_retry(
                     addr=recipient["email"],
                     text=text,
                     subject=subject,
                     html=body_html,
                 )
             else:
-                result, response = sendmail(
+                result, response = _sendmail_with_retry(
                     addr=recipient["email"], text=message, subject=subject
                 )
 
@@ -140,6 +172,12 @@ def _send_bulk_email(
                 else:
                     _bulk_email_status["failed"] += 1
                     _bulk_email_status["last_error"] = str(response)
+
+            # Pace the run so the provider doesn't reset our connections
+            if _bulk_email_cancel.wait(SEND_SPACING_SECONDS):
+                with _bulk_email_lock:
+                    _bulk_email_status["cancelled"] = True
+                break
 
         with _bulk_email_lock:
             _bulk_email_status["running"] = False
@@ -258,6 +296,7 @@ def email():
                     "total": len(recipient_list),
                     "sent": 0,
                     "failed": 0,
+                    "retries": 0,
                     "last_error": None,
                     "started": datetime.datetime.utcnow().isoformat(),
                     "finished": None,
