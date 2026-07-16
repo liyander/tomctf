@@ -516,6 +516,18 @@
     .form-select {
       color-scheme: dark;
     }
+    /* Chevron icon: page-level styles set `background:` shorthand on
+       selects, which wipes Bootstrap's arrow image — force it back. */
+    select.form-select,
+    .form-select {
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ec1313' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+      background-repeat: no-repeat !important;
+      background-position: right 0.85rem center !important;
+      background-size: 14px 11px !important;
+      padding-right: 2.4rem !important;
+    }
     select option,
     select optgroup {
       background-color: #1a0a0a;
