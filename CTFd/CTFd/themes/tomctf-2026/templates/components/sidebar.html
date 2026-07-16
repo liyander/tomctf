@@ -657,7 +657,9 @@
 
     if (runningLabMount) {
       loadRunningLab();
-      window.setInterval(loadRunningLab, 15000);
+      // Event-driven refresh below handles start/stop instantly; the
+      // interval is only a fallback, so keep it slow to reduce server load.
+      window.setInterval(loadRunningLab, 60000);
       window.addEventListener("tom:container-state-changed", () => {
         loadRunningLab();
       });
@@ -686,7 +688,7 @@
     };
     if (ticketsBadge && window.init && window.init.userId) {
       loadTicketsBadge();
-      window.setInterval(loadTicketsBadge, 60000);
+      window.setInterval(loadTicketsBadge, 180000);
     }
   })();
 </script>

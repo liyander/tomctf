@@ -542,7 +542,7 @@
       to { opacity: 1; }
     }
     .tom-main-content {
-      animation: tomPageIn 0.35s ease-out backwards;
+      animation: tomPageIn 0.15s ease-out backwards;
     }
 
     /* --- Buttons: consistent press feedback --- */
@@ -676,7 +676,7 @@ window.triggerFlagCaptured=function(){
 if(window.location.pathname==='/outro' || window.location.pathname.startsWith('/admin')){return;}
 // Don't redirect if user is an admin (userId of admins can be checked, but
 // the simplest check: if we're on an admin page or init says admin)
-var POLL_INTERVAL=30000; // 30 seconds
+var POLL_INTERVAL=60000; // 60 seconds — keep server load low with many players
 var _stopped=false;
 
 function checkOutroRedirect(){

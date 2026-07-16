@@ -637,6 +637,109 @@ def do_request(docker, url, headers=None, method='GET'):
     return r
 
 
+def docker_api_url(docker):
+    if not docker:
+        return None
+    tls = docker.tls_enabled
+    prefix = 'https' if tls else 'http'
+    return '%s://%s' % (prefix, docker.hostname)
+
+
+def do_post(docker, url, data=None, headers=None, timeout=20):
+    if not docker:
+        return None
+    headers = headers or {'Content-Type': "application/json"}
+    base_url = docker_api_url(docker)
+    if not base_url:
+        return None
+    try:
+        if docker.tls_enabled:
+            cert, verify = get_client_cert(docker)
+            if not cert or not verify:
+                return None
+            r = requests.post(
+                url=f"{base_url}{url}",
+                cert=cert,
+                verify=verify,
+                data=data,
+                headers=headers,
+                timeout=timeout,
+            )
+            for file_path in [*cert, verify]:
+                if file_path:
+                    Path(file_path).unlink(missing_ok=True)
+            return r
+        return requests.post(url=f"{base_url}{url}", data=data, headers=headers, timeout=timeout)
+    except Exception:
+        return None
+
+
+def decode_docker_exec_output(content):
+    """Decode Docker exec output. Non-TTY output is multiplexed with 8-byte stream headers."""
+    if not content:
+        return ""
+    output = bytearray()
+    i = 0
+    while i + 8 <= len(content):
+        stream_type = content[i]
+        if stream_type not in (0, 1, 2):
+            try:
+                return content.decode("utf-8", errors="replace")
+            except Exception:
+                return str(content)
+        size = int.from_bytes(content[i + 4:i + 8], byteorder="big")
+        i += 8
+        output.extend(content[i:i + size])
+        i += size
+    if i < len(content):
+        output.extend(content[i:])
+    return output.decode("utf-8", errors="replace")
+
+
+def docker_exec_command(docker, instance_id, command, shell="/bin/sh", timeout=20):
+    command = (command or "").strip()
+    shell = (shell or "/bin/sh").strip()
+    if not command:
+        return ""
+    if len(command) > 4000:
+        return "Command is too long.\n"
+
+    create_payload = json.dumps({
+        "AttachStdout": True,
+        "AttachStderr": True,
+        "Tty": False,
+        "Cmd": [shell, "-lc", command],
+    })
+    r = do_post(
+        docker,
+        f"/containers/{instance_id}/exec",
+        data=create_payload,
+        headers={'Content-Type': "application/json"},
+        timeout=10,
+    )
+    if r is None:
+        return "Could not reach Docker API.\n"
+    try:
+        payload = r.json()
+    except Exception:
+        return "Docker did not return a valid exec response.\n"
+    exec_id = payload.get("Id")
+    if not exec_id:
+        return payload.get("message", "Could not create terminal exec session.") + "\n"
+
+    start_payload = json.dumps({"Detach": False, "Tty": False})
+    r = do_post(
+        docker,
+        f"/exec/{exec_id}/start",
+        data=start_payload,
+        headers={'Content-Type': "application/json"},
+        timeout=timeout,
+    )
+    if r is None:
+        return "Command timed out or Docker API was not reachable.\n"
+    return decode_docker_exec_output(r.content)
+
+
 def get_client_cert(docker):
     # this can be done more efficiently, but works for now.
     ca_file = None
@@ -886,6 +989,8 @@ class DockerChallengeType(BaseChallenge):
             'value': challenge.value,
             'docker_image': challenge.docker_image,
             'container_expiry': challenge.container_expiry or 1200,
+            'access_mode': challenge.access_mode or 'web_proxy',
+            'terminal_shell': challenge.terminal_shell or '/bin/sh',
             'description': challenge.description,
             'category': challenge.category,
             'state': challenge.state,
@@ -1001,6 +1106,8 @@ class DockerChallenge(Challenges):
     id = db.Column(None, db.ForeignKey('challenges.id'), primary_key=True)
     docker_image = db.Column(db.String(128), index=True)
     container_expiry = db.Column(db.Integer, default=1200)
+    access_mode = db.Column(db.String(32), default='web_proxy')
+    terminal_shell = db.Column(db.String(128), default='/bin/sh')
 
 
 # API
@@ -1218,6 +1325,8 @@ class DockerStatus(Resource):
             chal_obj = DockerChallenge.query.filter_by(docker_image=i.docker_image).first()
             chal_expiry = (chal_obj.container_expiry if chal_obj and chal_obj.container_expiry else None) \
                           or (docker.container_expiry if docker and docker.container_expiry else 1200)
+            access_mode = (chal_obj.access_mode if chal_obj and chal_obj.access_mode else 'web_proxy')
+            expose_proxy_url = use_proxy and access_mode == 'web_proxy'
             data.append({
                 'id': i.id,
                 'team_id': i.team_id,
@@ -1228,14 +1337,68 @@ class DockerStatus(Resource):
                 'instance_id': i.instance_id,
                 'ports': ports_list,
                 'host': docker_host,
-                'connection_mode': 'proxy' if use_proxy else 'direct',
-                'connection_url': build_proxy_url(i.id, ports_list[0]) if use_proxy and ports_list else '',
+                'access_mode': access_mode,
+                'terminal_enabled': access_mode == 'terminal',
+                'terminal_shell': chal_obj.terminal_shell if chal_obj and chal_obj.terminal_shell else '/bin/sh',
+                'connection_mode': 'proxy' if expose_proxy_url else 'direct',
+                'connection_url': build_proxy_url(i.id, ports_list[0]) if expose_proxy_url and ports_list else '',
                 'container_expiry': chal_expiry
             })
         return {
             'success': True,
             'data': data
         }
+
+
+terminal_namespace = Namespace("docker_terminal", description='Endpoint to run terminal commands inside owned challenge containers')
+
+
+def owns_tracker_entry(tracker_entry):
+    if not authed() or tracker_entry is None:
+        return False
+    if is_teams_mode():
+        team = get_current_team()
+        return team is not None and str(tracker_entry.team_id) == str(team.id)
+    user = get_current_user()
+    return user is not None and str(tracker_entry.user_id) == str(user.id)
+
+
+@terminal_namespace.route("", methods=['POST'])
+class DockerTerminalAPI(Resource):
+    @authed_only
+    def post(self):
+        data = request.get_json(silent=True) or request.form or {}
+        tracker_id = data.get("tracker_id")
+        command = data.get("command", "")
+        if not tracker_id:
+            return {"success": False, "message": "Missing terminal instance id"}, 400
+
+        tracker_entry = DockerChallengeTracker.query.filter_by(id=tracker_id).first()
+        if not owns_tracker_entry(tracker_entry):
+            return {"success": False, "message": "Terminal not found or not owned by this account"}, 403
+
+        chal_obj = DockerChallenge.query.filter_by(docker_image=tracker_entry.docker_image).first()
+        if not chal_obj or (chal_obj.access_mode or "web_proxy") != "terminal":
+            return {"success": False, "message": "This challenge is not configured for terminal access"}, 403
+
+        docker = DockerConfig.query.filter_by(id=1).first()
+        if not docker or not docker.hostname:
+            return {"success": False, "message": "Docker is not configured"}, 403
+
+        now = unix_time(datetime.utcnow())
+        if tracker_entry.revert_time and int(tracker_entry.revert_time) <= now:
+            delete_container(docker, tracker_entry.instance_id, ports_str=tracker_entry.ports)
+            DockerChallengeTracker.query.filter_by(instance_id=tracker_entry.instance_id).delete()
+            db.session.commit()
+            return {"success": False, "message": "This terminal instance has expired"}, 410
+
+        output = docker_exec_command(
+            docker,
+            tracker_entry.instance_id,
+            command,
+            shell=chal_obj.terminal_shell or "/bin/sh",
+        )
+        return {"success": True, "output": output}
 
 
 docker_namespace = Namespace("docker", description='Endpoint to retrieve dockerstuff')
@@ -1311,6 +1474,10 @@ def load(app):
             cols = [c['name'] for c in insp.get_columns('docker_challenge')]
             if 'container_expiry' not in cols:
                 migrations.append('ALTER TABLE docker_challenge ADD COLUMN container_expiry INTEGER DEFAULT 1200')
+            if 'access_mode' not in cols:
+                migrations.append("ALTER TABLE docker_challenge ADD COLUMN access_mode VARCHAR(32) DEFAULT 'web_proxy'")
+            if 'terminal_shell' not in cols:
+                migrations.append("ALTER TABLE docker_challenge ADD COLUMN terminal_shell VARCHAR(128) DEFAULT '/bin/sh'")
         if migrations:
             with app.db.engine.connect() as conn:
                 for sql in migrations:
@@ -1334,4 +1501,5 @@ def load(app):
     CTFd_API_v1.add_namespace(docker_namespace, '/docker')
     CTFd_API_v1.add_namespace(container_namespace, '/container')
     CTFd_API_v1.add_namespace(active_docker_namespace, '/docker_status')
+    CTFd_API_v1.add_namespace(terminal_namespace, '/docker_terminal')
     CTFd_API_v1.add_namespace(kill_container, '/nuke')
