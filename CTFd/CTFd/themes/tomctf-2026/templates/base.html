@@ -511,6 +511,22 @@
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
     }
 
+    /* --- Native select dropdown lists: readable on the dark theme --- */
+    select,
+    .form-select {
+      color-scheme: dark;
+    }
+    select option,
+    select optgroup {
+      background-color: #1a0a0a;
+      color: #d4c5b0;
+    }
+    select option:checked,
+    select option:hover {
+      background-color: #8b0000;
+      color: #fff;
+    }
+
     /* --- Form checks / switches --- */
     .form-check-input:checked {
       background-color: #ec1313;
