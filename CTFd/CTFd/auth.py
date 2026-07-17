@@ -21,7 +21,16 @@ from CTFd.utils.config.visibility import registration_visible
 from CTFd.utils.crypto import verify_password
 from CTFd.utils.decorators import ratelimit
 from CTFd.utils.decorators.visibility import check_registration_visibility
-from CTFd.utils.helpers import error_for, get_errors, markup
+from CTFd.utils.helpers import error_for, get_errors, info_for, markup
+
+# Shown once as an announcement banner right after a player joins
+WELCOME_SUPPORT_INFO = (
+    "Welcome aboard! Need help at any point? Open “Raise a Concern” "
+    "under Community in the left sidebar to reach the team about technical "
+    "issues, challenge queries and anything else — pick a category, add a "
+    "subject and description, then track our replies in the My Tickets tab "
+    "on that page."
+)
 from CTFd.utils.logging import log
 from CTFd.utils.modes import TEAMS_MODE
 from CTFd.utils.security.auth import generate_preset_admin, login_user, logout_user
@@ -90,6 +99,7 @@ def confirm(data=None):
             email.successful_registration_notification(user.email)
         db.session.close()
         if current_user.authed():
+            info_for("challenges.listing", WELCOME_SUPPORT_INFO)
             return redirect(url_for("challenges.listing"))
         return redirect(url_for("auth.login"))
 
@@ -475,8 +485,10 @@ def register():
         db.session.close()
 
         if is_teams_mode():
+            info_for("teams.private", WELCOME_SUPPORT_INFO)
             return redirect(url_for("teams.private"))
 
+        info_for("challenges.listing", WELCOME_SUPPORT_INFO)
         return redirect(url_for("challenges.listing"))
     else:
         return render_template("register.html", errors=errors)
