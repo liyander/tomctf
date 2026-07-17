@@ -48,13 +48,13 @@
 
             {% with form = Forms.auth.LoginForm() %}
               <form method="post" accept-charset="utf-8" autocomplete="on">
-                <!-- Username/Email -->
+                <!-- Register Number/Email -->
                 <div class="auth-field mb-4">
                   <label class="auth-label">
                     <i class="fas fa-user"></i>
-                    {{ form.name.label.text }}
+                    {% trans %}Register Number or Email{% endtrans %}
                   </label>
-                  {{ form.name(class="auth-input", value=name, autocomplete="username email", placeholder="Enter your username or email") }}
+                  {{ form.name(class="auth-input", value=name, autocomplete="username email", placeholder="Enter your 7140 register number or email") }}
                   <div class="input-glow"></div>
                 </div>
 

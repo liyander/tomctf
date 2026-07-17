@@ -266,9 +266,11 @@ def register():
         )
 
     if request.method == "POST":
-        name = request.form.get("name", "").strip()
         email_address = request.form.get("email", "").strip().lower()
         register_number = request.form.get("register_number", "").strip()
+        # A player's institutional register number is also their username.
+        # Derive this server-side so a modified form cannot submit a different name.
+        name = register_number
         password = request.form.get("password", "").strip()
 
         website = request.form.get("website")
@@ -277,7 +279,6 @@ def register():
         registration_code = str(request.form.get("registration_code", ""))
         bracket_id = request.form.get("bracket_id", None)
 
-        name_len = len(name) == 0
         names = (
             Users.query.add_columns(Users.name, Users.id).filter_by(name=name).first()
         )
@@ -298,8 +299,6 @@ def register():
         pass_short = len(password) == 0
         pass_long = len(password) > 128
         valid_email = validators.validate_email(email_address)
-        team_name_email_check = validators.validate_email(name)
-
         password_min_length = int(get_config("password_min_length", default=0))
         pass_min = len(password) < password_min_length
 
@@ -364,10 +363,6 @@ def register():
             errors.append(_l("Your email address is not from an allowed domain"))
         if email.check_email_is_blacklisted(email_address) is True:
             errors.append(_l("Your email address is not from an allowed domain"))
-        if names:
-            errors.append(_l("That user name is already taken"))
-        if team_name_email_check is True:
-            errors.append(_l("Your user name cannot be an email address"))
         if emails:
             errors.append(_l("That email has already been used"))
         if re.fullmatch(r"7140[0-9]{8}", register_number) is None:
@@ -376,7 +371,7 @@ def register():
                     "Register number must be 12 digits starting with 7140 (e.g. 714023149048)"
                 )
             )
-        elif register_numbers:
+        elif names or register_numbers:
             errors.append(_l("That register number has already been used"))
         if pass_short:
             errors.append(_l("Pick a longer password"))
@@ -386,8 +381,6 @@ def register():
             )
         if pass_long:
             errors.append(_l("Pick a shorter password"))
-        if name_len:
-            errors.append(_l("Pick a longer user name"))
         if valid_website is False:
             errors.append(
                 _l("Websites must be a proper URL starting with http or https")
@@ -403,7 +396,6 @@ def register():
             return render_template(
                 "register.html",
                 errors=errors,
-                name=request.form["name"],
                 email=request.form["email"],
                 register_number=register_number,
                 password=request.form["password"],

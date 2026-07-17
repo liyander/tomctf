@@ -525,20 +525,13 @@
           </div>
           <div class="modal-body">
             <div class="mb-3">
-              <label class="form-label" for="edit-profile-name">
-                <i class="fas fa-user"></i>{% trans %}User Name{% endtrans %}
-              </label>
-              <input type="text" class="form-control" id="edit-profile-name" name="name"
-                  value="{{ user.name }}" maxlength="128" placeholder="Your display name" required>
-            </div>
-            <div class="mb-3">
               <label class="form-label" for="edit-profile-register-number">
-                <i class="fas fa-id-card"></i>Register Number
+                <i class="fas fa-id-card"></i>Register Number / Username
               </label>
               <input type="text" class="form-control" id="edit-profile-register-number" name="register_number"
                   value="{{ register_number or '7140' }}" pattern="7140[0-9]{8}" maxlength="12" inputmode="numeric"
                   title="12 digits starting with 7140, e.g. 714023149048" placeholder="7140________" required>
-              <div class="form-text">Starts with 7140, then your remaining 8 digits — e.g. 714023149048.</div>
+              <div class="form-text">This is also your username. It must contain 12 digits starting with 7140.</div>
             </div>
             <div class="mb-1">
               <label class="form-label" for="edit-profile-email">

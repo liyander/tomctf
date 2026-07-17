@@ -90,9 +90,10 @@ def private():
 def profile_update():
     user = get_current_user()
 
-    name = request.form.get("name", "").strip()
     email_address = request.form.get("email", "").strip().lower()
     register_number = request.form.get("register_number", "").strip()
+    # Keep the public username and institutional register number identical.
+    name = register_number
     confirm = request.form.get("confirm", "").strip()
 
     errors = []
@@ -103,18 +104,6 @@ def profile_update():
         or verify_password(plaintext=confirm, ciphertext=user.password) is False
     ):
         errors.append("Your current password is incorrect")
-
-    if len(name) == 0:
-        errors.append("Pick a longer user name")
-    elif len(name) > 128:
-        errors.append("Pick a shorter user name")
-    elif validators.validate_email(name) is True:
-        errors.append("Your user name cannot be an email address")
-    elif name != user.name:
-        if bool(get_config("name_changes", default=True)) is False:
-            errors.append("Name changes are disabled")
-        elif Users.query.filter(Users.name == name, Users.id != user.id).first():
-            errors.append("That user name is already taken")
 
     if validators.validate_email(email_address) is False or len(email_address) > 128:
         errors.append("Please enter a valid email address")
@@ -134,12 +123,20 @@ def profile_update():
         errors.append(
             "Register number must be 12 digits starting with 7140 (e.g. 714023149048)"
         )
-    elif register_number_field and UserFieldEntries.query.filter(
-        UserFieldEntries.field_id == register_number_field.id,
-        UserFieldEntries.value == register_number,
-        UserFieldEntries.user_id != user.id,
-    ).first():
-        errors.append("That register number has already been used")
+    else:
+        name_in_use = Users.query.filter(
+            Users.name == register_number, Users.id != user.id
+        ).first()
+        register_number_in_use = (
+            register_number_field
+            and UserFieldEntries.query.filter(
+                UserFieldEntries.field_id == register_number_field.id,
+                UserFieldEntries.value == register_number,
+                UserFieldEntries.user_id != user.id,
+            ).first()
+        )
+        if name_in_use or register_number_in_use:
+            errors.append("That register number has already been used")
 
     if errors:
         for error in errors:

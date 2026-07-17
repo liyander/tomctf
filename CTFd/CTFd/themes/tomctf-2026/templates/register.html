@@ -38,7 +38,8 @@
             <p>
               The CTF will be conducted in two phases. Only the first 100 registrations
               will be considered for Phase 1. Remaining registrations will be placed in
-              Phase 2, so complete your registration as soon as possible.
+              Phase 2, so complete your registration as soon as possible. Your 12-digit
+              register number, starting with 7140, will be your username for logging in.
             </p>
           </div>
         </div>
@@ -64,17 +65,6 @@
               {% from "macros/forms.html" import render_extra_fields %}
 
               <form method="post" accept-charset="utf-8" autocomplete="on">
-                <!-- Username -->
-                <div class="auth-field mb-4">
-                  <label class="auth-label">
-                    <i class="fas fa-user"></i>
-                    {{ form.name.label.text }}
-                  </label>
-                  {{ form.name(class="auth-input", value=name, autocomplete="username", placeholder="Choose your username") }}
-                  <div class="input-glow"></div>
-                  <small class="auth-hint">{% trans %}Your username on the site{% endtrans %}</small>
-                </div>
-
                 <!-- Email -->
                 <div class="auth-field mb-4">
                   <label class="auth-label">
@@ -94,7 +84,7 @@
                   </label>
                   {{ form.register_number(class="auth-input", value=register_number or "7140", placeholder="7140________", aria_describedby="register-number-hint") }}
                   <div class="input-glow"></div>
-                  <small class="auth-hint" id="register-number-hint">{% trans %}Starts with 7140, then your remaining 8 digits — e.g. 714023149048{% endtrans %}</small>
+                  <small class="auth-hint" id="register-number-hint">{% trans %}This will be your username. Enter 12 digits starting with 7140 — e.g. 714023149048{% endtrans %}</small>
                   <script>
                     (function () {
                       var input = document.getElementById("{{ form.register_number.id }}");
