@@ -99,6 +99,10 @@ def confirm(data=None):
             email.successful_registration_notification(user.email)
         db.session.close()
         if current_user.authed():
+            if is_teams_mode():
+                info_for("teams.private", WELCOME_SUPPORT_INFO)
+                return redirect(url_for("teams.private"))
+
             info_for("challenges.listing", WELCOME_SUPPORT_INFO)
             return redirect(url_for("challenges.listing"))
         return redirect(url_for("auth.login"))

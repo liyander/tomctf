@@ -342,7 +342,9 @@ def private():
 
     user = get_current_user()
     if not user.team_id:
-        return render_template("teams/team_enrollment.html")
+        return render_template(
+            "teams/team_enrollment.html", infos=infos, errors=errors
+        )
 
     team_id = user.team_id
 
