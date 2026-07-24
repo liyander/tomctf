@@ -89,6 +89,19 @@ function run_terminal_command(trackerId, inputId, outputId) {
         });
 }
 
+function toggle_terminal_minimized(panelId, btnId) {
+    const panel = document.getElementById(panelId);
+    const btn = document.getElementById(btnId);
+    if (!panel) return;
+    const minimized = panel.style.display === 'none';
+    panel.style.display = minimized ? '' : 'none';
+    if (btn) {
+        btn.innerHTML = minimized
+            ? '<i class="fas fa-window-minimize"></i> Minimize'
+            : '<i class="fas fa-expand-alt"></i> Expand';
+    }
+}
+
 function createWarningModalBody(){
     // Creates the Warning Modal placeholder, that will be updated when stuff happens.
     if (CTFd.lib.$('#warningModalBody').length === 0) {
@@ -154,6 +167,8 @@ function get_docker_status(container) {
                 const inputId = `${instancePrefix}_hostport_input`;
                 const terminalInputId = `${instancePrefix}_terminal_input`;
                 const terminalOutputId = `${instancePrefix}_terminal_output`;
+                const terminalPanelId = `${instancePrefix}_terminal_panel`;
+                const terminalToggleId = `${instancePrefix}_terminal_toggle`;
 
                 const openButton = isProxyMode
                     ? `<a href="${hostPort}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,230,118,0.12);color:#00e676;border:1px solid rgba(0,230,118,0.24);border-radius:8px;padding:7px 14px;margin-bottom:.6rem;text-decoration:none">
@@ -174,8 +189,17 @@ function get_docker_status(container) {
                             <span style="font-size:.78rem;color:#8be9fd;text-transform:uppercase;letter-spacing:1px">
                                 <i class="fas fa-terminal" style="margin-right:5px"></i> Isolated Terminal
                             </span>
-                            <span style="font-size:.72rem;color:#aaa">${escapeHtml(item.terminal_shell || '/bin/sh')}</span>
+                            <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+                                <span style="font-size:.72rem;color:#aaa">${escapeHtml(item.terminal_shell || '/bin/sh')}</span>
+                                <a href="${escapeHtml(item.terminal_url || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-info" style="padding:3px 8px;font-size:.72rem;border-color:rgba(139,233,253,.35);color:#8be9fd">
+                                    <i class="fas fa-external-link-alt"></i> Open window
+                                </a>
+                                <button id="${terminalToggleId}" type="button" class="btn btn-sm btn-outline-light" style="padding:3px 8px;font-size:.72rem;border-color:rgba(255,255,255,.18);color:#ddd">
+                                    <i class="fas fa-window-minimize"></i> Minimize
+                                </button>
+                            </span>
                         </div>
+                        <div id="${terminalPanelId}">
                         <pre id="${terminalOutputId}" style="height:260px;overflow:auto;white-space:pre-wrap;background:#06080d;color:#e8e8e8;border:1px solid rgba(139,233,253,.2);border-radius:10px;padding:12px;font-family:Consolas,Menlo,monospace;font-size:.82rem;line-height:1.45;margin:0 0 .5rem;box-shadow:inset 0 0 24px rgba(0,0,0,.35)">Welcome to your isolated challenge terminal.
 Run commands inside your own Docker instance. Other players cannot access this terminal.
 </pre>
@@ -188,13 +212,14 @@ Run commands inside your own Docker instance. Other players cannot access this t
                                 <button id="${instancePrefix}_terminal_run" type="button" class="btn btn-outline-info btn-sm">Run</button>
                             </div>
                         </div>
+                        </div>
                     </div>`;
 
                 // Container info panel — admin controls the max duration
                 const containerExpiry = parseInt(item.container_expiry || 300);
 
                 CTFd.lib.$('#docker_container').html(
-                    `<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.2rem 1rem;max-width:420px;margin:0 auto">
+                    `<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.2rem 1rem;max-width:${isTerminalMode ? '820px' : '420px'};margin:0 auto">
                         <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:.8rem">
                             <span style="width:8px;height:8px;border-radius:50%;background:#00e676;display:inline-block;box-shadow:0 0 6px #00e676"></span>
                             <span style="font-size:.85rem;font-weight:600;color:#e0e0e0;text-transform:uppercase;letter-spacing:1px">Instance Active</span>
@@ -225,9 +250,15 @@ Run commands inside your own Docker instance. Other players cannot access this t
                 if (isTerminalMode) {
                     const terminalInput = document.getElementById(terminalInputId);
                     const terminalRun = document.getElementById(`${instancePrefix}_terminal_run`);
+                    const terminalToggle = document.getElementById(terminalToggleId);
                     const runTerminal = function () {
                         run_terminal_command(item.id, terminalInputId, terminalOutputId);
                     };
+                    if (terminalToggle) {
+                        terminalToggle.addEventListener('click', function () {
+                            toggle_terminal_minimized(terminalPanelId, terminalToggleId);
+                        });
+                    }
                     if (terminalRun) {
                         terminalRun.addEventListener('click', runTerminal);
                     }

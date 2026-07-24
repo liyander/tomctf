@@ -1366,6 +1366,7 @@ class DockerStatus(Resource):
                 'access_mode': access_mode,
                 'terminal_enabled': access_mode == 'terminal',
                 'terminal_shell': chal_obj.terminal_shell if chal_obj and chal_obj.terminal_shell else '/bin/sh',
+                'terminal_url': url_for('docker_terminal_page.view_terminal', tracker_id=i.id) if access_mode == 'terminal' else '',
                 'connection_mode': 'proxy' if expose_proxy_url else 'direct',
                 'connection_url': build_proxy_url(i.id, ports_list[0]) if expose_proxy_url and ports_list else '',
                 'container_expiry': chal_expiry
@@ -1387,6 +1388,49 @@ def owns_tracker_entry(tracker_entry):
         return team is not None and str(tracker_entry.team_id) == str(team.id)
     user = get_current_user()
     return user is not None and str(tracker_entry.user_id) == str(user.id)
+
+
+def get_owned_terminal_context(tracker_id):
+    tracker_entry = DockerChallengeTracker.query.filter_by(id=tracker_id).first()
+    if not owns_tracker_entry(tracker_entry):
+        return None, None, ("Terminal not found or not owned by this account", 403)
+
+    chal_obj = DockerChallenge.query.filter_by(docker_image=tracker_entry.docker_image).first()
+    if not chal_obj or (chal_obj.access_mode or "web_proxy") != "terminal":
+        return None, None, ("This challenge is not configured for terminal access", 403)
+
+    return tracker_entry, chal_obj, None
+
+
+def define_docker_terminal_page(app):
+    docker_terminal_page = Blueprint(
+        "docker_terminal_page",
+        __name__,
+        template_folder="templates",
+        static_folder="assets",
+    )
+
+    @docker_terminal_page.route("/docker-terminal/<int:tracker_id>")
+    @authed_only
+    def view_terminal(tracker_id):
+        tracker_entry, chal_obj, error = get_owned_terminal_context(tracker_id)
+        if error:
+            message, status = error
+            return render_template(
+                "docker_terminal.html",
+                error=message,
+                tracker=None,
+                challenge=None,
+            ), status
+
+        return render_template(
+            "docker_terminal.html",
+            error=None,
+            tracker=tracker_entry,
+            challenge=chal_obj,
+        )
+
+    app.register_blueprint(docker_terminal_page)
 
 
 @terminal_namespace.route("", methods=['POST'])
@@ -1524,6 +1568,7 @@ def load(app):
     register_admin_plugin_menu_bar('Outro', '/admin/outro_config')
     define_docker_status(app)
     define_challenge_proxy(app)
+    define_docker_terminal_page(app)
     CTFd_API_v1.add_namespace(docker_namespace, '/docker')
     CTFd_API_v1.add_namespace(container_namespace, '/container')
     CTFd_API_v1.add_namespace(active_docker_namespace, '/docker_status')

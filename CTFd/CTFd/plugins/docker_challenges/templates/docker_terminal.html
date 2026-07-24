@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+  .pwnbox-page {
+    min-height: calc(100vh - 70px);
+    padding: calc(2rem + 70px) 0 2rem;
+    margin-top: -70px;
+    background:
+      radial-gradient(circle at 12% 10%, rgba(139,233,253,.12), transparent 28%),
+      radial-gradient(circle at 88% 0%, rgba(236,19,19,.16), transparent 32%),
+      #05070b;
+    color: #e8e8e8;
+  }
+  .pwnbox-shell {
+    background: rgba(5,8,13,.92);
+    border: 1px solid rgba(139,233,253,.22);
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,.42), 0 0 34px rgba(139,233,253,.08);
+  }
+  .pwnbox-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: .9rem 1rem;
+    background: linear-gradient(90deg, rgba(139,233,253,.12), rgba(236,19,19,.08));
+    border-bottom: 1px solid rgba(139,233,253,.16);
+  }
+  .pwnbox-titlebar h1 {
+    margin: 0;
+    font-size: 1rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #8be9fd;
+  }
+  .pwnbox-meta {
+    color: rgba(255,255,255,.58);
+    font-size: .82rem;
+  }
+  .pwnbox-output {
+    min-height: 58vh;
+    max-height: 68vh;
+    overflow: auto;
+    white-space: pre-wrap;
+    margin: 0;
+    padding: 1rem;
+    background: #05070b;
+    color: #e8e8e8;
+    font-family: Consolas, Menlo, monospace;
+    font-size: .92rem;
+    line-height: 1.5;
+  }
+  .pwnbox-inputbar {
+    display: flex;
+    align-items: stretch;
+    border-top: 1px solid rgba(139,233,253,.16);
+    background: #080d15;
+  }
+  .pwnbox-prompt {
+    display: grid;
+    place-items: center;
+    padding: 0 .85rem;
+    color: #8be9fd;
+    border-right: 1px solid rgba(139,233,253,.16);
+    font-family: Consolas, Menlo, monospace;
+  }
+  .pwnbox-input {
+    flex: 1;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #fff;
+    padding: .85rem;
+    font-family: Consolas, Menlo, monospace;
+  }
+  .pwnbox-run {
+    border: 0;
+    padding: 0 1rem;
+    background: rgba(139,233,253,.12);
+    color: #8be9fd;
+    font-weight: 700;
+  }
+</style>
+
+<div class="pwnbox-page">
+  <div class="container">
+    {% if error %}
+      <div class="alert alert-danger">{{ error }}</div>
+    {% else %}
+      <div class="pwnbox-shell">
+        <div class="pwnbox-titlebar">
+          <div>
+            <h1><i class="fas fa-terminal me-2"></i>Isolated PwnBox</h1>
+            <div class="pwnbox-meta">
+              {{ tracker.challenge }} · {{ challenge.terminal_shell or "/bin/sh" }} · instance #{{ tracker.id }}
+            </div>
+          </div>
+          <a href="{{ url_for('challenges.listing') }}" class="btn btn-outline-light btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Challenges
+          </a>
+        </div>
+        <pre class="pwnbox-output" id="pwnboxOutput">Welcome to your isolated terminal.
+This window is attached only to your/team's Docker instance.
+</pre>
+        <div class="pwnbox-inputbar">
+          <span class="pwnbox-prompt">$</span>
+          <input id="pwnboxInput" class="pwnbox-input" autocomplete="off" spellcheck="false" placeholder="Type a command and press Enter">
+          <button id="pwnboxRun" class="pwnbox-run" type="button">Run</button>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if not error %}
+<script>
+(function () {
+  const trackerId = {{ tracker.id | tojson }};
+  const input = document.getElementById("pwnboxInput");
+  const output = document.getElementById("pwnboxOutput");
+  const run = document.getElementById("pwnboxRun");
+
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function append(text, kind) {
+    const color = kind === "cmd" ? "#8be9fd" : (kind === "err" ? "#ff7777" : "#e8e8e8");
+    output.innerHTML += `<span style="color:${color}">${escapeHtml(text)}</span>`;
+    output.scrollTop = output.scrollHeight;
+  }
+
+  function executeCommand() {
+    const command = input.value;
+    if (!command.trim()) return;
+    input.value = "";
+    input.disabled = true;
+    append(`$ ${command}\n`, "cmd");
+
+    CTFd.fetch("/api/v1/docker_terminal", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tracker_id: trackerId, command: command })
+    })
+      .then(async function (response) {
+        const contentType = (response.headers && response.headers.get && response.headers.get("content-type")) || "";
+        const payload = contentType.includes("application/json") ? await response.json() : { success: false, message: await response.text() };
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.message || "Terminal command failed");
+        }
+        append(payload.output || "\n", "out");
+      })
+      .catch(function (error) {
+        append(`${error.message || "Terminal command failed"}\n`, "err");
+      })
+      .finally(function () {
+        input.disabled = false;
+        input.focus();
+      });
+  }
+
+  run.addEventListener("click", executeCommand);
+  input.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      executeCommand();
+    }
+  });
+  input.focus();
+})();
+</script>
+{% endif %}
+{% endblock %}
