@@ -1110,6 +1110,28 @@ class DockerChallenge(Challenges):
     terminal_shell = db.Column(db.String(128), default='/bin/sh')
 
 
+def get_current_docker_owner():
+    """Return the account/team that owns Docker instances for this request."""
+    if is_teams_mode():
+        owner = get_current_team()
+        if owner is None:
+            return None, {
+                "success": False,
+                "message": "Team mode is enabled. Join or create a team before starting a challenge instance.",
+                "data": [],
+            }, 403
+        return owner, None, None
+
+    owner = get_current_user()
+    if owner is None:
+        return None, {
+            "success": False,
+            "message": "Authentication required",
+            "data": [],
+        }, 403
+    return owner, None, None
+
+
 # API
 container_namespace = Namespace("container", description='Endpoint to interact with containers')
 
@@ -1135,19 +1157,21 @@ class ContainerAPI(Resource):
         containers = DockerChallengeTracker.query.all()
         if container not in get_repositories(docker, tags=True):
             return {"success": False, "message": f"Container {container} not present in the repository."}, 403
+        session, owner_error, owner_status = get_current_docker_owner()
+        if owner_error:
+            return owner_error, owner_status
+
         if is_teams_mode():
-            session = get_current_team()
             # First we'll delete all old docker containers (+2 hours)
             for i in containers:
-                if int(session.id) == int(i.team_id) and (unix_time(datetime.utcnow()) - int(i.timestamp)) >= 7200:
+                if i.team_id is not None and str(session.id) == str(i.team_id) and (unix_time(datetime.utcnow()) - int(i.timestamp)) >= 7200:
                     delete_container(docker, i.instance_id, ports_str=i.ports)
                     DockerChallengeTracker.query.filter_by(instance_id=i.instance_id).delete()
                     db.session.commit()
             check = DockerChallengeTracker.query.filter_by(team_id=session.id).filter_by(docker_image=container).first()
         else:
-            session = get_current_user()
             for i in containers:
-                if int(session.id) == int(i.user_id) and (unix_time(datetime.utcnow()) - int(i.timestamp)) >= 7200:
+                if i.user_id is not None and str(session.id) == str(i.user_id) and (unix_time(datetime.utcnow()) - int(i.timestamp)) >= 7200:
                     delete_container(docker, i.instance_id, ports_str=i.ports)
                     DockerChallengeTracker.query.filter_by(instance_id=i.instance_id).delete()
                     db.session.commit()
@@ -1270,11 +1294,13 @@ class DockerStatus(Resource):
         docker = DockerConfig.query.filter_by(id=1).first()
         docker_host = (docker.display_host or get_docker_api_host(docker)) if docker and docker.hostname else ""
         use_proxy = docker_proxy_enabled()
+        session, owner_error, owner_status = get_current_docker_owner()
+        if owner_error:
+            return owner_error, owner_status
+
         if is_teams_mode():
-            session = get_current_team()
             tracker = DockerChallengeTracker.query.filter_by(team_id=session.id)
         else:
-            session = get_current_user()
             tracker = DockerChallengeTracker.query.filter_by(user_id=session.id)
 
         # Clean up expired containers (based on revert_time)
