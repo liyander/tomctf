@@ -1,4 +1,6 @@
-from flask import render_template, request, url_for
+import datetime
+
+from flask import render_template, request, send_file, url_for
 from sqlalchemy.sql import not_
 
 from CTFd.admin import admin
@@ -12,6 +14,19 @@ from CTFd.models import (
 from CTFd.utils import get_config
 from CTFd.utils.decorators import admins_only
 from CTFd.utils.modes import TEAMS_MODE
+from CTFd.utils.xlsx import build_xlsx
+
+
+def _users_query(q=None, field=None):
+    query = Users.query
+    if q:
+        if field == "ip":
+            query = query.join(Tracking, Users.id == Tracking.user_id).filter(
+                Tracking.ip.like("%{}%".format(q))
+            )
+        elif field and Users.__mapper__.has_property(field):
+            query = query.filter(getattr(Users, field).like("%{}%".format(q)))
+    return query.distinct().order_by(Users.id.asc())
 
 
 @admin.route("/admin/users")
@@ -20,27 +35,9 @@ def users_listing():
     q = request.args.get("q")
     field = request.args.get("field")
     page = abs(request.args.get("page", 1, type=int))
-    filters = []
-    users = []
-
-    if q:
-        # The field exists as an exposed column
-        if Users.__mapper__.has_property(field):
-            filters.append(getattr(Users, field).like("%{}%".format(q)))
-
-    if q and field == "ip":
-        users = (
-            Users.query.join(Tracking, Users.id == Tracking.user_id)
-            .filter(Tracking.ip.like("%{}%".format(q)))
-            .order_by(Users.id.asc())
-            .paginate(page=page, per_page=50, error_out=False)
-        )
-    else:
-        users = (
-            Users.query.filter(*filters)
-            .order_by(Users.id.asc())
-            .paginate(page=page, per_page=50, error_out=False)
-        )
+    users = _users_query(q=q, field=field).paginate(
+        page=page, per_page=50, error_out=False
+    )
 
     args = dict(request.args)
     args.pop("page", 1)
@@ -66,6 +63,70 @@ def users_listing():
         next_page=url_for(request.endpoint, page=users.next_num, **args),
         q=q,
         field=field,
+    )
+
+
+@admin.route("/admin/users/export.xlsx")
+@admins_only
+def users_export_xlsx():
+    q = request.args.get("q")
+    field = request.args.get("field")
+    exclude_hidden = request.args.get("exclude_hidden", "0") == "1"
+
+    query = _users_query(q=q, field=field)
+    if exclude_hidden:
+        query = query.filter(not_(Users.hidden.is_(True)))
+    users = query.all()
+
+    custom_fields = UserFields.query.order_by(UserFields.id.asc()).all()
+    headers = [
+        "ID",
+        "User",
+        "Email",
+        "Website",
+        "Affiliation",
+        "Country",
+        "Team",
+        "Bracket",
+        "Account Type",
+        "Verified",
+        "Hidden",
+        "Banned",
+        "Language",
+        "Created",
+    ]
+    headers.extend(field.name for field in custom_fields)
+
+    rows = []
+    for user in users:
+        field_values = {entry.field_id: entry.value for entry in user.field_entries}
+        row = [
+            user.id,
+            user.name,
+            user.email,
+            user.website,
+            user.affiliation,
+            user.country,
+            user.team.name if user.team else None,
+            user.bracket.name if user.bracket else None,
+            user.type,
+            bool(user.verified),
+            bool(user.hidden),
+            bool(user.banned),
+            user.language,
+            user.created,
+        ]
+        row.extend(field_values.get(custom_field.id) for custom_field in custom_fields)
+        rows.append(row)
+
+    workbook = build_xlsx(headers=headers, rows=rows, sheet_name="Users")
+    filename = "users-{}.xlsx".format(datetime.date.today().isoformat())
+    return send_file(
+        workbook,
+        as_attachment=True,
+        max_age=-1,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
 

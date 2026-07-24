@@ -51,6 +51,25 @@
 
 	<div class="row">
 		<div class="col-md-12">
+			<div class="float-left pb-3">
+				<form method="GET" action="{{ url_for('admin.users_export_xlsx') }}" class="form-inline">
+					{% if q %}
+						<input type="hidden" name="q" value="{{ q }}">
+					{% endif %}
+					{% if field %}
+						<input type="hidden" name="field" value="{{ field }}">
+					{% endif %}
+					<div class="form-check mr-3">
+						<input class="form-check-input" type="checkbox" value="1" id="exclude-hidden-users" name="exclude_hidden">
+						<label class="form-check-label" for="exclude-hidden-users">
+							Exclude hidden users
+						</label>
+					</div>
+					<button type="submit" class="btn btn-outline-success" title="Download users as Excel">
+						<i class="btn-fa fas fa-file-excel"></i> Download Excel
+					</button>
+				</form>
+			</div>
 			<div class="float-right pb-3">
 				<div class="btn-group" role="group">
 					<button type="button" class="btn btn-outline-secondary" data-toggle="tooltip" title="Edit Users" id="users-edit-button">
