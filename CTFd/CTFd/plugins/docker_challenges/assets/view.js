@@ -102,6 +102,40 @@ function toggle_terminal_minimized(panelId, btnId) {
     }
 }
 
+function toggle_terminal_expanded(wrapperId, outputId, btnId) {
+    const wrapper = document.getElementById(wrapperId);
+    const output = document.getElementById(outputId);
+    const btn = document.getElementById(btnId);
+    if (!wrapper) return;
+
+    const expanded = wrapper.classList.toggle('tom-pwnbox-expanded');
+    if (expanded) {
+        wrapper.dataset.originalStyle = wrapper.getAttribute('style') || '';
+        wrapper.setAttribute(
+            'style',
+            'position:fixed;inset:18px;z-index:10050;max-width:none!important;margin:0!important;background:#05070b;border:1px solid rgba(139,233,253,.38);border-radius:18px;padding:14px;box-shadow:0 24px 120px rgba(0,0,0,.82),0 0 40px rgba(139,233,253,.18);'
+        );
+        if (output) {
+            output.dataset.originalStyle = output.getAttribute('style') || '';
+            output.style.height = 'calc(100vh - 180px)';
+            output.style.maxHeight = 'none';
+        }
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-compress-alt"></i> Exit full screen';
+        }
+        document.body.style.overflow = 'hidden';
+    } else {
+        wrapper.setAttribute('style', wrapper.dataset.originalStyle || '');
+        if (output) {
+            output.setAttribute('style', output.dataset.originalStyle || '');
+        }
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-expand-alt"></i> Expand terminal';
+        }
+        document.body.style.overflow = '';
+    }
+}
+
 function createWarningModalBody(){
     // Creates the Warning Modal placeholder, that will be updated when stuff happens.
     if (CTFd.lib.$('#warningModalBody').length === 0) {
@@ -167,8 +201,10 @@ function get_docker_status(container) {
                 const inputId = `${instancePrefix}_hostport_input`;
                 const terminalInputId = `${instancePrefix}_terminal_input`;
                 const terminalOutputId = `${instancePrefix}_terminal_output`;
+                const terminalWrapperId = `${instancePrefix}_terminal_wrapper`;
                 const terminalPanelId = `${instancePrefix}_terminal_panel`;
                 const terminalToggleId = `${instancePrefix}_terminal_toggle`;
+                const terminalExpandId = `${instancePrefix}_terminal_expand`;
 
                 const openButton = isProxyMode
                     ? `<a href="${hostPort}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,230,118,0.12);color:#00e676;border:1px solid rgba(0,230,118,0.24);border-radius:8px;padding:7px 14px;margin-bottom:.6rem;text-decoration:none">
@@ -184,17 +220,20 @@ function get_docker_status(container) {
                     : `<div style="color:#aaa">Host: ${host} &middot; Port: (pending)</div>`;
 
                 const terminalField = `
-                    <div style="text-align:left;margin:.8rem auto 1rem;max-width:760px">
-                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:.4rem">
+                    <div id="${terminalWrapperId}" style="text-align:left;margin:.8rem auto 1rem;max-width:760px">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:.55rem;flex-wrap:wrap">
                             <span style="font-size:.78rem;color:#8be9fd;text-transform:uppercase;letter-spacing:1px">
                                 <i class="fas fa-terminal" style="margin-right:5px"></i> Isolated Terminal
                             </span>
                             <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
                                 <span style="font-size:.72rem;color:#aaa">${escapeHtml(item.terminal_shell || '/bin/sh')}</span>
-                                <a href="${escapeHtml(item.terminal_url || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-info" style="padding:3px 8px;font-size:.72rem;border-color:rgba(139,233,253,.35);color:#8be9fd">
+                                <button id="${terminalExpandId}" type="button" class="btn btn-sm" title="Expand terminal full screen" style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;font-size:.78rem;border-radius:8px;background:rgba(139,233,253,.14);border:1px solid rgba(139,233,253,.45);color:#8be9fd;font-weight:700">
+                                    <i class="fas fa-expand-alt"></i> Expand terminal
+                                </button>
+                                <a href="${escapeHtml(item.terminal_url || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-info" style="padding:5px 10px;font-size:.78rem;border-color:rgba(139,233,253,.35);color:#8be9fd">
                                     <i class="fas fa-external-link-alt"></i> Open window
                                 </a>
-                                <button id="${terminalToggleId}" type="button" class="btn btn-sm btn-outline-light" style="padding:3px 8px;font-size:.72rem;border-color:rgba(255,255,255,.18);color:#ddd">
+                                <button id="${terminalToggleId}" type="button" class="btn btn-sm btn-outline-light" style="padding:5px 10px;font-size:.78rem;border-color:rgba(255,255,255,.18);color:#ddd">
                                     <i class="fas fa-window-minimize"></i> Minimize
                                 </button>
                             </span>
@@ -251,9 +290,15 @@ Run commands inside your own Docker instance. Other players cannot access this t
                     const terminalInput = document.getElementById(terminalInputId);
                     const terminalRun = document.getElementById(`${instancePrefix}_terminal_run`);
                     const terminalToggle = document.getElementById(terminalToggleId);
+                    const terminalExpand = document.getElementById(terminalExpandId);
                     const runTerminal = function () {
                         run_terminal_command(item.id, terminalInputId, terminalOutputId);
                     };
+                    if (terminalExpand) {
+                        terminalExpand.addEventListener('click', function () {
+                            toggle_terminal_expanded(terminalWrapperId, terminalOutputId, terminalExpandId);
+                        });
+                    }
                     if (terminalToggle) {
                         terminalToggle.addEventListener('click', function () {
                             toggle_terminal_minimized(terminalPanelId, terminalToggleId);

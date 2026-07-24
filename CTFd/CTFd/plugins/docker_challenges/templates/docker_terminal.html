@@ -82,6 +82,22 @@
     color: #8be9fd;
     font-weight: 700;
   }
+  .pwnbox-expand {
+    border-color: rgba(139,233,253,.38);
+    color: #8be9fd;
+  }
+  .pwnbox-shell.expanded {
+    position: fixed;
+    inset: 18px;
+    z-index: 10050;
+    border-color: rgba(139,233,253,.45);
+    box-shadow: 0 24px 120px rgba(0,0,0,.86), 0 0 44px rgba(139,233,253,.18);
+  }
+  .pwnbox-shell.expanded .pwnbox-output {
+    min-height: auto;
+    max-height: none;
+    height: calc(100vh - 178px);
+  }
 </style>
 
 <div class="pwnbox-page">
@@ -97,9 +113,14 @@
               {{ tracker.challenge }} · {{ challenge.terminal_shell or "/bin/sh" }} · instance #{{ tracker.id }}
             </div>
           </div>
-          <a href="{{ url_for('challenges.listing') }}" class="btn btn-outline-light btn-sm">
-            <i class="fas fa-arrow-left me-1"></i> Challenges
-          </a>
+          <div class="d-flex flex-wrap gap-2 justify-content-end">
+            <button type="button" class="btn btn-outline-info btn-sm pwnbox-expand" id="pwnboxExpand">
+              <i class="fas fa-expand-alt me-1"></i> Expand terminal
+            </button>
+            <a href="{{ url_for('challenges.listing') }}" class="btn btn-outline-light btn-sm">
+              <i class="fas fa-arrow-left me-1"></i> Challenges
+            </a>
+          </div>
         </div>
         <pre class="pwnbox-output" id="pwnboxOutput">Welcome to your isolated terminal.
 This window is attached only to your/team's Docker instance.
@@ -123,6 +144,8 @@ This window is attached only to your/team's Docker instance.
   const input = document.getElementById("pwnboxInput");
   const output = document.getElementById("pwnboxOutput");
   const run = document.getElementById("pwnboxRun");
+  const expand = document.getElementById("pwnboxExpand");
+  const shell = document.querySelector(".pwnbox-shell");
 
   function escapeHtml(value) {
     return String(value || "")
@@ -170,6 +193,13 @@ This window is attached only to your/team's Docker instance.
   }
 
   run.addEventListener("click", executeCommand);
+  expand.addEventListener("click", function () {
+    const expanded = shell.classList.toggle("expanded");
+    document.body.style.overflow = expanded ? "hidden" : "";
+    expand.innerHTML = expanded
+      ? '<i class="fas fa-compress-alt me-1"></i> Exit full screen'
+      : '<i class="fas fa-expand-alt me-1"></i> Expand terminal';
+  });
   input.addEventListener("keydown", function (event) {
     if (event.key === "Enter") {
       event.preventDefault();
