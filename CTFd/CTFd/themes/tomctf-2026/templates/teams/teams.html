@@ -3,9 +3,12 @@
 {% block content %}
 <style>
   .teams-hero {
-    background: linear-gradient(135deg, #050303 0%, #1a0a0a 50%, #0d0505 100%);
-    border-bottom: 2px solid #8b0000;
-    padding: 3rem 0;
+    background:
+      radial-gradient(circle at 15% 15%, rgba(236,19,19,0.18), transparent 28%),
+      radial-gradient(circle at 85% 0%, rgba(255,95,95,0.12), transparent 32%),
+      linear-gradient(135deg, #050303 0%, #1a0a0a 50%, #0d0505 100%);
+    border-bottom: 1px solid rgba(236,19,19,0.42);
+    padding: 3.25rem 0 2.75rem;
     padding-top: calc(3rem + 70px);
     margin-top: -70px;
     position: relative;
@@ -41,13 +44,79 @@
     font-size: 1.05rem;
     letter-spacing: 1px;
   }
+  .teams-hero .hero-actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.35rem;
+  }
+  .team-hero-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.05rem;
+    border-radius: 999px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .team-hero-btn.primary {
+    color: #fff;
+    background: linear-gradient(135deg, #a50000, #ec1313);
+    box-shadow: 0 10px 28px rgba(236,19,19,0.25);
+  }
+  .team-hero-btn.secondary {
+    color: #f6e7d0;
+    background: rgba(255,255,255,0.055);
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  .team-hero-btn:hover {
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 14px 34px rgba(0,0,0,0.34), 0 0 22px rgba(236,19,19,0.16);
+  }
+
+  .team-overview-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: -1.7rem;
+    position: relative;
+    z-index: 2;
+  }
+  .team-overview-card {
+    background: rgba(18,7,7,0.88);
+    border: 1px solid rgba(236,19,19,0.22);
+    border-radius: 18px;
+    padding: 1.1rem 1.25rem;
+    box-shadow: 0 18px 42px rgba(0,0,0,0.24);
+    backdrop-filter: blur(14px);
+  }
+  .team-overview-card span {
+    display: block;
+    color: rgba(255,255,255,0.46);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
+  }
+  .team-overview-card strong {
+    color: #fff1e2;
+    font-size: 1.35rem;
+  }
+  .team-overview-card i {
+    color: #ec1313;
+    margin-right: 0.45rem;
+  }
 
   .search-card {
     background: rgba(26,10,10,0.85);
     border: 1px solid rgba(139,0,0,0.4);
-    border-radius: 16px;
+    border-radius: 18px;
     padding: 1.5rem 2rem;
     backdrop-filter: blur(10px);
+    box-shadow: 0 16px 38px rgba(0,0,0,0.2);
   }
   .search-card .search-label {
     font-family: 'Space Grotesk', sans-serif;
@@ -102,9 +171,10 @@
   .teams-table-card {
     background: rgba(26,10,10,0.7);
     border: 1px solid rgba(139,0,0,0.3);
-    border-radius: 12px;
+    border-radius: 18px;
     overflow: hidden;
     backdrop-filter: blur(10px);
+    box-shadow: 0 20px 46px rgba(0,0,0,0.24);
   }
   .teams-table-card .table {
     margin-bottom: 0;
@@ -192,17 +262,112 @@
   .search-results-info strong {
     color: #ec1313;
   }
+
+  .team-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+  .team-avatar-mini {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 42px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(139,0,0,0.85), rgba(236,19,19,0.7));
+    color: #fff;
+    box-shadow: 0 0 18px rgba(236,19,19,0.18);
+    font-weight: 800;
+  }
+  .team-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 0.32rem;
+  }
+  .team-soft-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.32rem;
+    padding: 0.22rem 0.48rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.62);
+    font-size: 0.72rem;
+  }
+  .team-empty-state {
+    padding: 3.5rem 1.5rem;
+    text-align: center;
+    color: rgba(255,255,255,0.58);
+  }
+  .team-empty-state i {
+    width: 64px;
+    height: 64px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 20px;
+    background: rgba(236,19,19,0.12);
+    color: #ec1313;
+    font-size: 1.65rem;
+    margin-bottom: 1rem;
+  }
+  .team-empty-state h3 {
+    color: #fff0df;
+    font-size: 1.2rem;
+    margin-bottom: 0.4rem;
+  }
+
+  @media (max-width: 767px) {
+    .teams-hero .stranger-title { font-size: 2.75rem; }
+    .team-overview-grid { grid-template-columns: 1fr; margin-top: 1rem; }
+    .search-card { padding: 1.15rem; }
+    .teams-table-card { border-radius: 14px; }
+    .teams-table-card .table thead { display: none; }
+    .teams-table-card .table,
+    .teams-table-card .table tbody,
+    .teams-table-card .table tr,
+    .teams-table-card .table td { display: block; width: 100%; }
+    .teams-table-card .table tbody tr { padding: 1rem; }
+    .teams-table-card .table tbody td { padding: 0.35rem 0; }
+    .teams-table-card .table tbody td.text-center { text-align: left !important; }
+  }
 </style>
 
   <div class="teams-hero">
     <div class="container text-center">
       <i class="fas fa-users-cog hero-icon mb-2"></i>
       <h1><span class="stranger-title">{% trans %}Teams{% endtrans %}</span></h1>
-      <p class="hero-subtitle mb-0">{% trans %}Browse participating teams{% endtrans %}</p>
+      <p class="hero-subtitle mb-0">{% trans %}Browse participating teams, find squads, and keep track of the field.{% endtrans %}</p>
+      <div class="hero-actions">
+        {% if Configs.user_mode == 'teams' and authed() %}
+          <a class="team-hero-btn primary" href="{{ url_for('teams.private') }}"><i class="fas fa-user-group"></i>{% trans %}Open My Team{% endtrans %}</a>
+        {% endif %}
+        {% if Configs.user_mode == 'teams' and registration_visible() %}
+          <a class="team-hero-btn secondary" href="{{ url_for('teams.new') }}"><i class="fas fa-plus"></i>{% trans %}Create Team{% endtrans %}</a>
+          <a class="team-hero-btn secondary" href="{{ url_for('teams.join') }}"><i class="fas fa-link"></i>{% trans %}Join Team{% endtrans %}</a>
+        {% endif %}
+      </div>
     </div>
   </div>
 
   <div class="container py-4">
+    <div class="team-overview-grid mb-4">
+      <div class="team-overview-card">
+        <span>{% trans %}Registered squads{% endtrans %}</span>
+        <strong><i class="fas fa-users"></i>{{ teams.total }}</strong>
+      </div>
+      <div class="team-overview-card">
+        <span>{% trans %}Current page{% endtrans %}</span>
+        <strong><i class="fas fa-layer-group"></i>{{ teams.page }} / {{ teams.pages or 1 }}</strong>
+      </div>
+      <div class="team-overview-card">
+        <span>{% trans %}Team mode{% endtrans %}</span>
+        <strong><i class="fas fa-shield-alt"></i>{% if Configs.user_mode == 'teams' %}{% trans %}Enabled{% endtrans %}{% else %}{% trans %}Hidden{% endtrans %}{% endif %}</strong>
+      </div>
+    </div>
+
     {% if q and field %}
       <div class="text-center mb-3">
         <p class="search-results-info">
@@ -254,21 +419,27 @@
             {% for team in teams.items %}
               <tr>
                 <td>
-                  {% if scores_visible() %}
-                    <a href="{{ url_for('teams.public', team_id=team.id) }}">{{ team.name | truncate(50) }}</a>
-                  {% else %}
-                    <span>{{ team.name | truncate(50) }}</span>
-                  {% endif %}
+                  <div class="team-name-cell">
+                    <div class="team-avatar-mini">{{ team.name[0] | upper }}</div>
+                    <div>
+                      {% if scores_visible() %}
+                        <a href="{{ url_for('teams.public', team_id=team.id) }}">{{ team.name | truncate(50) }}</a>
+                      {% else %}
+                        <span>{{ team.name | truncate(50) }}</span>
+                      {% endif %}
+                      <div class="team-meta-row">
+                        {% if team.bracket_id %}
+                          <span class="team-soft-badge"><i class="fas fa-layer-group"></i>{{ team.bracket.name }}</span>
+                        {% endif %}
 
-                  {% if team.bracket_id %}
-                    <span class="badge ms-2" style="background:rgba(139,0,0,0.4); color:#ff6b6b;">{{ team.bracket.name }}</span>
-                  {% endif %}
-
-                  {% if team.oauth_id %}
-                    <a href="https://majorleaguecyber.org/t/{{ team.name }}">
-                      <span class="badge ms-2" style="background:linear-gradient(135deg,#8b0000,#ec1313); color:#fff;">Official</span>
-                    </a>
-                  {% endif %}
+                        {% if team.oauth_id %}
+                          <a href="https://majorleaguecyber.org/t/{{ team.name }}" class="team-soft-badge" style="color:#fff;text-decoration:none;background:linear-gradient(135deg,rgba(139,0,0,.85),rgba(236,19,19,.75));">
+                            <i class="fas fa-certificate"></i>Official
+                          </a>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
                 </td>
 
                 <td class="text-center">
@@ -302,6 +473,16 @@
                       {{ lookup_country_code(team.country) }}
                     {% endif %}
                   </span>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="4">
+                  <div class="team-empty-state">
+                    <i class="fas fa-user-group"></i>
+                    <h3>{% trans %}No teams found{% endtrans %}</h3>
+                    <p class="mb-0">{% trans %}Try a different search, or create the first team for the event.{% endtrans %}</p>
+                  </div>
                 </td>
               </tr>
             {% endfor %}

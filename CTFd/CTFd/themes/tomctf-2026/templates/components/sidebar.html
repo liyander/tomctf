@@ -387,6 +387,14 @@
         <a class="nav-link {% if request.path.startswith('/scoreboard') %}active{% endif %}" href="{{ url_for('scoreboard.listing') }}"><i class="fas fa-trophy me-2"></i><span class="label">Scoreboard</span></a>
         {% endif %}
 
+        {% if Configs.user_mode == 'teams' %}
+        {% if authed() %}
+        <a class="nav-link {% if request.path.startswith('/teams') %}active{% endif %}" href="{{ url_for('teams.private') }}"><i class="fas fa-user-group me-2"></i><span class="label">My Team</span></a>
+        {% else %}
+        <a class="nav-link {% if request.path.startswith('/teams') %}active{% endif %}" href="{{ url_for('teams.listing') }}"><i class="fas fa-user-group me-2"></i><span class="label">Teams</span></a>
+        {% endif %}
+        {% endif %}
+
         {% if (Configs.pro_red_team_labs_visible | string | lower) != 'false' %}
         <a class="nav-link {% if request.path.startswith('/pro-red-team-labs') %}active{% endif %}" href="{{ url_for('prolabs.prolab_listing') }}"><i class="fas fa-user-secret me-2"></i><span class="label">Pro Red Team Labs</span></a>
         {% endif %}
