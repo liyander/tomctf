@@ -930,7 +930,7 @@ class DockerChallengeType(BaseChallenge):
     scripts = {
         'create': '/plugins/docker_challenges/assets/create.js',
         'update': '/plugins/docker_challenges/assets/update.js',
-        'view': '/plugins/docker_challenges/assets/view.js?v=terminal-expand-2',
+        'view': '/plugins/docker_challenges/assets/view.js?v=terminal-ux-3',
     }
     route = '/plugins/docker_challenges/assets'
     blueprint = Blueprint('docker_challenges', __name__, template_folder='templates', static_folder='assets')

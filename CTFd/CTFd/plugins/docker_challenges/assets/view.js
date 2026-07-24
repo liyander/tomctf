@@ -53,14 +53,256 @@ function appendTerminalOutput(outputId, text, kind) {
     out.scrollTop = out.scrollHeight;
 }
 
-function run_terminal_command(trackerId, inputId, outputId) {
+function ensureTerminalStyles() {
+    if (document.getElementById('tom-pwnbox-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'tom-pwnbox-styles';
+    style.textContent = `
+        .tom-pwnbox {
+            text-align: left !important;
+            margin: .9rem auto 1rem;
+            max-width: 820px;
+            border: 1px solid rgba(139,233,253,.22);
+            border-radius: 18px;
+            background:
+                radial-gradient(circle at top left, rgba(139,233,253,.10), transparent 34%),
+                linear-gradient(180deg, rgba(10,15,25,.98), rgba(4,7,12,.98));
+            box-shadow: 0 18px 55px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.04);
+            overflow: hidden;
+        }
+        .tom-pwnbox * { box-sizing: border-box; }
+        .tom-pwnbox-titlebar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: .82rem .95rem;
+            border-bottom: 1px solid rgba(139,233,253,.14);
+            background: linear-gradient(90deg, rgba(139,233,253,.10), rgba(236,19,19,.07));
+        }
+        .tom-pwnbox-title {
+            display: flex;
+            align-items: center;
+            gap: .7rem;
+            min-width: 210px;
+        }
+        .tom-pwnbox-terminal-icon {
+            display: grid;
+            place-items: center;
+            width: 34px;
+            height: 34px;
+            border-radius: 11px;
+            color: #8be9fd;
+            background: rgba(139,233,253,.10);
+            border: 1px solid rgba(139,233,253,.20);
+            box-shadow: 0 0 18px rgba(139,233,253,.08);
+        }
+        .tom-pwnbox-label {
+            color: #8be9fd;
+            font-size: .82rem;
+            font-weight: 800;
+            letter-spacing: .11em;
+            text-transform: uppercase;
+            line-height: 1.1;
+        }
+        .tom-pwnbox-meta {
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+            flex-wrap: wrap;
+            margin-top: .24rem;
+            color: rgba(255,255,255,.58);
+            font-size: .72rem;
+        }
+        .tom-pwnbox-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            padding: .18rem .48rem;
+            border-radius: 999px;
+            color: rgba(255,255,255,.72);
+            background: rgba(255,255,255,.055);
+            border: 1px solid rgba(255,255,255,.08);
+        }
+        .tom-pwnbox-live-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: #00e676;
+            box-shadow: 0 0 9px rgba(0,230,118,.95);
+        }
+        .tom-pwnbox-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: .45rem;
+            flex-wrap: wrap;
+        }
+        .tom-pwnbox-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: .38rem;
+            border-radius: 999px;
+            padding: .42rem .72rem;
+            border: 1px solid rgba(255,255,255,.13);
+            background: rgba(255,255,255,.055);
+            color: rgba(255,255,255,.82);
+            font-size: .76rem;
+            font-weight: 700;
+            line-height: 1;
+            text-decoration: none !important;
+            transition: transform .16s ease, border-color .16s ease, background .16s ease, color .16s ease;
+        }
+        .tom-pwnbox-btn:hover {
+            transform: translateY(-1px);
+            border-color: rgba(139,233,253,.38);
+            background: rgba(139,233,253,.11);
+            color: #8be9fd;
+        }
+        .tom-pwnbox-btn-primary {
+            color: #061016;
+            background: linear-gradient(135deg, #8be9fd, #64d7ff);
+            border-color: rgba(139,233,253,.64);
+            box-shadow: 0 8px 24px rgba(139,233,253,.14);
+        }
+        .tom-pwnbox-btn-primary:hover { color: #061016; }
+        .tom-pwnbox-panel { padding: .82rem; }
+        .tom-pwnbox-help {
+            display: flex;
+            align-items: flex-start;
+            gap: .55rem;
+            margin: 0 0 .72rem;
+            padding: .62rem .75rem;
+            border: 1px solid rgba(139,233,253,.12);
+            border-radius: 12px;
+            background: rgba(139,233,253,.055);
+            color: rgba(255,255,255,.68);
+            font-size: .77rem;
+            line-height: 1.45;
+        }
+        .tom-pwnbox-output {
+            height: 310px;
+            overflow: auto;
+            white-space: pre-wrap;
+            text-align: left !important;
+            margin: 0 0 .62rem;
+            padding: .95rem;
+            border: 1px solid rgba(139,233,253,.16);
+            border-radius: 14px;
+            background: #05070b;
+            color: #e8e8e8;
+            font-family: Consolas, Menlo, monospace;
+            font-size: .86rem;
+            line-height: 1.5;
+            box-shadow: inset 0 0 28px rgba(0,0,0,.36);
+        }
+        .tom-pwnbox-inputbar {
+            display: flex;
+            align-items: stretch;
+            overflow: hidden;
+            border: 1px solid rgba(139,233,253,.18);
+            border-radius: 13px;
+            background: #080d15;
+        }
+        .tom-pwnbox-prompt {
+            display: grid;
+            place-items: center;
+            min-width: 42px;
+            color: #8be9fd;
+            border-right: 1px solid rgba(139,233,253,.14);
+            font-family: Consolas, Menlo, monospace;
+            font-weight: 800;
+        }
+        .tom-pwnbox-input {
+            flex: 1;
+            min-width: 0;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            color: #fff;
+            padding: .72rem .78rem;
+            font-family: Consolas, Menlo, monospace;
+            font-size: .86rem;
+        }
+        .tom-pwnbox-run {
+            border: 0;
+            border-left: 1px solid rgba(139,233,253,.14);
+            padding: 0 1rem;
+            background: rgba(139,233,253,.12);
+            color: #8be9fd;
+            font-weight: 800;
+        }
+        .tom-pwnbox-run:disabled {
+            cursor: wait;
+            opacity: .65;
+        }
+        .tom-pwnbox-minimized .tom-pwnbox-panel { display: none; }
+        .tom-pwnbox-minimized {
+            max-width: 620px;
+        }
+        .tom-pwnbox-minimized .tom-pwnbox-titlebar {
+            border-bottom: 0;
+        }
+        .tom-pwnbox-expanded {
+            position: fixed !important;
+            inset: 18px !important;
+            z-index: 10050 !important;
+            max-width: none !important;
+            margin: 0 !important;
+            border-color: rgba(139,233,253,.42);
+            box-shadow: 0 28px 130px rgba(0,0,0,.86), 0 0 46px rgba(139,233,253,.18);
+        }
+        .tom-pwnbox-expanded .tom-pwnbox-panel {
+            height: calc(100vh - 96px);
+            display: flex;
+            flex-direction: column;
+        }
+        .tom-pwnbox-expanded .tom-pwnbox-output {
+            height: auto;
+            flex: 1;
+            min-height: 0;
+        }
+        @media (max-width: 640px) {
+            .tom-pwnbox-titlebar {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            .tom-pwnbox-actions {
+                justify-content: flex-start;
+                width: 100%;
+            }
+            .tom-pwnbox-btn {
+                flex: 1 1 auto;
+                justify-content: center;
+            }
+            .tom-pwnbox-expanded {
+                inset: 8px !important;
+                border-radius: 14px;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function setTerminalBusy(input, runButton, busy) {
+    if (input) input.disabled = busy;
+    if (runButton) {
+        runButton.disabled = busy;
+        runButton.innerHTML = busy
+            ? '<i class="fas fa-circle-notch fa-spin"></i> Running'
+            : '<i class="fas fa-play"></i> Run';
+    }
+}
+
+function run_terminal_command(trackerId, inputId, outputId, runBtnId) {
     const input = document.getElementById(inputId);
+    const runButton = runBtnId ? document.getElementById(runBtnId) : null;
     if (!input) return;
     const command = input.value;
     if (!command.trim()) return;
     input.value = '';
     appendTerminalOutput(outputId, `$ ${command}\n`, 'cmd');
-    input.disabled = true;
+    setTerminalBusy(input, runButton, true);
     CTFd.fetch("/api/v1/docker_terminal", {
         method: "POST",
         credentials: "same-origin",
@@ -84,57 +326,61 @@ function run_terminal_command(trackerId, inputId, outputId) {
             appendTerminalOutput(outputId, `${error.message || "Terminal command failed"}\n`, 'err');
         })
         .finally(function () {
-            input.disabled = false;
+            setTerminalBusy(input, runButton, false);
             input.focus();
         });
 }
 
-function toggle_terminal_minimized(panelId, btnId) {
-    const panel = document.getElementById(panelId);
+function toggle_terminal_minimized(wrapperId, inputId, btnId) {
+    const wrapper = document.getElementById(wrapperId);
     const btn = document.getElementById(btnId);
-    if (!panel) return;
-    const minimized = panel.style.display === 'none';
-    panel.style.display = minimized ? '' : 'none';
+    const input = document.getElementById(inputId);
+    if (!wrapper) return;
+    const minimized = wrapper.classList.toggle('tom-pwnbox-minimized');
     if (btn) {
         btn.innerHTML = minimized
-            ? '<i class="fas fa-window-minimize"></i> Minimize'
-            : '<i class="fas fa-expand-alt"></i> Expand';
+            ? '<i class="fas fa-chevron-up"></i> Restore'
+            : '<i class="fas fa-window-minimize"></i> Minimize';
+    }
+    if (!minimized && input) {
+        setTimeout(function () { input.focus(); }, 50);
     }
 }
 
-function toggle_terminal_expanded(wrapperId, outputId, btnId) {
+function toggle_terminal_expanded(wrapperId, inputId, btnId) {
     const wrapper = document.getElementById(wrapperId);
-    const output = document.getElementById(outputId);
+    const input = document.getElementById(inputId);
     const btn = document.getElementById(btnId);
     if (!wrapper) return;
 
+    wrapper.classList.remove('tom-pwnbox-minimized');
+    const minimizeBtn = wrapper.querySelector('[data-pwnbox-minimize]');
+    if (minimizeBtn) {
+        minimizeBtn.innerHTML = '<i class="fas fa-window-minimize"></i> Minimize';
+    }
     const expanded = wrapper.classList.toggle('tom-pwnbox-expanded');
-    if (expanded) {
-        wrapper.dataset.originalStyle = wrapper.getAttribute('style') || '';
-        wrapper.setAttribute(
-            'style',
-            'position:fixed;inset:18px;z-index:10050;max-width:none!important;margin:0!important;background:#05070b;border:1px solid rgba(139,233,253,.38);border-radius:18px;padding:14px;box-shadow:0 24px 120px rgba(0,0,0,.82),0 0 40px rgba(139,233,253,.18);'
-        );
-        if (output) {
-            output.dataset.originalStyle = output.getAttribute('style') || '';
-            output.style.height = 'calc(100vh - 180px)';
-            output.style.maxHeight = 'none';
-        }
-        if (btn) {
-            btn.innerHTML = '<i class="fas fa-compress-alt"></i> Exit full screen';
-        }
-        document.body.style.overflow = 'hidden';
-    } else {
-        wrapper.setAttribute('style', wrapper.dataset.originalStyle || '');
-        if (output) {
-            output.setAttribute('style', output.dataset.originalStyle || '');
-        }
-        if (btn) {
-            btn.innerHTML = '<i class="fas fa-expand-alt"></i> Expand terminal';
-        }
-        document.body.style.overflow = '';
+    if (btn) {
+        btn.innerHTML = expanded
+            ? '<i class="fas fa-compress-alt"></i> Exit full screen'
+            : '<i class="fas fa-expand-alt"></i> Expand';
+    }
+    document.body.style.overflow = expanded ? 'hidden' : '';
+    if (input) {
+        setTimeout(function () { input.focus(); }, 50);
     }
 }
+
+document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Escape') return;
+    const expanded = document.querySelector('.tom-pwnbox-expanded');
+    if (!expanded) return;
+    expanded.classList.remove('tom-pwnbox-expanded');
+    const expandBtn = expanded.querySelector('[data-pwnbox-expand]');
+    if (expandBtn) {
+        expandBtn.innerHTML = '<i class="fas fa-expand-alt"></i> Expand';
+    }
+    document.body.style.overflow = '';
+});
 
 function createWarningModalBody(){
     // Creates the Warning Modal placeholder, that will be updated when stuff happens.
@@ -205,6 +451,7 @@ function get_docker_status(container) {
                 const terminalPanelId = `${instancePrefix}_terminal_panel`;
                 const terminalToggleId = `${instancePrefix}_terminal_toggle`;
                 const terminalExpandId = `${instancePrefix}_terminal_expand`;
+                const terminalRunId = `${instancePrefix}_terminal_run`;
 
                 const openButton = isProxyMode
                     ? `<a href="${hostPort}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="display:inline-flex;align-items:center;gap:6px;background:rgba(0,230,118,0.12);color:#00e676;border:1px solid rgba(0,230,118,0.24);border-radius:8px;padding:7px 14px;margin-bottom:.6rem;text-decoration:none">
@@ -220,37 +467,44 @@ function get_docker_status(container) {
                     : `<div style="color:#aaa">Host: ${host} &middot; Port: (pending)</div>`;
 
                 const terminalField = `
-                    <div id="${terminalWrapperId}" style="text-align:left;margin:.8rem auto 1rem;max-width:760px">
-                        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:.55rem;flex-wrap:wrap">
-                            <span style="font-size:.78rem;color:#8be9fd;text-transform:uppercase;letter-spacing:1px">
-                                <i class="fas fa-terminal" style="margin-right:5px"></i> Isolated Terminal
-                            </span>
-                            <span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
-                                <span style="font-size:.72rem;color:#aaa">${escapeHtml(item.terminal_shell || '/bin/sh')}</span>
-                                <button id="${terminalExpandId}" type="button" class="btn btn-sm" title="Expand terminal full screen" style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;font-size:.78rem;border-radius:8px;background:rgba(139,233,253,.14);border:1px solid rgba(139,233,253,.45);color:#8be9fd;font-weight:700">
-                                    <i class="fas fa-expand-alt"></i> Expand terminal
+                    <div id="${terminalWrapperId}" class="tom-pwnbox">
+                        <div class="tom-pwnbox-titlebar">
+                            <div class="tom-pwnbox-title">
+                                <span class="tom-pwnbox-terminal-icon"><i class="fas fa-terminal"></i></span>
+                                <div>
+                                    <div class="tom-pwnbox-label">Isolated PwnBox</div>
+                                    <div class="tom-pwnbox-meta">
+                                        <span class="tom-pwnbox-chip"><span class="tom-pwnbox-live-dot"></span> Live</span>
+                                        <span class="tom-pwnbox-chip">${escapeHtml(item.terminal_shell || '/bin/sh')}</span>
+                                        <span class="tom-pwnbox-chip">Only your instance</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tom-pwnbox-actions">
+                                <button id="${terminalExpandId}" type="button" class="tom-pwnbox-btn tom-pwnbox-btn-primary" title="Expand terminal full screen" data-pwnbox-expand>
+                                    <i class="fas fa-expand-alt"></i> Expand
                                 </button>
-                                <a href="${escapeHtml(item.terminal_url || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-info" style="padding:5px 10px;font-size:.78rem;border-color:rgba(139,233,253,.35);color:#8be9fd">
-                                    <i class="fas fa-external-link-alt"></i> Open window
+                                <a href="${escapeHtml(item.terminal_url || '#')}" target="_blank" rel="noopener noreferrer" class="tom-pwnbox-btn" title="Open the terminal in a new browser window">
+                                    <i class="fas fa-external-link-alt"></i> Pop out
                                 </a>
-                                <button id="${terminalToggleId}" type="button" class="btn btn-sm btn-outline-light" style="padding:5px 10px;font-size:.78rem;border-color:rgba(255,255,255,.18);color:#ddd">
+                                <button id="${terminalToggleId}" type="button" class="tom-pwnbox-btn" title="Minimize this terminal" data-pwnbox-minimize>
                                     <i class="fas fa-window-minimize"></i> Minimize
                                 </button>
-                            </span>
+                            </div>
                         </div>
-                        <div id="${terminalPanelId}">
-                        <pre id="${terminalOutputId}" style="height:260px;overflow:auto;white-space:pre-wrap;background:#06080d;color:#e8e8e8;border:1px solid rgba(139,233,253,.2);border-radius:10px;padding:12px;font-family:Consolas,Menlo,monospace;font-size:.82rem;line-height:1.45;margin:0 0 .5rem;box-shadow:inset 0 0 24px rgba(0,0,0,.35)">Welcome to your isolated challenge terminal.
-Run commands inside your own Docker instance. Other players cannot access this terminal.
+                        <div id="${terminalPanelId}" class="tom-pwnbox-panel">
+                            <div class="tom-pwnbox-help">
+                                <i class="fas fa-shield-alt"></i>
+                                <span>Commands run inside your private Docker instance. This terminal is isolated from other players and is safe to pop out while solving.</span>
+                            </div>
+                            <pre id="${terminalOutputId}" class="tom-pwnbox-output">Welcome to your isolated challenge terminal.
+Try: id, pwd, ls, or service-specific tools needed for this challenge.
 </pre>
-                        <div class="input-group input-group-sm">
-                            <div class="input-group-prepend">
-                                <span class="input-group-text" style="background:#0b111c;color:#8be9fd;border-color:rgba(139,233,253,.2)">$</span>
+                            <div class="tom-pwnbox-inputbar">
+                                <span class="tom-pwnbox-prompt">$</span>
+                                <input id="${terminalInputId}" type="text" class="tom-pwnbox-input" placeholder="Type a command and press Enter" autocomplete="off" spellcheck="false">
+                                <button id="${terminalRunId}" type="button" class="tom-pwnbox-run"><i class="fas fa-play"></i> Run</button>
                             </div>
-                            <input id="${terminalInputId}" type="text" class="form-control" placeholder="Type a command, e.g. id, ls, nmap -sV 127.0.0.1" autocomplete="off" spellcheck="false" style="background:#0b111c;color:#e8e8e8;border-color:rgba(139,233,253,.2);font-family:Consolas,Menlo,monospace">
-                            <div class="input-group-append">
-                                <button id="${instancePrefix}_terminal_run" type="button" class="btn btn-outline-info btn-sm">Run</button>
-                            </div>
-                        </div>
                         </div>
                     </div>`;
 
@@ -287,21 +541,22 @@ Run commands inside your own Docker instance. Other players cannot access this t
                 }
 
                 if (isTerminalMode) {
+                    ensureTerminalStyles();
                     const terminalInput = document.getElementById(terminalInputId);
-                    const terminalRun = document.getElementById(`${instancePrefix}_terminal_run`);
+                    const terminalRun = document.getElementById(terminalRunId);
                     const terminalToggle = document.getElementById(terminalToggleId);
                     const terminalExpand = document.getElementById(terminalExpandId);
                     const runTerminal = function () {
-                        run_terminal_command(item.id, terminalInputId, terminalOutputId);
+                        run_terminal_command(item.id, terminalInputId, terminalOutputId, terminalRunId);
                     };
                     if (terminalExpand) {
                         terminalExpand.addEventListener('click', function () {
-                            toggle_terminal_expanded(terminalWrapperId, terminalOutputId, terminalExpandId);
+                            toggle_terminal_expanded(terminalWrapperId, terminalInputId, terminalExpandId);
                         });
                     }
                     if (terminalToggle) {
                         terminalToggle.addEventListener('click', function () {
-                            toggle_terminal_minimized(terminalPanelId, terminalToggleId);
+                            toggle_terminal_minimized(terminalWrapperId, terminalInputId, terminalToggleId);
                         });
                     }
                     if (terminalRun) {

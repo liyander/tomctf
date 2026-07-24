@@ -13,11 +13,13 @@
     color: #e8e8e8;
   }
   .pwnbox-shell {
-    background: rgba(5,8,13,.92);
+    background:
+      radial-gradient(circle at top left, rgba(139,233,253,.10), transparent 34%),
+      linear-gradient(180deg, rgba(10,15,25,.98), rgba(4,7,12,.98));
     border: 1px solid rgba(139,233,253,.22);
     border-radius: 18px;
     overflow: hidden;
-    box-shadow: 0 24px 80px rgba(0,0,0,.42), 0 0 34px rgba(139,233,253,.08);
+    box-shadow: 0 24px 80px rgba(0,0,0,.42), 0 0 34px rgba(139,233,253,.08), inset 0 1px 0 rgba(255,255,255,.04);
   }
   .pwnbox-titlebar {
     display: flex;
@@ -28,6 +30,21 @@
     background: linear-gradient(90deg, rgba(139,233,253,.12), rgba(236,19,19,.08));
     border-bottom: 1px solid rgba(139,233,253,.16);
   }
+  .pwnbox-title {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+  }
+  .pwnbox-icon {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    color: #8be9fd;
+    background: rgba(139,233,253,.10);
+    border: 1px solid rgba(139,233,253,.20);
+  }
   .pwnbox-titlebar h1 {
     margin: 0;
     font-size: 1rem;
@@ -36,7 +53,40 @@
     color: #8be9fd;
   }
   .pwnbox-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: .45rem;
+    margin-top: .3rem;
     color: rgba(255,255,255,.58);
+    font-size: .82rem;
+  }
+  .pwnbox-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .2rem .5rem;
+    border-radius: 999px;
+    color: rgba(255,255,255,.72);
+    background: rgba(255,255,255,.055);
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  .pwnbox-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: #00e676;
+    box-shadow: 0 0 9px rgba(0,230,118,.95);
+  }
+  .pwnbox-help {
+    display: flex;
+    gap: .55rem;
+    margin: .85rem .85rem 0;
+    padding: .65rem .78rem;
+    border: 1px solid rgba(139,233,253,.12);
+    border-radius: 12px;
+    background: rgba(139,233,253,.055);
+    color: rgba(255,255,255,.68);
     font-size: .82rem;
   }
   .pwnbox-output {
@@ -44,10 +94,13 @@
     max-height: 68vh;
     overflow: auto;
     white-space: pre-wrap;
-    margin: 0;
+    margin: .85rem;
     padding: 1rem;
     background: #05070b;
     color: #e8e8e8;
+    border: 1px solid rgba(139,233,253,.16);
+    border-radius: 14px;
+    box-shadow: inset 0 0 28px rgba(0,0,0,.36);
     font-family: Consolas, Menlo, monospace;
     font-size: .92rem;
     line-height: 1.5;
@@ -55,7 +108,10 @@
   .pwnbox-inputbar {
     display: flex;
     align-items: stretch;
-    border-top: 1px solid rgba(139,233,253,.16);
+    overflow: hidden;
+    margin: 0 .85rem .85rem;
+    border: 1px solid rgba(139,233,253,.18);
+    border-radius: 13px;
     background: #080d15;
   }
   .pwnbox-prompt {
@@ -77,14 +133,28 @@
   }
   .pwnbox-run {
     border: 0;
+    border-left: 1px solid rgba(139,233,253,.14);
     padding: 0 1rem;
     background: rgba(139,233,253,.12);
     color: #8be9fd;
     font-weight: 700;
   }
+  .pwnbox-run:disabled {
+    cursor: wait;
+    opacity: .65;
+  }
   .pwnbox-expand {
     border-color: rgba(139,233,253,.38);
     color: #8be9fd;
+  }
+  .pwnbox-expand-primary {
+    color: #061016;
+    background: linear-gradient(135deg, #8be9fd, #64d7ff);
+    border-color: rgba(139,233,253,.64);
+    font-weight: 800;
+  }
+  .pwnbox-expand-primary:hover {
+    color: #061016;
   }
   .pwnbox-shell.expanded {
     position: fixed;
@@ -96,7 +166,20 @@
   .pwnbox-shell.expanded .pwnbox-output {
     min-height: auto;
     max-height: none;
-    height: calc(100vh - 178px);
+    height: calc(100vh - 236px);
+  }
+  @media (max-width: 640px) {
+    .pwnbox-titlebar {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+    .pwnbox-shell.expanded {
+      inset: 8px;
+      border-radius: 14px;
+    }
+    .pwnbox-shell.expanded .pwnbox-output {
+      height: calc(100vh - 292px);
+    }
   }
 </style>
 
@@ -107,28 +190,38 @@
     {% else %}
       <div class="pwnbox-shell">
         <div class="pwnbox-titlebar">
-          <div>
-            <h1><i class="fas fa-terminal me-2"></i>Isolated PwnBox</h1>
-            <div class="pwnbox-meta">
-              {{ tracker.challenge }} · {{ challenge.terminal_shell or "/bin/sh" }} · instance #{{ tracker.id }}
+          <div class="pwnbox-title">
+            <span class="pwnbox-icon"><i class="fas fa-terminal"></i></span>
+            <div>
+              <h1>Isolated PwnBox</h1>
+              <div class="pwnbox-meta">
+                <span class="pwnbox-chip"><span class="pwnbox-dot"></span> Live</span>
+                <span class="pwnbox-chip">{{ tracker.challenge }}</span>
+                <span class="pwnbox-chip">{{ challenge.terminal_shell or "/bin/sh" }}</span>
+                <span class="pwnbox-chip">instance #{{ tracker.id }}</span>
+              </div>
             </div>
           </div>
           <div class="d-flex flex-wrap gap-2 justify-content-end">
-            <button type="button" class="btn btn-outline-info btn-sm pwnbox-expand" id="pwnboxExpand">
-              <i class="fas fa-expand-alt me-1"></i> Expand terminal
+            <button type="button" class="btn btn-sm pwnbox-expand pwnbox-expand-primary" id="pwnboxExpand">
+              <i class="fas fa-expand-alt me-1"></i> Expand
             </button>
             <a href="{{ url_for('challenges.listing') }}" class="btn btn-outline-light btn-sm">
               <i class="fas fa-arrow-left me-1"></i> Challenges
             </a>
           </div>
         </div>
+        <div class="pwnbox-help">
+          <i class="fas fa-shield-alt mt-1"></i>
+          <span>Commands run inside your private Docker instance. This terminal is isolated from other players and stays attached to this challenge only.</span>
+        </div>
         <pre class="pwnbox-output" id="pwnboxOutput">Welcome to your isolated terminal.
-This window is attached only to your/team's Docker instance.
+Try: id, pwd, ls, or service-specific tools needed for this challenge.
 </pre>
         <div class="pwnbox-inputbar">
           <span class="pwnbox-prompt">$</span>
           <input id="pwnboxInput" class="pwnbox-input" autocomplete="off" spellcheck="false" placeholder="Type a command and press Enter">
-          <button id="pwnboxRun" class="pwnbox-run" type="button">Run</button>
+          <button id="pwnboxRun" class="pwnbox-run" type="button"><i class="fas fa-play me-1"></i> Run</button>
         </div>
       </div>
     {% endif %}
@@ -162,11 +255,19 @@ This window is attached only to your/team's Docker instance.
     output.scrollTop = output.scrollHeight;
   }
 
+  function setBusy(busy) {
+    input.disabled = busy;
+    run.disabled = busy;
+    run.innerHTML = busy
+      ? '<i class="fas fa-circle-notch fa-spin me-1"></i> Running'
+      : '<i class="fas fa-play me-1"></i> Run';
+  }
+
   function executeCommand() {
     const command = input.value;
     if (!command.trim()) return;
     input.value = "";
-    input.disabled = true;
+    setBusy(true);
     append(`$ ${command}\n`, "cmd");
 
     CTFd.fetch("/api/v1/docker_terminal", {
@@ -187,7 +288,7 @@ This window is attached only to your/team's Docker instance.
         append(`${error.message || "Terminal command failed"}\n`, "err");
       })
       .finally(function () {
-        input.disabled = false;
+        setBusy(false);
         input.focus();
       });
   }
@@ -198,7 +299,16 @@ This window is attached only to your/team's Docker instance.
     document.body.style.overflow = expanded ? "hidden" : "";
     expand.innerHTML = expanded
       ? '<i class="fas fa-compress-alt me-1"></i> Exit full screen'
-      : '<i class="fas fa-expand-alt me-1"></i> Expand terminal';
+      : '<i class="fas fa-expand-alt me-1"></i> Expand';
+    input.focus();
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && shell.classList.contains("expanded")) {
+      shell.classList.remove("expanded");
+      document.body.style.overflow = "";
+      expand.innerHTML = '<i class="fas fa-expand-alt me-1"></i> Expand';
+      input.focus();
+    }
   });
   input.addEventListener("keydown", function (event) {
     if (event.key === "Enter") {
