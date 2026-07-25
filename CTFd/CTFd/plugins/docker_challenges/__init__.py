@@ -205,6 +205,117 @@ def build_proxy_url(tracker_id, port):
     return url_for("docker_challenge_proxy.proxy_instance", tracker_id=tracker_id, port=port, path="", _external=True)
 
 
+def _proxy_join(prefix, value):
+    value = str(value or "")
+    if not value:
+        return value
+    if value.startswith(("#", "mailto:", "tel:", "javascript:", "data:", "blob:")):
+        return value
+    if value.startswith("//"):
+        return value
+    if value.startswith(prefix):
+        return value
+    if value.startswith("/"):
+        return prefix.rstrip("/") + value
+    return value
+
+
+def _rewrite_srcset(value, prefix):
+    parts = []
+    for item in str(value or "").split(","):
+        segment = item.strip()
+        if not segment:
+            continue
+        pieces = segment.split(None, 1)
+        url = _proxy_join(prefix, pieces[0])
+        parts.append(url + ((" " + pieces[1]) if len(pieces) > 1 else ""))
+    return ", ".join(parts)
+
+
+def rewrite_proxy_text(body, content_type, proxy_prefix):
+    """Rewrite root-relative links from proxied apps so they stay under /challenge-proxy/.../."""
+    if not body:
+        return body
+    prefix = proxy_prefix.rstrip("/")
+    lower_type = (content_type or "").lower()
+
+    def attr_repl(match):
+        attr, quote, value = match.groups()
+        return f'{attr}={quote}{_proxy_join(prefix, value)}{quote}'
+
+    def srcset_repl(match):
+        attr, quote, value = match.groups()
+        return f'{attr}={quote}{_rewrite_srcset(value, prefix)}{quote}'
+
+    def css_url_repl(match):
+        quote = match.group(1) or ""
+        value = match.group(2)
+        return f'url({quote}{_proxy_join(prefix, value)}{quote})'
+
+    rewritten = body
+    if "html" in lower_type or "xml" in lower_type:
+        rewritten = re.sub(
+            r'\b(srcset)\s*=\s*(["\'])([^"\']+)\2',
+            srcset_repl,
+            rewritten,
+            flags=re.IGNORECASE,
+        )
+        rewritten = re.sub(
+            r'\b(href|src|action|poster|data-url|data-src)\s*=\s*(["\'])(/(?!/)[^"\']*)\2',
+            attr_repl,
+            rewritten,
+            flags=re.IGNORECASE,
+        )
+        if "<head" in rewritten.lower() and "<base " not in rewritten.lower():
+            rewritten = re.sub(
+                r'(<head\b[^>]*>)',
+                r'\1<base href="' + prefix + '/">',
+                rewritten,
+                count=1,
+                flags=re.IGNORECASE,
+            )
+        if "</body>" in rewritten.lower() and "data-tomctf-proxy-rewriter" not in rewritten:
+            rewriter_script = (
+                '<script data-tomctf-proxy-rewriter>(function(){'
+                'var p=' + json.dumps(prefix) + ';'
+                'function j(v){if(!v||v[0]!="/"||v.slice(0,2)=="//"||v.indexOf(p+"/")===0)return v;return p+v;}'
+                'function r(root){root=root||document;["href","src","action","poster","data-url","data-src"].forEach(function(a){'
+                "root.querySelectorAll('['+a+'^=\"/\"]').forEach(function(e){e.setAttribute(a,j(e.getAttribute(a)));});"
+                '});}'
+                'r();'
+                'document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[href]");if(a){a.setAttribute("href",j(a.getAttribute("href")));}},true);'
+                'document.addEventListener("submit",function(e){var f=e.target;if(f&&f.getAttribute){f.setAttribute("action",j(f.getAttribute("action")||"/"));}},true);'
+                'new MutationObserver(function(m){m.forEach(function(x){x.addedNodes&&x.addedNodes.forEach(function(n){if(n.nodeType===1)r(n);});});}).observe(document.documentElement,{childList:true,subtree:true});'
+                '})();</script>'
+            )
+            rewritten = re.sub(r'</body>', rewriter_script + '</body>', rewritten, count=1, flags=re.IGNORECASE)
+
+    if "css" in lower_type or "html" in lower_type:
+        rewritten = re.sub(
+            r'url\(\s*([\'"]?)(/(?!/)[^\'")]+)\1\s*\)',
+            css_url_repl,
+            rewritten,
+            flags=re.IGNORECASE,
+        )
+
+    if any(kind in lower_type for kind in ("javascript", "ecmascript", "json", "html")):
+        rewritten = re.sub(
+            r'(["\'])/(?!/|challenge-proxy/)([^"\'\s<>)]*)\1',
+            lambda m: f'{m.group(1)}{prefix}/{m.group(2)}{m.group(1)}',
+            rewritten,
+        )
+
+    return rewritten
+
+
+def should_rewrite_proxy_body(content_type):
+    lower_type = (content_type or "").lower()
+    return any(
+        token in lower_type
+        for token in ("text/html", "application/xhtml", "text/css", "javascript", "ecmascript", "application/json")
+    )
+
+
 def define_challenge_proxy(app):
     challenge_proxy = Blueprint("docker_challenge_proxy", __name__)
 
@@ -290,6 +401,7 @@ def define_challenge_proxy(app):
             "transfer-encoding",
             "upgrade",
             "content-encoding",
+            "content-length",
         }
         response_headers = []
         proxy_prefix = url_for(
@@ -304,11 +416,50 @@ def define_challenge_proxy(app):
                 continue
             if lower == "location":
                 parsed = urlsplit(value)
-                if parsed.netloc == f"{upstream_host}:{port}":
+                if parsed.netloc == f"{upstream_host}:{port}" or (parsed.netloc and parsed.port and str(parsed.port) == str(port)):
                     value = urlunsplit(("", "", proxy_prefix.rstrip("/") + parsed.path, parsed.query, parsed.fragment))
                 elif value.startswith("/"):
                     value = proxy_prefix.rstrip("/") + value
+            if lower == "set-cookie":
+                continue
             response_headers.append((key, value))
+
+        set_cookie_headers = []
+        try:
+            set_cookie_headers = upstream.raw.headers.get_all("Set-Cookie") or []
+        except Exception:
+            set_cookie_headers = []
+        if not set_cookie_headers and upstream.headers.get("Set-Cookie"):
+            set_cookie_headers = [upstream.headers.get("Set-Cookie")]
+        for cookie in set_cookie_headers:
+            if re.search(r";\s*path=", cookie, flags=re.IGNORECASE):
+                cookie = re.sub(
+                    r";\s*path=/[^;]*",
+                    "; Path=" + proxy_prefix.rstrip("/") + "/",
+                    cookie,
+                    count=1,
+                    flags=re.IGNORECASE,
+                )
+            else:
+                cookie = cookie + "; Path=" + proxy_prefix.rstrip("/") + "/"
+            response_headers.append(("Set-Cookie", cookie))
+
+        content_type = upstream.headers.get("Content-Type", "")
+        if should_rewrite_proxy_body(content_type):
+            raw_body = upstream.content
+            encoding = upstream.encoding or "utf-8"
+            try:
+                text = raw_body.decode(encoding, errors="replace")
+            except LookupError:
+                encoding = "utf-8"
+                text = raw_body.decode(encoding, errors="replace")
+            rewritten = rewrite_proxy_text(text, content_type, proxy_prefix)
+            return Response(
+                rewritten.encode(encoding, errors="replace"),
+                status=upstream.status_code,
+                headers=response_headers,
+                content_type=content_type,
+            )
 
         return Response(
             stream_with_context(upstream.iter_content(chunk_size=8192)),
