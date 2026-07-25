@@ -147,6 +147,9 @@ class ServerConfig(object):
         CACHE_THRESHOLD: int = 0
 
     # === SECURITY ===
+    SESSION_COOKIE_NAME: str = empty_str_cast(config_ini["security"].get("SESSION_COOKIE_NAME")) \
+        or "ctfd_session"
+
     SESSION_COOKIE_HTTPONLY: bool = config_ini["security"].getboolean("SESSION_COOKIE_HTTPONLY", fallback=True)
 
     SESSION_COOKIE_SAMESITE: str = empty_str_cast(config_ini["security"]["SESSION_COOKIE_SAMESITE"]) \

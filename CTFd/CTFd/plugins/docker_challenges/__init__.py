@@ -19,7 +19,7 @@ from CTFd.api.v1.scoreboard import ScoreboardDetail
 import CTFd.utils.scores
 from CTFd.api.v1.challenges import ChallengeList, Challenge
 from flask_restx import Namespace, Resource
-from flask import request, Blueprint, jsonify, abort, render_template, url_for, redirect, session, Response, stream_with_context
+from flask import request, Blueprint, jsonify, abort, render_template, url_for, redirect, session, Response, stream_with_context, current_app
 # from flask_wtf import FlaskForm
 from wtforms import (
     FileField,
@@ -507,10 +507,9 @@ def define_challenge_proxy(app):
             if "=" in first_cookie_part:
                 original_cookie_name = first_cookie_part.split("=", 1)[0].strip()
                 if original_cookie_name:
-                    response_headers.append((
-                        "Set-Cookie",
-                        f"{original_cookie_name}=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; Path={proxy_prefix.rstrip('/')}/",
-                    ))
+                    response_headers.append(("Set-Cookie", f"{original_cookie_name}=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; Path={proxy_prefix.rstrip('/')}/"))
+                    if original_cookie_name.lower() == "session" and current_app.config.get("SESSION_COOKIE_NAME") != "session":
+                        response_headers.append(("Set-Cookie", "session=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; Path=/"))
             response_headers.append(("Set-Cookie", rewrite_set_cookie_header(cookie, cookie_prefix, proxy_prefix)))
 
         content_type = upstream.headers.get("Content-Type", "")
