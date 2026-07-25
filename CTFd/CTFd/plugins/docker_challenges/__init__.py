@@ -215,6 +215,8 @@ def _proxy_join(prefix, value):
         return value
     if value.startswith(prefix):
         return value
+    if re.match(r"^/(challenges|scoreboard|teams|users|notifications|settings|profile)(/|$)", value):
+        return value
     if value.startswith("/"):
         return prefix.rstrip("/") + value
     return value
@@ -274,21 +276,6 @@ def rewrite_proxy_text(body, content_type, proxy_prefix):
                 count=1,
                 flags=re.IGNORECASE,
             )
-        if "</body>" in rewritten.lower() and "data-tomctf-proxy-rewriter" not in rewritten:
-            rewriter_script = (
-                '<script data-tomctf-proxy-rewriter>(function(){'
-                'var p=' + json.dumps(prefix) + ';'
-                'function j(v){if(!v||v[0]!="/"||v.slice(0,2)=="//"||v.indexOf(p+"/")===0)return v;return p+v;}'
-                'function r(root){root=root||document;["href","src","action","poster","data-url","data-src"].forEach(function(a){'
-                "root.querySelectorAll('['+a+'^=\"/\"]').forEach(function(e){e.setAttribute(a,j(e.getAttribute(a)));});"
-                '});}'
-                'r();'
-                'document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[href]");if(a){a.setAttribute("href",j(a.getAttribute("href")));}},true);'
-                'document.addEventListener("submit",function(e){var f=e.target;if(f&&f.getAttribute){f.setAttribute("action",j(f.getAttribute("action")||"/"));}},true);'
-                'new MutationObserver(function(m){m.forEach(function(x){x.addedNodes&&x.addedNodes.forEach(function(n){if(n.nodeType===1)r(n);});});}).observe(document.documentElement,{childList:true,subtree:true});'
-                '})();</script>'
-            )
-            rewritten = re.sub(r'</body>', rewriter_script + '</body>', rewritten, count=1, flags=re.IGNORECASE)
 
     if "css" in lower_type or "html" in lower_type:
         rewritten = re.sub(
@@ -301,9 +288,25 @@ def rewrite_proxy_text(body, content_type, proxy_prefix):
     if any(kind in lower_type for kind in ("javascript", "ecmascript", "json", "html")):
         rewritten = re.sub(
             r'(["\'])/(?!/|challenge-proxy/)([^"\'\s<>)]*)\1',
-            lambda m: f'{m.group(1)}{prefix}/{m.group(2)}{m.group(1)}',
+            lambda m: f'{m.group(1)}{_proxy_join(prefix, "/" + m.group(2))}{m.group(1)}',
             rewritten,
         )
+
+    if ("html" in lower_type or "xml" in lower_type) and "</body>" in rewritten.lower() and "data-tomctf-proxy-rewriter" not in rewritten:
+        rewriter_script = (
+            '<script data-tomctf-proxy-rewriter>(function(){'
+            'var p=' + json.dumps(prefix) + ';'
+            'function j(v){if(!v||v[0]!="/"||v.slice(0,2)=="//"||v.indexOf(p+"/")===0||/^\\/(challenges|scoreboard|teams|users|notifications|settings|profile)(\\/|$)/.test(v))return v;return p+v;}'
+            'function r(root){root=root||document;["href","src","action","poster","data-url","data-src"].forEach(function(a){'
+            "root.querySelectorAll('['+a+'^=\"/\"]').forEach(function(e){e.setAttribute(a,j(e.getAttribute(a)));});"
+            '});}'
+            'r();'
+            'document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[href]");if(a){a.setAttribute("href",j(a.getAttribute("href")));}},true);'
+            'document.addEventListener("submit",function(e){var f=e.target;if(f&&f.getAttribute){f.setAttribute("action",j(f.getAttribute("action")||"/"));}},true);'
+            'new MutationObserver(function(m){m.forEach(function(x){x.addedNodes&&x.addedNodes.forEach(function(n){if(n.nodeType===1)r(n);});});}).observe(document.documentElement,{childList:true,subtree:true});'
+            '})();</script>'
+        )
+        rewritten = re.sub(r'</body>', rewriter_script + '</body>', rewritten, count=1, flags=re.IGNORECASE)
 
     return rewritten
 
@@ -314,6 +317,69 @@ def should_rewrite_proxy_body(content_type):
         token in lower_type
         for token in ("text/html", "application/xhtml", "text/css", "javascript", "ecmascript", "application/json")
     )
+
+
+def proxy_cookie_prefix(tracker_id, port):
+    safe_port = re.sub(r"[^A-Za-z0-9_]", "_", str(port))
+    return f"tomctfp_{tracker_id}_{safe_port}_"
+
+
+def build_upstream_cookie_header(prefix):
+    upstream_cookies = []
+    for name, value in request.cookies.items():
+        if name.startswith(prefix):
+            upstream_name = name[len(prefix):]
+            if upstream_name:
+                upstream_cookies.append(f"{upstream_name}={value}")
+    return "; ".join(upstream_cookies)
+
+
+def rewrite_set_cookie_header(cookie, prefix, proxy_prefix):
+    cookie = str(cookie or "")
+    if not cookie:
+        return cookie
+
+    first, sep, rest = cookie.partition(";")
+    if "=" not in first:
+        return cookie
+
+    name, value = first.split("=", 1)
+    rewritten = prefix + name + "=" + value
+    attrs = []
+    has_path = False
+
+    for attr in rest.split(";") if sep else []:
+        cleaned = attr.strip()
+        if not cleaned:
+            continue
+        lower = cleaned.lower()
+        if lower.startswith("domain="):
+            continue
+        if lower.startswith("path="):
+            attrs.append("Path=" + proxy_prefix.rstrip("/") + "/")
+            has_path = True
+            continue
+        attrs.append(cleaned)
+
+    if not has_path:
+        attrs.append("Path=" + proxy_prefix.rstrip("/") + "/")
+
+    if attrs:
+        rewritten += "; " + "; ".join(attrs)
+    return rewritten
+
+
+def rewrite_proxy_origin(value, upstream_origin, proxy_prefix):
+    if not value:
+        return value
+    proxy_base = request.host_url.rstrip("/")
+    prefix = proxy_prefix.rstrip("/")
+    text = str(value)
+    text = text.replace(proxy_base + prefix, upstream_origin)
+    text = text.replace(prefix, "")
+    if text == proxy_base:
+        return upstream_origin
+    return text
 
 
 def define_challenge_proxy(app):
@@ -360,6 +426,7 @@ def define_challenge_proxy(app):
             "upgrade",
             "host",
             "content-length",
+            "cookie",
         }
         headers = {
             key: value
@@ -370,12 +437,23 @@ def define_challenge_proxy(app):
         headers["X-Forwarded-For"] = request.headers.get("X-Forwarded-For", request.remote_addr or "")
         headers["X-Forwarded-Host"] = request.host
         headers["X-Forwarded-Proto"] = request.scheme
-        headers["X-Forwarded-Prefix"] = url_for(
+        proxy_prefix = url_for(
             "docker_challenge_proxy.proxy_instance",
             tracker_id=tracker_id,
             port=port,
             path="",
-        ).rstrip("/")
+        )
+        headers["X-Forwarded-Prefix"] = proxy_prefix.rstrip("/")
+        upstream_origin = f"http://{upstream_host}:{port}"
+        if request.headers.get("Origin"):
+            headers["Origin"] = rewrite_proxy_origin(request.headers.get("Origin"), upstream_origin, proxy_prefix)
+        if request.headers.get("Referer"):
+            headers["Referer"] = rewrite_proxy_origin(request.headers.get("Referer"), upstream_origin, proxy_prefix)
+
+        cookie_prefix = proxy_cookie_prefix(tracker_id, port)
+        upstream_cookie_header = build_upstream_cookie_header(cookie_prefix)
+        if upstream_cookie_header:
+            headers["Cookie"] = upstream_cookie_header
 
         try:
             upstream = requests.request(
@@ -383,7 +461,6 @@ def define_challenge_proxy(app):
                 url=upstream_url,
                 headers=headers,
                 data=request.get_data(),
-                cookies=request.cookies,
                 allow_redirects=False,
                 stream=True,
                 timeout=(5, 120),
@@ -404,12 +481,6 @@ def define_challenge_proxy(app):
             "content-length",
         }
         response_headers = []
-        proxy_prefix = url_for(
-            "docker_challenge_proxy.proxy_instance",
-            tracker_id=tracker_id,
-            port=port,
-            path="",
-        )
         for key, value in upstream.headers.items():
             lower = key.lower()
             if lower in excluded:
@@ -432,17 +503,15 @@ def define_challenge_proxy(app):
         if not set_cookie_headers and upstream.headers.get("Set-Cookie"):
             set_cookie_headers = [upstream.headers.get("Set-Cookie")]
         for cookie in set_cookie_headers:
-            if re.search(r";\s*path=", cookie, flags=re.IGNORECASE):
-                cookie = re.sub(
-                    r";\s*path=/[^;]*",
-                    "; Path=" + proxy_prefix.rstrip("/") + "/",
-                    cookie,
-                    count=1,
-                    flags=re.IGNORECASE,
-                )
-            else:
-                cookie = cookie + "; Path=" + proxy_prefix.rstrip("/") + "/"
-            response_headers.append(("Set-Cookie", cookie))
+            first_cookie_part = str(cookie or "").partition(";")[0]
+            if "=" in first_cookie_part:
+                original_cookie_name = first_cookie_part.split("=", 1)[0].strip()
+                if original_cookie_name:
+                    response_headers.append((
+                        "Set-Cookie",
+                        f"{original_cookie_name}=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; Path={proxy_prefix.rstrip('/')}/",
+                    ))
+            response_headers.append(("Set-Cookie", rewrite_set_cookie_header(cookie, cookie_prefix, proxy_prefix)))
 
         content_type = upstream.headers.get("Content-Type", "")
         if should_rewrite_proxy_body(content_type):
