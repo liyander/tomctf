@@ -38,6 +38,27 @@
                 </div>
                 <div class="card mb-3">
                     <div class="card-body">
+                        <h5 class="card-title mb-2">Challenge Port Range</h5>
+                        <p class="text-muted small mb-3">
+                            Docker challenge instances will only publish host ports inside this range. Keep the range large enough for concurrent players and multi-port challenges.
+                        </p>
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="port-range-start">From Port</label>
+                                <input class="form-control" type="number" min="1" max="65535" name="port_range_start" id="port-range-start" placeholder="30000" value="{{ config.port_range_start if config and config.port_range_start else 30000 }}">
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="port-range-end">To Port</label>
+                                <input class="form-control" type="number" min="1" max="65535" name="port_range_end" id="port-range-end" placeholder="60000" value="{{ config.port_range_end if config and config.port_range_end else 60000 }}">
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">
+                            Example: From <code>40000</code> to <code>45000</code>. New containers will be assigned only ports from that pool.
+                        </small>
+                    </div>
+                </div>
+                <div class="card mb-3">
+                    <div class="card-body">
                         <h5 class="card-title mb-2">Challenge Proxy</h5>
                         <p class="text-muted small mb-3">
                             Route player traffic through CTFd so only the CTFd web port needs to be public. CTFd checks the logged-in user/team before forwarding to the player's own container.

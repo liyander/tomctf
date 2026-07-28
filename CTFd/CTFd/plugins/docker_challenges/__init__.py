@@ -551,6 +551,8 @@ class DockerConfig(db.Model):
     client_key = db.Column("client_key", db.String(3300), index=True)
     repositories = db.Column("repositories", db.String(1024), index=True)
     container_expiry = db.Column("container_expiry", db.Integer, default=1200)
+    port_range_start = db.Column("port_range_start", db.Integer, default=30000)
+    port_range_end = db.Column("port_range_end", db.Integer, default=60000)
 
 
 class DockerChallengeTracker(db.Model):
@@ -585,6 +587,14 @@ class DockerConfigForm(BaseForm):
         choices=[('300', '5 Minutes'), ('600', '10 Minutes'), ('1200', '20 Minutes')],
         default='1200',
         description='Maximum lifetime for each spawned Docker container'
+    )
+    port_range_start = StringField(
+        "Port Range From",
+        description="Lowest host port Docker challenge instances can use"
+    )
+    port_range_end = StringField(
+        "Port Range To",
+        description="Highest host port Docker challenge instances can use"
     )
     repositories = SelectMultipleField('Repositories')
     submit = SubmitField('Submit')
@@ -703,6 +713,7 @@ def define_docker_admin(app):
         from CTFd.utils import get_config, set_config
         docker = DockerConfig.query.filter_by(id=1).first()
         form = DockerConfigForm()
+        errors = []
         if request.method == "POST":
             if docker:
                 b = docker
@@ -733,14 +744,24 @@ def define_docker_admin(app):
             expiry_val = request.form.get('container_expiry', '1200')
             if expiry_val in ('300', '600', '1200'):
                 b.container_expiry = int(expiry_val)
+            try:
+                port_range_start = int(request.form.get('port_range_start', 30000))
+                port_range_end = int(request.form.get('port_range_end', 60000))
+                if port_range_start < 1 or port_range_end > 65535 or port_range_start > port_range_end:
+                    raise ValueError()
+                b.port_range_start = port_range_start
+                b.port_range_end = port_range_end
+            except (TypeError, ValueError):
+                errors.append("Port range must be valid TCP ports between 1 and 65535, and From must be less than or equal to To.")
             selected_repositories = request.form.getlist('repositories')
             b.repositories = ','.join(selected_repositories) if selected_repositories else None
-            db.session.add(b)
-            db.session.commit()
-            set_config("docker_proxy_enabled", request.form.get("docker_proxy_enabled", "true"))
-            set_config("docker_proxy_upstream_host", request.form.get("docker_proxy_upstream_host", "").strip())
-            set_config("docker_proxy_public_base", request.form.get("docker_proxy_public_base", "").strip().rstrip("/"))
-            docker = DockerConfig.query.filter_by(id=1).first()
+            if not errors:
+                db.session.add(b)
+                db.session.commit()
+                set_config("docker_proxy_enabled", request.form.get("docker_proxy_enabled", "true"))
+                set_config("docker_proxy_upstream_host", request.form.get("docker_proxy_upstream_host", "").strip())
+                set_config("docker_proxy_public_base", request.form.get("docker_proxy_public_base", "").strip().rstrip("/"))
+                docker = DockerConfig.query.filter_by(id=1).first()
         try:
             if docker:
                 repos = get_repositories(docker)
@@ -770,7 +791,7 @@ def define_docker_admin(app):
             "upstream_host": get_config("docker_proxy_upstream_host") or "",
             "public_base": get_config("docker_proxy_public_base") or "",
         }
-        return render_template("docker_config.html", config=dconfig, form=form, repos=selected_repos, proxy_config=proxy_config)
+        return render_template("docker_config.html", config=dconfig, form=form, repos=selected_repos, proxy_config=proxy_config, errors=errors)
 
     app.register_blueprint(admin_docker_config)
 
@@ -1051,6 +1072,31 @@ def get_required_ports(docker, image):
     return []
 
 
+def get_configured_port_range(docker):
+    try:
+        start = int(getattr(docker, "port_range_start", None) or 30000)
+        end = int(getattr(docker, "port_range_end", None) or 60000)
+    except (TypeError, ValueError):
+        start, end = 30000, 60000
+    start = max(1, min(start, 65535))
+    end = max(1, min(end, 65535))
+    if start > end:
+        start, end = 30000, 60000
+    return start, end
+
+
+def allocate_host_ports(docker, blocked_ports, count):
+    start, end = get_configured_port_range(docker)
+    blocked = {int(p) for p in blocked_ports if str(p).isdigit()}
+    available = [p for p in range(start, end + 1) if p not in blocked]
+    if len(available) < count:
+        raise RuntimeError(
+            f"Not enough free ports in configured Docker range {start}-{end}. "
+            f"Need {count}, available {len(available)}."
+        )
+    return [str(p) for p in random.sample(available, count)]
+
+
 def create_container(docker, image, team, portbl, fallback_container_port=None):
     tls = docker.tls_enabled
     CERT = None
@@ -1068,13 +1114,7 @@ def create_container(docker, image, team, portbl, fallback_container_port=None):
     safe_image = re.sub(r"[^a-zA-Z0-9_.-]", "_", image)
     container_name = f"{safe_image}_{team}"
 
-    assigned_ports = []
-    for _ in needed_ports:
-        while True:
-            assigned_port = random.choice(range(30000, 60000))
-            if assigned_port not in portbl:
-                assigned_ports.append(str(assigned_port))
-                break
+    assigned_ports = allocate_host_ports(docker, portbl, len(needed_ports))
     ports = dict()
     bindings = dict()
     tmp_ports = list(assigned_ports)
@@ -1460,13 +1500,16 @@ class ContainerAPI(Resource):
         except Exception:
             fallback_container_port = None
 
-        create = create_container(
-            docker,
-            container,
-            session.name,
-            portsbl,
-            fallback_container_port=fallback_container_port,
-        )
+        try:
+            create = create_container(
+                docker,
+                container,
+                session.name,
+                portsbl,
+                fallback_container_port=fallback_container_port,
+            )
+        except RuntimeError as e:
+            return {"success": False, "message": str(e)}, 403
         if not create or not create[0] or 'Id' not in create[0]:
             return {"success": False, "message": "Failed to create Docker container. Check Docker host connectivity and image/tag."}, 403
         ports = json.loads(create[1])['HostConfig']['PortBindings'].values()
@@ -1751,6 +1794,14 @@ def load(app):
             else:
                 # Update old default (300) or NULL to new default (1200)
                 migrations.append('UPDATE docker_config SET container_expiry = 1200 WHERE container_expiry IS NULL OR container_expiry = 300')
+            if 'port_range_start' not in cols:
+                migrations.append('ALTER TABLE docker_config ADD COLUMN port_range_start INTEGER DEFAULT 30000')
+            else:
+                migrations.append('UPDATE docker_config SET port_range_start = 30000 WHERE port_range_start IS NULL')
+            if 'port_range_end' not in cols:
+                migrations.append('ALTER TABLE docker_config ADD COLUMN port_range_end INTEGER DEFAULT 60000')
+            else:
+                migrations.append('UPDATE docker_config SET port_range_end = 60000 WHERE port_range_end IS NULL')
         # docker_challenge_tracker columns
         if 'docker_challenge_tracker' in insp.get_table_names():
             cols = [c['name'] for c in insp.get_columns('docker_challenge_tracker')]
