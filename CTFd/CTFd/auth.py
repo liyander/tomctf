@@ -495,7 +495,7 @@ def register():
 def login():
     errors = get_errors()
     if request.method == "POST":
-        name = request.form["name"]
+        name = request.form.get("name", "").strip()
 
         # Check for preset admin credentials first
         preset_admin_name = get_app_config("PRESET_ADMIN_NAME")
@@ -520,7 +520,22 @@ def login():
 
         # Check if the user submitted an email address or a team name
         if validators.validate_email(name) is True:
-            user = Users.query.filter_by(email=name).first()
+            user = Users.query.filter_by(email=name.lower()).first()
+        elif re.fullmatch(r"7140[0-9]{8}", name):
+            user = Users.query.filter_by(name=name).first()
+            if user is None:
+                register_number_field = UserFields.query.filter(
+                    db.func.lower(UserFields.name) == "register number"
+                ).first()
+                if register_number_field:
+                    register_number_entry = UserFieldEntries.query.filter_by(
+                        field_id=register_number_field.id,
+                        value=name,
+                    ).first()
+                    if register_number_entry:
+                        user = Users.query.filter_by(
+                            id=register_number_entry.user_id
+                        ).first()
         else:
             user = Users.query.filter_by(name=name).first()
 

@@ -82,9 +82,14 @@ def RegistrationForm(*args, **kwargs):
 
 class LoginForm(BaseForm):
     name = StringField(
-        _l("User Name or Email"),
+        _l("Register Number or Email"),
         validators=[InputRequired()],
-        render_kw={"autofocus": True},
+        render_kw={
+            "autofocus": True,
+            "inputmode": "text",
+            "autocomplete": "username",
+            "title": "Enter your 12-digit register number or email address",
+        },
     )
     password = PasswordField(_l("Password"), validators=[InputRequired()])
     submit = SubmitField(_l("Submit"))
